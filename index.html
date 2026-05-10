@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mini Lichess</title>
+<title>Mini Lichess Arena</title>
 
 <link rel="stylesheet"
   href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
@@ -25,8 +25,8 @@ header {
 
 .container {
   display: flex;
-  justify-content: center;
   gap: 20px;
+  justify-content: center;
   margin-top: 20px;
   flex-wrap: wrap;
 }
@@ -37,13 +37,13 @@ header {
 }
 
 .panel {
-  width: 240px;
+  width: 260px;
   background: #2a2a2a;
   padding: 10px;
   border-radius: 8px;
 }
 
-.btn, select {
+.btn, select, input {
   width: 100%;
   margin-top: 10px;
   padding: 10px;
@@ -61,7 +61,7 @@ header {
 
 <body>
 
-<header>♟ Mini Lichess Clone</header>
+<header>♟ Mini Lichess Arena System</header>
 
 <div class="container">
 
@@ -69,23 +69,23 @@ header {
 
 <div class="panel">
 
-<h3>Controls</h3>
+<h3>Arena Setup</h3>
 
-<select id="botLevel">
-  <option value="random">Bot: Random</option>
-  <option value="easy">Bot: Easy</option>
-  <option value="medium">Bot: Medium</option>
+<label>Number of Bots</label>
+<input id="botCount" type="number" value="3" min="2" max="10">
+
+<label>Bot Type</label>
+<select id="botType">
+  <option value="random">Random Bot</option>
+  <option value="easy">Easy Bot</option>
+  <option value="medium">Medium Bot</option>
 </select>
 
-<button class="btn" onclick="resetGame()">New Game</button>
-<button class="btn" onclick="toggleBot()">Toggle Bot</button>
-<button class="btn" onclick="startTournament()">Start Tournament</button>
-
-<div id="status"></div>
+<button class="btn" onclick="startArena()">Start Arena</button>
 
 <hr>
 
-<div id="tournament"></div>
+<div id="arenaStatus"></div>
 
 </div>
 
@@ -98,95 +98,37 @@ header {
 
 <script>
 
-let game = new Chess();
-let botEnabled = true;
-
-// BOT LEVELS
-function botMove() {
-  if (!botEnabled) return;
-  if (game.game_over()) return;
-
-  let moves = game.moves();
-  let level = document.getElementById("botLevel").value;
-
-  let move;
-
-  if (level === "random") {
-    move = moves[Math.floor(Math.random() * moves.length)];
-  }
-
-  if (level === "easy") {
-    move = moves[0]; // stupid first move
-  }
-
-  if (level === "medium") {
-    move = moves[Math.floor(Math.random() * (moves.length / 2))];
-  }
-
-  game.move(move);
-  board.position(game.fen());
-
-  updateStatus();
-}
-
-// BOARD
 let board = Chessboard('board', {
   draggable: true,
-  position: 'start',
-
-  pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
-
-  onDragStart: function () {
-    if (game.game_over()) return false;
-  },
-
-  onDrop: function (source, target) {
-
-    let move = game.move({
-      from: source,
-      to: target,
-      promotion: 'q'
-    });
-
-    if (move === null) return 'snapback';
-
-    updateStatus();
-
-    setTimeout(botMove, 400);
-  },
-
-  onSnapEnd: function () {
-    board.position(game.fen());
-  }
+  position: 'start'
 });
 
-// RESET
-function resetGame() {
-  game = new Chess();
-  board.start();
-  updateStatus();
+// ---------------- ARENA SYSTEM ----------------
+
+let players = [];
+let scores = {};
+
+function createBots(count) {
+
+  players = ["You"];
+  scores = { "You": 0 };
+
+  for (let i = 1; i <= count; i++) {
+    let name = "Bot " + i;
+    players.push(name);
+    scores[name] = 0;
+  }
 }
 
-// BOT TOGGLE
-function toggleBot() {
-  botEnabled = !botEnabled;
-  updateStatus();
-}
+function startArena() {
 
-// STATUS
-function updateStatus() {
-  document.getElementById("status").innerHTML =
-    "Turn: " + game.turn() +
-    "<br>Bot: " + botEnabled +
-    "<br>Level: " + document.getElementById("botLevel").value;
-}
+  let count = parseInt(document.getElementById("botCount").value);
 
-// -------------------- TOURNAMENT SYSTEM --------------------
+  createBots(count);
 
-function startTournament() {
+  let botType = document.getElementById("botType").value;
 
-  let players = ["You", "Bot", "Bot Medium"];
-  let results = {};
+  let results = [];
 
   for (let i = 0; i < players.length; i++) {
     for (let j = i + 1; j < players.length; j++) {
@@ -194,27 +136,52 @@ function startTournament() {
       let a = players[i];
       let b = players[j];
 
-      let winner = Math.random() > 0.5 ? a : b;
+      let winner = simulateGame(a, b, botType);
 
-      results[winner] = (results[winner] || 0) + 1;
+      scores[winner] += 2;
     }
   }
 
-  showTournament(results);
+  showArena();
 }
 
-function showTournament(results) {
-  let html = "<h3>Tournament Result</h3>";
+// ---------------- GAME SIMULATION ----------------
 
-  for (let p in results) {
-    html += p + ": " + results[p] + "<br>";
+function simulateGame(a, b, type) {
+
+  let moves = ["a", "b"];
+  let winner;
+
+  if (type === "random") {
+    winner = Math.random() > 0.5 ? a : b;
   }
 
-  document.getElementById("tournament").innerHTML = html;
+  if (type === "easy") {
+    winner = Math.random() > 0.65 ? a : b;
+  }
+
+  if (type === "medium") {
+    winner = Math.random() > 0.45 ? a : b;
+  }
+
+  return winner;
 }
 
-// INIT
-updateStatus();
+// ---------------- DISPLAY ----------------
+
+function showArena() {
+
+  let sorted = Object.entries(scores)
+    .sort((a,b) => b[1] - a[1]);
+
+  let html = "<h3>Arena Results</h3>";
+
+  for (let s of sorted) {
+    html += s[0] + ": " + s[1] + " pts<br>";
+  }
+
+  document.getElementById("arenaStatus").innerHTML = html;
+}
 
 </script>
 
