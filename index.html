@@ -1,68 +1,144 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <title>My Chess Website</title>
+  <meta charset="UTF-8" />
+  <title>My Lichess Clone</title>
 
   <link rel="stylesheet"
-    href="https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+        href="https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
 
   <style>
     body {
-      background-color: #1e1e1e;
-      color: white;
-      font-family: Arial, sans-serif;
-      text-align: center;
       margin: 0;
-      padding: 20px;
+      font-family: Arial;
+      background: #202124;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
 
-    h1 {
-      margin-bottom: 20px;
+    header {
+      width: 100%;
+      padding: 15px;
+      background: #111;
+      display: flex;
+      justify-content: space-between;
+      padding-left: 20px;
+      padding-right: 20px;
+    }
+
+    .container {
+      display: flex;
+      margin-top: 20px;
+      gap: 30px;
     }
 
     #board {
-      width: 90vw;
-      max-width: 500px;
-      margin: auto;
+      width: 420px;
+    }
+
+    .panel {
+      width: 220px;
+      background: #2a2a2a;
+      padding: 10px;
+      border-radius: 8px;
+    }
+
+    .btn {
+      width: 100%;
+      margin-top: 10px;
+      padding: 10px;
+      border: none;
+      cursor: pointer;
+      background: #444;
+      color: white;
+    }
+
+    .btn:hover {
+      background: #666;
+    }
+
+    .moveList {
+      font-size: 14px;
+      margin-top: 10px;
     }
   </style>
 </head>
+
 <body>
 
-  <h1>My Chess Website</h1>
+<header>
+  <div>♟ MyChess</div>
+  <div>Rating: 1200 (demo)</div>
+</header>
+
+<div class="container">
 
   <div id="board"></div>
 
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <div class="panel">
+    <h3>Game Panel</h3>
 
-  <script src="https://cdn.jsdelivr.net/npm/chess.js@0.13.4/chess.min.js"></script>
+    <button class="btn" onclick="resetGame()">New Game</button>
 
-  <script src="https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+    <div class="moveList" id="moves"></div>
 
-  <script>
-    const game = new Chess()
+    <hr />
 
-    const board = Chessboard('board', {
-      draggable: true,
-      position: 'start',
+    <h4>Features (WIP)</h4>
+    <ul>
+      <li>✔ Chessboard</li>
+      <li>✔ Moves</li>
+      <li>❌ Ratings (coming)</li>
+      <li>❌ Bots (coming)</li>
+      <li>❌ Turniere (coming)</li>
+    </ul>
+  </div>
 
-      onDrop: function(source, target) {
+</div>
 
-        const move = game.move({
-          from: source,
-          to: target,
-          promotion: 'q'
-        })
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chess.js@0.13.4/chess.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
 
-        if (move === null) {
-          return 'snapback'
-        }
-      }
-    })
-  </script>
+<script>
+let game = new Chess();
+
+let board = Chessboard('board', {
+  draggable: true,
+  position: 'start',
+
+  onDrop: function (source, target) {
+    let move = game.move({
+      from: source,
+      to: target,
+      promotion: 'q'
+    });
+
+    if (move === null) return 'snapback';
+
+    updateMoves();
+  }
+});
+
+function resetGame() {
+  game = new Chess();
+  board.start();
+  updateMoves();
+}
+
+function updateMoves() {
+  let history = game.history();
+  let text = "";
+
+  for (let i = 0; i < history.length; i++) {
+    text += (i+1) + ". " + history[i] + "<br>";
+  }
+
+  document.getElementById("moves").innerHTML = text;
+}
+</script>
 
 </body>
 </html>
