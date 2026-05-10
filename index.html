@@ -20,6 +20,7 @@ header {
   text-align: center;
   padding: 10px;
   background: #111;
+  font-size: 18px;
 }
 
 .container {
@@ -35,13 +36,13 @@ header {
 }
 
 .panel {
-  width: 300px;
+  width: 320px;
   background: #2a2a2a;
   padding: 10px;
   border-radius: 8px;
 }
 
-.btn, select {
+.btn, input {
   width: 100%;
   margin-top: 10px;
   padding: 10px;
@@ -55,28 +56,21 @@ header {
   background: #666;
 }
 
-.log {
+.box {
   margin-top: 10px;
-  font-size: 13px;
-  max-height: 180px;
-  overflow-y: auto;
-  background: #1b1b1b;
-  padding: 5px;
-}
-
-.liveGames {
-  margin-top: 15px;
-  font-size: 12px;
   background: #111;
   padding: 8px;
   border-radius: 5px;
+  font-size: 13px;
+  max-height: 200px;
+  overflow-y: auto;
 }
 </style>
 </head>
 
 <body>
 
-<header>♟ Mini Lichess Arena (Live Fixed)</header>
+<header>♟ Mini Lichess Arena System</header>
 
 <div class="container">
 
@@ -84,18 +78,18 @@ header {
 
 <div class="panel">
 
-<h3>Arena Controls</h3>
+<h3>Arena Setup</h3>
+
+<label>Bot Anzahl</label>
+<input id="botCount" type="number" min="2" max="20" value="5">
 
 <button class="btn" onclick="startArena()">Start Arena</button>
 
-<h3>Live Matches</h3>
-<div class="log" id="log"></div>
+<h3>Live Games</h3>
+<div class="box" id="liveGames"></div>
 
-<h3>Live Bot Games</h3>
-<div class="liveGames" id="liveGames"></div>
-
-<h3>Results</h3>
-<div id="results"></div>
+<h3>Leaderboard</h3>
+<div class="box" id="results"></div>
 
 </div>
 </div>
@@ -107,41 +101,48 @@ header {
 
 <script>
 
-// ✅ FIX: Piece Theme (WICHTIG für sichtbare Figuren)
+// ♟ Board fix (FIGUREN SICHTBAR!)
 let board = Chessboard('board', {
-  draggable: false,
   position: 'start',
+  draggable: false,
   pieceTheme: 'https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/img/chesspieces/wikipedia/{piece}.png'
 });
 
 // ---------------- STATE ----------------
 
-let arenaScores = {};
-let arenaQueue = [];
-let arenaRunning = false;
+let bots = [];
+let scores = {};
+let pairs = [];
+let games = [];
+let running = false;
 
-let liveGames = []; // 🟢 echte laufende Bot-Games
-
-// ---------------- START ----------------
+// ---------------- START ARENA ----------------
 
 function startArena() {
 
-  let bots = ["Bot Easy", "Bot Medium", "Bot Random"];
+  let count = parseInt(document.getElementById("botCount").value);
 
-  arenaScores = {};
-  bots.forEach(b => arenaScores[b] = 0);
+  bots = [];
+  scores = {};
+  pairs = [];
+  games = [];
 
-  arenaQueue = [];
+  for (let i = 1; i <= count; i++) {
+    let name = "Bot " + i;
+    bots.push(name);
+    scores[name] = 0;
+  }
 
+  // Round Robin
   for (let i = 0; i < bots.length; i++) {
     for (let j = i + 1; j < bots.length; j++) {
-      arenaQueue.push([bots[i], bots[j]]);
+      pairs.push([bots[i], bots[j]]);
     }
   }
 
-  arenaRunning = true;
+  running = true;
+  logLive("Arena gestartet mit " + count + " Bots");
 
-  log("Arena gestartet...");
   nextMatch();
 }
 
@@ -149,96 +150,90 @@ function startArena() {
 
 function nextMatch() {
 
-  if (!arenaRunning || arenaQueue.length === 0) {
-    showResults();
+  if (!running || pairs.length === 0) {
+    renderBoard();
     return;
   }
 
-  let [a, b] = arenaQueue.shift();
+  let [w, b] = pairs.shift();
 
-  log("Match: " + a + " vs " + b);
-
-  let game = createLiveGame(a, b);
-  liveGames.push(game);
-
-  let result = simulateGame(game);
-
-  if (result === "a") arenaScores[a] += 2;
-  if (result === "b") arenaScores[b] += 2;
-  if (result === "draw") {
-    arenaScores[a] += 1;
-    arenaScores[b] += 1;
-  }
-
-  renderLiveGames();
-
-  setTimeout(nextMatch, 400);
-}
-
-// ---------------- LIVE GAME ----------------
-
-function createLiveGame(a, b) {
-  return {
-    white: a,
+  let gameObj = {
+    white: w,
     black: b,
     game: new Chess(),
     moves: []
   };
+
+  games.push(gameObj);
+
+  playGame(gameObj);
+
+  renderLive();
+  renderScores();
+
+  setTimeout(nextMatch, 300);
 }
 
-// ---------------- SIMULATION + LIVE DISPLAY ----------------
+// ---------------- GAME SIMULATION ----------------
 
-function simulateGame(liveGame) {
+function playGame(gObj) {
 
-  let g = liveGame.game;
+  let g = gObj.game;
 
-  for (let i = 0; i < 30; i++) {
+  for (let i = 0; i < 35; i++) {
 
     if (g.game_over()) break;
 
-    let bot = g.turn() === "w" ? liveGame.white : liveGame.black;
+    let bot = g.turn() === "w" ? gObj.white : gObj.black;
 
     let move = getMove(g, bot);
     g.move(move);
 
-    liveGame.moves.push(move);
-
-    renderLiveGames();
+    gObj.moves.push(move);
   }
+
+  let result = "draw";
 
   if (g.in_checkmate()) {
-    return g.turn() === "w" ? "b" : "a";
+    result = g.turn() === "w" ? "b" : "a";
   }
 
-  return "draw";
+  if (result === "a") scores[gObj.white] += 2;
+  if (result === "b") scores[gObj.black] += 2;
+  if (result === "draw") {
+    scores[gObj.white] += 1;
+    scores[gObj.black] += 1;
+  }
 }
 
-// ---------------- BOT LOGIC ----------------
+// ---------------- BOT AI ----------------
 
 function getMove(game, bot) {
 
   let moves = game.moves();
 
-  if (bot.includes("Easy")) return moves[0];
+  if (bot.includes("1") || bot.includes("2")) {
+    return moves[0];
+  }
 
-  if (bot.includes("Medium")) {
+  if (bot.includes("3") || bot.includes("4")) {
     return moves[Math.floor(Math.random() * Math.max(1, moves.length / 2))];
   }
 
   return moves[Math.floor(Math.random() * moves.length)];
 }
 
-// ---------------- LIVE DISPLAY ----------------
+// ---------------- LIVE UI ----------------
 
-function renderLiveGames() {
+function renderLive() {
 
-  let html = "";
+  let html = "<b>Live Games</b><br><br>";
 
-  liveGames.slice(-5).forEach((g, i) => {
+  games.slice(-6).forEach(g => {
     html += `
       <div>
-        <b>${g.white} vs ${g.black}</b><br>
-        Moves: ${g.moves.slice(-6).join(" ")}
+        ♟ ${g.white} vs ${g.black}<br>
+        <small>${g.moves.slice(-8).join(" ")}</small>
       </div><hr>
     `;
   });
@@ -246,28 +241,26 @@ function renderLiveGames() {
   document.getElementById("liveGames").innerHTML = html;
 }
 
-// ---------------- RESULTS ----------------
+// ---------------- SCOREBOARD ----------------
 
-function showResults() {
+function renderScores() {
 
-  let html = "<b>Arena Finished</b><br>";
-
-  let sorted = Object.entries(arenaScores)
+  let sorted = Object.entries(scores)
     .sort((a,b) => b[1] - a[1]);
 
-  for (let [name, score] of sorted) {
-    html += name + ": " + score + " pts<br>";
-  }
+  let html = "<b>Leaderboard</b><br><br>";
+
+  sorted.forEach((p, i) => {
+    html += `${i+1}. ${p[0]} — ${p[1]} pts<br>`;
+  });
 
   document.getElementById("results").innerHTML = html;
 }
 
 // ---------------- LOG ----------------
 
-function log(msg) {
-  let el = document.getElementById("log");
-  el.innerHTML += msg + "<br>";
-  el.scrollTop = el.scrollHeight;
+function logLive(msg) {
+  console.log(msg);
 }
 
 </script>
