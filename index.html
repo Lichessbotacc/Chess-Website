@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mini Lichess Clone</title>
+<title>Chess App</title>
 
 <link rel="stylesheet"
   href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
@@ -14,30 +14,30 @@ body {
   font-family: Arial;
   background: #202124;
   color: white;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  overflow: hidden; /* FIX SCROLL */
 }
 
 header {
-  width: 100%;
-  padding: 12px;
-  background: #111;
   text-align: center;
+  padding: 10px;
+  background: #111;
 }
 
 .container {
   display: flex;
-  gap: 20px;
-  margin-top: 20px;
-  flex-wrap: wrap;
   justify-content: center;
+  margin-top: 20px;
+  gap: 20px;
+  flex-wrap: wrap;
 }
 
-#board { width: 420px; }
+#board {
+  width: 420px;
+  touch-action: none; /* FIX iPad SCROLL/DRAG ISSUE */
+}
 
 .panel {
-  width: 240px;
+  width: 220px;
   background: #2a2a2a;
   padding: 10px;
   border-radius: 8px;
@@ -48,48 +48,31 @@ header {
   margin-top: 10px;
   padding: 10px;
   border: none;
-  cursor: pointer;
   background: #444;
   color: white;
   border-radius: 5px;
-}
-
-.btn:hover { background: #666; }
-
-.small {
-  font-size: 13px;
-  margin-top: 10px;
 }
 </style>
 </head>
 
 <body>
 
-<header>♟ Mini Lichess Clone (Browser Edition)</header>
+<header>♟ Chess App (Fixed Version)</header>
 
 <div class="container">
 
 <div id="board"></div>
 
 <div class="panel">
+  <button class="btn" onclick="resetGame()">New Game</button>
+  <button class="btn" onclick="toggleBot()">Toggle Bot</button>
 
-<h3>Controls</h3>
-
-<button class="btn" onclick="resetGame()">New Game</button>
-<button class="btn" onclick="toggleBot()">Toggle Bot</button>
-<button class="btn" onclick="startTournament()">Start Tournament</button>
-
-<div class="small" id="status"></div>
-
-<hr>
-
-<h3>Ratings</h3>
-<div id="ratings"></div>
-
+  <div id="status"></div>
 </div>
 
 </div>
 
+<!-- FIXED LIBS -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
@@ -97,32 +80,18 @@ header {
 <script>
 
 let game = new Chess();
-let botEnabled = true;
+let bot = true;
 
-// --- RATINGS (LOCAL STORAGE)
-let ratings = JSON.parse(localStorage.getItem("ratings")) || {
-  Player: 1200,
-  Bot: 1200,
-  Bot2: 1200
-};
-
-function saveRatings() {
-  localStorage.setItem("ratings", JSON.stringify(ratings));
-}
-
-function updateRatingsUI() {
-  document.getElementById("ratings").innerHTML =
-    Object.entries(ratings)
-      .map(([k,v]) => k + ": " + v)
-      .join("<br>");
-}
-
-updateRatingsUI();
-
-// --- BOARD
+// BOARD
 let board = Chessboard('board', {
   draggable: true,
   position: 'start',
+
+  pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png', // FIX FIGURES
+
+  onDragStart: function () {
+    if (game.game_over()) return false;
+  },
 
   onDrop: function (source, target) {
 
@@ -136,7 +105,7 @@ let board = Chessboard('board', {
 
     updateStatus();
 
-    setTimeout(botMove, 400);
+    setTimeout(botMove, 300);
   },
 
   onSnapEnd: function () {
@@ -144,9 +113,9 @@ let board = Chessboard('board', {
   }
 });
 
-// --- BOT (random legal move)
+// BOT
 function botMove() {
-  if (!botEnabled) return;
+  if (!bot) return;
   if (game.game_over()) return;
 
   let moves = game.moves();
@@ -158,56 +127,26 @@ function botMove() {
   updateStatus();
 }
 
-// --- RESET
+// RESET
 function resetGame() {
   game = new Chess();
   board.start();
   updateStatus();
 }
 
-// --- BOT TOGGLE
+// BOT TOGGLE
 function toggleBot() {
-  botEnabled = !botEnabled;
-  document.getElementById("status").innerHTML =
-    "Bot: " + (botEnabled ? "ON" : "OFF");
+  bot = !bot;
+  document.getElementById("status").innerHTML = "Bot: " + bot;
 }
 
-// --- STATUS
+// STATUS
 function updateStatus() {
   document.getElementById("status").innerHTML =
-    "Turn: " + game.turn() + "<br>" +
-    (game.game_over() ? "Game Over" : "Playing");
+    "Turn: " + game.turn() +
+    "<br>Bot: " + bot;
 }
 
-// --- SIMPLE TOURNAMENT SYSTEM (LOCAL SIM)
-function startTournament() {
-
-  let players = ["Player", "Bot", "Bot2"];
-  let results = {};
-
-  for (let i = 0; i < players.length; i++) {
-    for (let j = i + 1; j < players.length; j++) {
-
-      let a = players[i];
-      let b = players[j];
-
-      let winner = Math.random() > 0.5 ? a : b;
-
-      results[winner] = (results[winner] || 0) + 1;
-
-      // rating update
-      ratings[winner] += 10;
-      ratings[winner === a ? b : a] -= 10;
-    }
-  }
-
-  saveRatings();
-  updateRatingsUI();
-
-  alert("Tournament finished!");
-}
-
-// INIT
 updateStatus();
 
 </script>
