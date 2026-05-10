@@ -146,8 +146,9 @@ function createBoardUI(w,b){
   div.className="game";
 
   let canvas = document.createElement("canvas");
-  canvas.width=160;
-  canvas.height=160;
+  canvas.width = 160;
+  canvas.height = 160;
+  canvas.style.border = "2px solid red";
 
   div.innerHTML = `<b>${w} vs ${b}</b><br>`;
   div.appendChild(canvas);
