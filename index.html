@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Chess App</title>
+<title>Mini Lichess</title>
 
 <link rel="stylesheet"
   href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
@@ -14,7 +14,7 @@ body {
   font-family: Arial;
   background: #202124;
   color: white;
-  overflow: hidden; /* FIX SCROLL */
+  overflow: hidden;
 }
 
 header {
@@ -26,24 +26,24 @@ header {
 .container {
   display: flex;
   justify-content: center;
-  margin-top: 20px;
   gap: 20px;
+  margin-top: 20px;
   flex-wrap: wrap;
 }
 
 #board {
   width: 420px;
-  touch-action: none; /* FIX iPad SCROLL/DRAG ISSUE */
+  touch-action: none;
 }
 
 .panel {
-  width: 220px;
+  width: 240px;
   background: #2a2a2a;
   padding: 10px;
   border-radius: 8px;
 }
 
-.btn {
+.btn, select {
   width: 100%;
   margin-top: 10px;
   padding: 10px;
@@ -52,27 +52,46 @@ header {
   color: white;
   border-radius: 5px;
 }
+
+.btn:hover {
+  background: #666;
+}
 </style>
 </head>
 
 <body>
 
-<header>♟ Chess App (Fixed Version)</header>
+<header>♟ Mini Lichess Clone</header>
 
 <div class="container">
 
 <div id="board"></div>
 
 <div class="panel">
-  <button class="btn" onclick="resetGame()">New Game</button>
-  <button class="btn" onclick="toggleBot()">Toggle Bot</button>
 
-  <div id="status"></div>
+<h3>Controls</h3>
+
+<select id="botLevel">
+  <option value="random">Bot: Random</option>
+  <option value="easy">Bot: Easy</option>
+  <option value="medium">Bot: Medium</option>
+</select>
+
+<button class="btn" onclick="resetGame()">New Game</button>
+<button class="btn" onclick="toggleBot()">Toggle Bot</button>
+<button class="btn" onclick="startTournament()">Start Tournament</button>
+
+<div id="status"></div>
+
+<hr>
+
+<div id="tournament"></div>
+
 </div>
 
 </div>
 
-<!-- FIXED LIBS -->
+<!-- LIBS -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
@@ -80,14 +99,42 @@ header {
 <script>
 
 let game = new Chess();
-let bot = true;
+let botEnabled = true;
+
+// BOT LEVELS
+function botMove() {
+  if (!botEnabled) return;
+  if (game.game_over()) return;
+
+  let moves = game.moves();
+  let level = document.getElementById("botLevel").value;
+
+  let move;
+
+  if (level === "random") {
+    move = moves[Math.floor(Math.random() * moves.length)];
+  }
+
+  if (level === "easy") {
+    move = moves[0]; // stupid first move
+  }
+
+  if (level === "medium") {
+    move = moves[Math.floor(Math.random() * (moves.length / 2))];
+  }
+
+  game.move(move);
+  board.position(game.fen());
+
+  updateStatus();
+}
 
 // BOARD
 let board = Chessboard('board', {
   draggable: true,
   position: 'start',
 
-  pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png', // FIX FIGURES
+  pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
 
   onDragStart: function () {
     if (game.game_over()) return false;
@@ -105,27 +152,13 @@ let board = Chessboard('board', {
 
     updateStatus();
 
-    setTimeout(botMove, 300);
+    setTimeout(botMove, 400);
   },
 
   onSnapEnd: function () {
     board.position(game.fen());
   }
 });
-
-// BOT
-function botMove() {
-  if (!bot) return;
-  if (game.game_over()) return;
-
-  let moves = game.moves();
-  let move = moves[Math.floor(Math.random() * moves.length)];
-
-  game.move(move);
-  board.position(game.fen());
-
-  updateStatus();
-}
 
 // RESET
 function resetGame() {
@@ -136,17 +169,51 @@ function resetGame() {
 
 // BOT TOGGLE
 function toggleBot() {
-  bot = !bot;
-  document.getElementById("status").innerHTML = "Bot: " + bot;
+  botEnabled = !botEnabled;
+  updateStatus();
 }
 
 // STATUS
 function updateStatus() {
   document.getElementById("status").innerHTML =
     "Turn: " + game.turn() +
-    "<br>Bot: " + bot;
+    "<br>Bot: " + botEnabled +
+    "<br>Level: " + document.getElementById("botLevel").value;
 }
 
+// -------------------- TOURNAMENT SYSTEM --------------------
+
+function startTournament() {
+
+  let players = ["You", "Bot", "Bot Medium"];
+  let results = {};
+
+  for (let i = 0; i < players.length; i++) {
+    for (let j = i + 1; j < players.length; j++) {
+
+      let a = players[i];
+      let b = players[j];
+
+      let winner = Math.random() > 0.5 ? a : b;
+
+      results[winner] = (results[winner] || 0) + 1;
+    }
+  }
+
+  showTournament(results);
+}
+
+function showTournament(results) {
+  let html = "<h3>Tournament Result</h3>";
+
+  for (let p in results) {
+    html += p + ": " + results[p] + "<br>";
+  }
+
+  document.getElementById("tournament").innerHTML = html;
+}
+
+// INIT
 updateStatus();
 
 </script>
