@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <title>My Lichess Clone</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Chess (Lichess Style)</title>
 
+  <!-- Chessboard CSS -->
   <link rel="stylesheet"
         href="https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
 
@@ -24,14 +26,15 @@
       background: #111;
       display: flex;
       justify-content: space-between;
-      padding-left: 20px;
-      padding-right: 20px;
+      box-sizing: border-box;
     }
 
     .container {
       display: flex;
+      gap: 20px;
       margin-top: 20px;
-      gap: 30px;
+      flex-wrap: wrap;
+      justify-content: center;
     }
 
     #board {
@@ -47,21 +50,32 @@
 
     .btn {
       width: 100%;
-      margin-top: 10px;
       padding: 10px;
+      margin-top: 10px;
       border: none;
       cursor: pointer;
       background: #444;
       color: white;
+      border-radius: 5px;
     }
 
     .btn:hover {
       background: #666;
     }
 
-    .moveList {
+    .moves {
       font-size: 14px;
       margin-top: 10px;
+      max-height: 250px;
+      overflow-y: auto;
+    }
+
+    .clock {
+      margin-top: 10px;
+      font-size: 14px;
+      background: #1b1b1b;
+      padding: 8px;
+      border-radius: 5px;
     }
   </style>
 </head>
@@ -82,22 +96,17 @@
 
     <button class="btn" onclick="resetGame()">New Game</button>
 
-    <div class="moveList" id="moves"></div>
+    <div class="clock" id="clock">
+      White: 5:00 <br>
+      Black: 5:00
+    </div>
 
-    <hr />
-
-    <h4>Features (WIP)</h4>
-    <ul>
-      <li>✔ Chessboard</li>
-      <li>✔ Moves</li>
-      <li>❌ Ratings (coming)</li>
-      <li>❌ Bots (coming)</li>
-      <li>❌ Turniere (coming)</li>
-    </ul>
+    <div class="moves" id="moves"></div>
   </div>
 
 </div>
 
+<!-- Libraries -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chess.js@0.13.4/chess.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
@@ -105,11 +114,21 @@
 <script>
 let game = new Chess();
 
+let whiteTime = 300;
+let blackTime = 300;
+let clockInterval;
+let clockRunning = false;
+
 let board = Chessboard('board', {
   draggable: true,
   position: 'start',
 
+  onDragStart: function () {
+    if (game.game_over()) return false;
+  },
+
   onDrop: function (source, target) {
+
     let move = game.move({
       from: source,
       to: target,
@@ -119,25 +138,98 @@ let board = Chessboard('board', {
     if (move === null) return 'snapback';
 
     updateMoves();
+    startClock();
+  },
+
+  onSnapEnd: function () {
+    board.position(game.fen());
   }
 });
 
+// MOVE LIST
+function updateMoves() {
+  let history = game.history();
+  let html = "";
+
+  for (let i = 0; i < history.length; i += 2) {
+    html += (i / 2 + 1) + ". " + history[i];
+
+    if (history[i + 1]) {
+      html += " " + history[i + 1];
+    }
+
+    html += "<br>";
+  }
+
+  document.getElementById("moves").innerHTML = html;
+}
+
+// RESET
 function resetGame() {
   game = new Chess();
   board.start();
+
+  whiteTime = 300;
+  blackTime = 300;
+
   updateMoves();
+  updateClock();
+  stopClock();
 }
 
-function updateMoves() {
-  let history = game.history();
-  let text = "";
+// CLOCK START
+function startClock() {
+  if (clockRunning) return;
 
-  for (let i = 0; i < history.length; i++) {
-    text += (i+1) + ". " + history[i] + "<br>";
-  }
+  clockRunning = true;
 
-  document.getElementById("moves").innerHTML = text;
+  clockInterval = setInterval(() => {
+
+    if (game.game_over()) {
+      stopClock();
+      return;
+    }
+
+    if (game.turn() === "w") {
+      whiteTime--;
+    } else {
+      blackTime--;
+    }
+
+    updateClock();
+
+    if (whiteTime <= 0 || blackTime <= 0) {
+      stopClock();
+      alert("Time over!");
+    }
+
+  }, 1000);
 }
+
+// CLOCK STOP
+function stopClock() {
+  clearInterval(clockInterval);
+  clockRunning = false;
+}
+
+// CLOCK UI
+function updateClock() {
+  document.getElementById("clock").innerHTML =
+    "White: " + formatTime(whiteTime) + "<br>" +
+    "Black: " + formatTime(blackTime);
+}
+
+// TIME FORMAT
+function formatTime(sec) {
+  let m = Math.floor(sec / 60);
+  let s = sec % 60;
+  return m + ":" + (s < 10 ? "0" : "") + s;
+}
+
+// INIT
+updateMoves();
+updateClock();
+
 </script>
 
 </body>
