@@ -3,110 +3,98 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lichess Arena Lite</title>
-
-<link rel="stylesheet"
-  href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
+<title>Lichess Arena Canvas</title>
 
 <style>
 body {
-  margin: 0;
+  margin:0;
   font-family: Arial;
-  background: #202124;
-  color: white;
+  background:#202124;
+  color:white;
 }
 
 header {
-  text-align: center;
-  padding: 10px;
-  background: #111;
-  font-size: 18px;
+  padding:10px;
+  background:#111;
+  text-align:center;
+  font-size:18px;
 }
 
 .container {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  margin-top: 20px;
-  flex-wrap: wrap;
-}
-
-#board {
-  width: 420px;
+  display:flex;
+  gap:20px;
+  justify-content:center;
+  flex-wrap:wrap;
+  margin-top:15px;
 }
 
 .panel {
-  width: 340px;
-  background: #2a2a2a;
-  padding: 10px;
-  border-radius: 8px;
+  width:320px;
+  background:#2a2a2a;
+  padding:10px;
+  border-radius:8px;
 }
 
-.btn, input {
-  width: 100%;
-  margin-top: 10px;
-  padding: 10px;
-  border: none;
-  background: #444;
-  color: white;
-  border-radius: 5px;
+input, button {
+  width:100%;
+  padding:10px;
+  margin-top:10px;
+  border:none;
+  border-radius:5px;
 }
 
-.btn:hover {
-  background: #666;
+button {
+  background:#444;
+  color:white;
+  cursor:pointer;
 }
 
-.box {
-  margin-top: 10px;
-  background: #111;
-  padding: 8px;
-  border-radius: 5px;
-  font-size: 13px;
-  max-height: 220px;
-  overflow-y: auto;
+button:hover {
+  background:#666;
+}
+
+#boards {
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  max-width:900px;
+}
+
+.game {
+  background:#111;
+  padding:8px;
+  border-radius:6px;
+}
+
+canvas {
+  background:#eee;
+  display:block;
 }
 </style>
 </head>
 
 <body>
 
-<header>♟ Lichess Arena Lite (Fixed Live Version)</header>
+<header>♟ Lichess Arena (Bot vs Bot Live)</header>
 
 <div class="container">
 
-<div id="board"></div>
+<div id="boards"></div>
 
 <div class="panel">
 
 <h3>Arena Setup</h3>
 
-<label>Bot Anzahl</label>
-<input id="botCount" type="number" min="2" max="20" value="5">
-
-<button class="btn" onclick="startArena()">Start Arena</button>
-
-<h3>Live Games</h3>
-<div class="box" id="liveGames"></div>
+<input id="botCount" type="number" value="6" min="2" max="20">
+<button onclick="startArena()">Start Arena</button>
 
 <h3>Leaderboard</h3>
-<div class="box" id="results"></div>
+<div id="scores"></div>
 
 </div>
 </div>
-
-<!-- LIBS -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
 
 <script>
-
-// ♟ Main board (optional display only)
-let board = Chessboard('board', {
-  position: 'start',
-  draggable: false,
-  pieceTheme: 'https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/img/chesspieces/wikipedia/{piece}.png'
-});
 
 // ---------------- STATE ----------------
 
@@ -114,10 +102,8 @@ let bots = [];
 let scores = {};
 let pairs = [];
 let games = [];
-let boards = {};
-let running = false;
 
-// ---------------- START ARENA ----------------
+// ---------------- START ----------------
 
 function startArena() {
 
@@ -127,10 +113,8 @@ function startArena() {
   scores = {};
   pairs = [];
   games = [];
-  boards = {};
 
-  document.getElementById("liveGames").innerHTML = "";
-  document.getElementById("results").innerHTML = "";
+  document.getElementById("boards").innerHTML = "";
 
   for (let i = 1; i <= count; i++) {
     let name = "Bot " + i;
@@ -138,158 +122,157 @@ function startArena() {
     scores[name] = 0;
   }
 
-  // Round Robin Pairings (Lichess style light)
   for (let i = 0; i < bots.length; i++) {
     for (let j = i + 1; j < bots.length; j++) {
       pairs.push([bots[i], bots[j]]);
     }
   }
 
-  running = true;
-
-  nextMatch();
+  nextGame();
 }
 
-// ---------------- MATCH LOOP ----------------
+// ---------------- GAME LOOP ----------------
 
-function nextMatch() {
+function nextGame() {
 
-  if (!running || pairs.length === 0) {
+  if (pairs.length === 0) {
     renderScores();
     return;
   }
 
-  let [white, black] = pairs.shift();
+  let [w, b] = pairs.shift();
 
-  let gameObj = {
-    id: Date.now() + Math.random(),
-    white,
-    black,
-    game: new Chess(),
-    moves: []
+  let game = {
+    white: w,
+    black: b,
+    board: initBoard(w, b),
+    state: initState()
   };
 
-  games.push(gameObj);
+  games.push(game);
 
-  createGameUI(gameObj);
-  playGame(gameObj);
+  playGame(game);
 
-  renderScores();
-
-  setTimeout(nextMatch, 250);
+  setTimeout(nextGame, 400);
 }
 
-// ---------------- CREATE LIVE BOARD ----------------
+// ---------------- BOARD ----------------
 
-function createGameUI(g) {
+function initBoard(w, b) {
 
-  let id = "board_" + g.id;
+  let container = document.createElement("div");
+  container.className = "game";
 
-  let wrapper = document.createElement("div");
+  let title = document.createElement("div");
+  title.innerHTML = `<b>${w} vs ${b}</b>`;
+  container.appendChild(title);
 
-  wrapper.innerHTML = `
-    <div style="margin-bottom:10px;">
-      <b>${g.white} vs ${g.black}</b>
-      <div id="${id}" style="width:200px;"></div>
-      <small id="moves_${g.id}"></small>
-    </div>
-    <hr>
-  `;
+  let canvas = document.createElement("canvas");
+  canvas.width = 160;
+  canvas.height = 160;
 
-  document.getElementById("liveGames").prepend(wrapper);
+  container.appendChild(canvas);
 
-  boards[g.id] = Chessboard(id, {
-    position: 'start',
-    draggable: false,
-    pieceTheme: 'https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/img/chesspieces/wikipedia/{piece}.png'
-  });
+  document.getElementById("boards").prepend(container);
+
+  return { canvas, ctx: canvas.getContext("2d") };
 }
 
-// ---------------- GAME SIMULATION ----------------
+// ---------------- CHESS STATE (MINIMAL) ----------------
 
-function playGame(gObj) {
+function initState() {
+  return {
+    turn: "w",
+    move: 0,
+    moves: []
+  };
+}
 
-  let g = gObj.game;
-  let turn = 0;
+// ---------------- BOT GAME ----------------
+
+function playGame(game) {
 
   let interval = setInterval(() => {
 
-    if (g.game_over() || turn > 50) {
+    let s = game.state;
+
+    if (s.move > 25) {
+      finishGame(game);
       clearInterval(interval);
-      finishGame(gObj);
       return;
     }
 
-    let bot = g.turn() === "w" ? gObj.white : gObj.black;
+    let bot = s.turn === "w" ? game.white : game.black;
 
-    let move = getMove(g, bot);
-    g.move(move);
+    let move = getMove(bot);
 
-    gObj.moves.push(move);
+    s.moves.push(move);
 
-    boards[gObj.id].position(g.fen());
+    s.turn = s.turn === "w" ? "b" : "w";
+    s.move++;
 
-    document.getElementById("moves_" + gObj.id).innerText =
-      gObj.moves.slice(-6).join(" ");
-
-    turn++;
+    drawBoard(game.board, s);
 
   }, 120);
 }
 
-// ---------------- RESULT SYSTEM (FIXED) ----------------
+// ---------------- BOT AI ----------------
 
-function finishGame(gObj) {
+function getMove(bot) {
 
-  let g = gObj.game;
+  let moves = ["e4", "d4", "Nf3", "c4", "a3", "h3"];
 
-  let white = gObj.white;
-  let black = gObj.black;
-
-  if (g.in_checkmate()) {
-    let winner = g.turn() === "w" ? black : white;
-    scores[winner] += 2;
-  } else {
-    scores[white] += 1;
-    scores[black] += 1;
-  }
-
-  renderScores();
-}
-
-// ---------------- BOT LOGIC ----------------
-
-function getMove(game, bot) {
-
-  let moves = game.moves();
-
-  if (!moves.length) return null;
-
-  if (bot.includes("1") || bot.includes("2")) {
-    return moves[0];
-  }
-
-  if (bot.includes("3") || bot.includes("4")) {
-    return moves[Math.floor(Math.random() * Math.max(1, moves.length / 2))];
-  }
+  if (bot.includes("1") || bot.includes("2")) return moves[0];
 
   return moves[Math.floor(Math.random() * moves.length)];
 }
 
-// ---------------- LEADERBOARD ----------------
+// ---------------- DRAW BOARD ----------------
+
+function drawBoard(board, state) {
+
+  let ctx = board.ctx;
+
+  ctx.clearRect(0,0,160,160);
+
+  // simple grid
+  for (let i=0;i<8;i++) {
+    for (let j=0;j<8;j++) {
+      ctx.fillStyle = (i+j)%2 ? "#769656" : "#eeeed2";
+      ctx.fillRect(i*20,j*20,20,20);
+    }
+  }
+
+  ctx.fillStyle = "black";
+  ctx.font = "10px Arial";
+  ctx.fillText(state.moves.slice(-1)[0] || "", 5, 155);
+}
+
+// ---------------- RESULT ----------------
+
+function finishGame(game) {
+
+  let winner = Math.random() > 0.5 ? game.white : game.black;
+
+  scores[winner] += 2;
+
+  renderScores();
+}
+
+// ---------------- SCOREBOARD ----------------
 
 function renderScores() {
 
   let sorted = Object.entries(scores)
-    .sort((a,b) => b[1] - a[1]);
+    .sort((a,b) => b[1]-a[1]);
 
   let html = "<b>Leaderboard</b><br><br>";
 
-  sorted.forEach((p, i) => {
+  sorted.forEach((p,i) => {
     html += `${i+1}. ${p[0]} — ${p[1]} pts<br>`;
   });
 
-  document.getElementById("results").innerHTML = html;
+  document.getElementById("scores").innerHTML = html;
 }
 
 </script>
