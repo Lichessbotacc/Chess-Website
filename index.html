@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<title>Stockfish Arena</title>
+<title>Stockfish Arena Fixed</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
@@ -51,28 +51,40 @@ button:hover {
   background:#666;
 }
 
-#games {
-  display:flex;
-  flex-wrap:wrap;
-  gap:10px;
-  max-width:900px;
-}
-
 .game {
   background:#111;
   padding:8px;
+  margin-bottom:10px;
   border-radius:6px;
 }
 
-canvas {
-  background:#eee;
+.board {
+  font-size:22px;
+  line-height:22px;
+  width:160px;
+  height:160px;
+  display:grid;
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+  margin-top:5px;
 }
+
+.square {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:18px;
+}
+
+.light { background:#eeeed2; }
+.dark { background:#769656; }
+
 </style>
 </head>
 
 <body>
 
-<header>♟ Stockfish Bot Arena (Lichess-style)</header>
+<header>♟ Stockfish Arena FIXED (real scoring + pieces)</header>
 
 <div class="container">
 
@@ -80,20 +92,17 @@ canvas {
 
 <div class="panel">
 
-<h3>Arena Setup</h3>
-
+<h3>Arena</h3>
 <input id="botCount" type="number" value="4" min="2" max="10">
-<button onclick="startArena()">Start Arena</button>
+<button onclick="start()">Start</button>
 
 <h3>Leaderboard</h3>
-<div id="scores"></div>
+<div id="score"></div>
 
 </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
-
-<!-- STOCKFISH -->
 <script src="https://cdn.jsdelivr.net/npm/stockfish@16.0.0/src/stockfish.js"></script>
 
 <script>
@@ -103,32 +112,30 @@ canvas {
 let bots = [];
 let scores = {};
 let pairs = [];
-let games = [];
 
-// ---------------- STOCKFISH ENGINE ----------------
+// ---------------- ENGINE ----------------
 
-function createEngine() {
-  let engine = Stockfish();
-  engine.postMessage("uci");
-  engine.postMessage("isready");
-  return engine;
+function engine() {
+  let e = Stockfish();
+  e.postMessage("uci");
+  e.postMessage("isready");
+  return e;
 }
 
 // ---------------- START ----------------
 
-function startArena() {
+function start() {
 
-  let count = +document.getElementById("botCount").value;
+  let n = +document.getElementById("botCount").value;
 
   bots = [];
   scores = {};
   pairs = [];
-  games = [];
 
   document.getElementById("games").innerHTML = "";
 
-  for (let i=1;i<=count;i++) {
-    let name = "SF Bot " + i;
+  for (let i=1;i<=n;i++) {
+    let name = "Bot " + i;
     bots.push(name);
     scores[name] = 0;
   }
@@ -139,56 +146,53 @@ function startArena() {
     }
   }
 
-  nextGame();
+  next();
 }
 
 // ---------------- GAME LOOP ----------------
 
-function nextGame() {
+function next() {
 
   if (pairs.length === 0) {
-    renderScores();
+    render();
     return;
   }
 
   let [w,b] = pairs.shift();
 
-  let game = {
+  let g = {
     white: w,
     black: b,
     chess: new Chess(),
-    engineW: createEngine(),
-    engineB: createEngine(),
+    ew: engine(),
+    eb: engine(),
+    el: null,
     moves: [],
-    id: Date.now() + Math.random(),
-    board: createUI(w,b)
+    board: createBoard(w,b)
   };
 
-  games.push(game);
+  play(g);
 
-  play(game);
-
-  setTimeout(nextGame, 300);
+  setTimeout(next, 200);
 }
 
-// ---------------- UI ----------------
+// ---------------- BOARD ----------------
 
-function createUI(w,b) {
+function createBoard(w,b) {
 
   let div = document.createElement("div");
   div.className = "game";
 
   div.innerHTML = `
-    <b>${w} vs ${b}</b><br>
-    <canvas width="160" height="160"></canvas>
-    <div class="moves"></div>
+    <b>${w} vs ${b}</b>
+    <div class="board"></div>
+    <small class="moves"></small>
   `;
 
   document.getElementById("games").prepend(div);
 
   return {
-    canvas: div.querySelector("canvas"),
-    ctx: div.querySelector("canvas").getContext("2d"),
+    el: div.querySelector(".board"),
     moves: div.querySelector(".moves")
   };
 }
@@ -206,19 +210,16 @@ function play(g) {
     }
 
     let turn = g.chess.turn();
+    let eng = turn === "w" ? g.ew : g.eb;
 
-    let engine = turn === "w" ? g.engineW : g.engineB;
+    eng.postMessage("position fen " + g.chess.fen());
+    eng.postMessage("go depth 10");
 
-    engine.postMessage("position fen " + g.chess.fen());
-    engine.postMessage("go depth 10");
+    eng.onmessage = e => {
 
-    engine.onmessage = function(event) {
+      if (e.data.includes("bestmove")) {
 
-      let line = event.data;
-
-      if (line.includes("bestmove")) {
-
-        let move = line.split(" ")[1];
+        let move = e.data.split(" ")[1];
 
         g.chess.move(move);
         g.moves.push(move);
@@ -232,40 +233,57 @@ function play(g) {
 
 // ---------------- DRAW ----------------
 
+const pieces = {
+  p:"♟", r:"♜", n:"♞", b:"♝", q:"♛", k:"♚",
+  P:"♙", R:"♖", N:"♘", B:"♗", Q:"♕", K:"♔"
+};
+
 function draw(g) {
 
-  let ctx = g.board.ctx;
-  let c = g.board.canvas;
+  let html = "";
 
-  ctx.clearRect(0,0,160,160);
+  let board = g.chess.board();
 
-  for (let i=0;i<8;i++) {
-    for (let j=0;j<8;j++) {
-      ctx.fillStyle = (i+j)%2 ? "#769656" : "#eeeed2";
-      ctx.fillRect(i*20,j*20,20,20);
+  for (let r=0;r<8;r++) {
+    for (let c=0;c<8;c++) {
+
+      let piece = board[r][c];
+
+      let isDark = (r+c)%2;
+
+      html += `
+        <div class="square ${isDark?'dark':'light'}">
+          ${piece ? pieces[piece.type.toUpperCase() === piece.type ? piece.type : piece.type] : ""}
+        </div>
+      `;
     }
   }
 
-  ctx.fillStyle = "black";
-  ctx.fillText(g.moves.slice(-1)[0] || "", 10, 150);
-
+  g.board.el.innerHTML = html;
   g.board.moves.innerText = g.moves.slice(-6).join(" ");
 }
 
-// ---------------- FINISH ----------------
+// ---------------- FINISH (REAL RESULT FIXED) ----------------
 
 function finish(g) {
 
-  let winner = Math.random() > 0.5 ? g.white : g.black;
+  let w = g.white;
+  let b = g.black;
 
-  scores[winner] += 2;
+  if (g.chess.in_checkmate()) {
+    let winner = g.chess.turn() === "w" ? b : w;
+    scores[winner] += 2;
+  } else {
+    scores[w] += 1;
+    scores[b] += 1;
+  }
 
-  renderScores();
+  render();
 }
 
 // ---------------- SCORE ----------------
 
-function renderScores() {
+function render() {
 
   let sorted = Object.entries(scores)
     .sort((a,b)=>b[1]-a[1]);
@@ -276,7 +294,7 @@ function renderScores() {
     html += `${i+1}. ${p[0]} — ${p[1]} pts<br>`;
   });
 
-  document.getElementById("scores").innerHTML = html;
+  document.getElementById("score").innerHTML = html;
 }
 
 </script>
