@@ -2,8 +2,8 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
+<title>Stockfish Arena</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lichess Arena Canvas</title>
 
 <style>
 body {
@@ -14,10 +14,9 @@ body {
 }
 
 header {
+  text-align:center;
   padding:10px;
   background:#111;
-  text-align:center;
-  font-size:18px;
 }
 
 .container {
@@ -46,14 +45,13 @@ input, button {
 button {
   background:#444;
   color:white;
-  cursor:pointer;
 }
 
 button:hover {
   background:#666;
 }
 
-#boards {
+#games {
   display:flex;
   flex-wrap:wrap;
   gap:10px;
@@ -68,24 +66,23 @@ button:hover {
 
 canvas {
   background:#eee;
-  display:block;
 }
 </style>
 </head>
 
 <body>
 
-<header>♟ Lichess Arena (Bot vs Bot Live)</header>
+<header>♟ Stockfish Bot Arena (Lichess-style)</header>
 
 <div class="container">
 
-<div id="boards"></div>
+<div id="games"></div>
 
 <div class="panel">
 
 <h3>Arena Setup</h3>
 
-<input id="botCount" type="number" value="6" min="2" max="20">
+<input id="botCount" type="number" value="4" min="2" max="10">
 <button onclick="startArena()">Start Arena</button>
 
 <h3>Leaderboard</h3>
@@ -93,6 +90,11 @@ canvas {
 
 </div>
 </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+
+<!-- STOCKFISH -->
+<script src="https://cdn.jsdelivr.net/npm/stockfish@16.0.0/src/stockfish.js"></script>
 
 <script>
 
@@ -103,27 +105,36 @@ let scores = {};
 let pairs = [];
 let games = [];
 
+// ---------------- STOCKFISH ENGINE ----------------
+
+function createEngine() {
+  let engine = Stockfish();
+  engine.postMessage("uci");
+  engine.postMessage("isready");
+  return engine;
+}
+
 // ---------------- START ----------------
 
 function startArena() {
 
-  let count = parseInt(document.getElementById("botCount").value);
+  let count = +document.getElementById("botCount").value;
 
   bots = [];
   scores = {};
   pairs = [];
   games = [];
 
-  document.getElementById("boards").innerHTML = "";
+  document.getElementById("games").innerHTML = "";
 
-  for (let i = 1; i <= count; i++) {
-    let name = "Bot " + i;
+  for (let i=1;i<=count;i++) {
+    let name = "SF Bot " + i;
     bots.push(name);
     scores[name] = 0;
   }
 
-  for (let i = 0; i < bots.length; i++) {
-    for (let j = i + 1; j < bots.length; j++) {
+  for (let i=0;i<bots.length;i++) {
+    for (let j=i+1;j<bots.length;j++) {
       pairs.push([bots[i], bots[j]]);
     }
   }
@@ -140,102 +151,94 @@ function nextGame() {
     return;
   }
 
-  let [w, b] = pairs.shift();
+  let [w,b] = pairs.shift();
 
   let game = {
     white: w,
     black: b,
-    board: initBoard(w, b),
-    state: initState()
+    chess: new Chess(),
+    engineW: createEngine(),
+    engineB: createEngine(),
+    moves: [],
+    id: Date.now() + Math.random(),
+    board: createUI(w,b)
   };
 
   games.push(game);
 
-  playGame(game);
+  play(game);
 
-  setTimeout(nextGame, 400);
+  setTimeout(nextGame, 300);
 }
 
-// ---------------- BOARD ----------------
+// ---------------- UI ----------------
 
-function initBoard(w, b) {
+function createUI(w,b) {
 
-  let container = document.createElement("div");
-  container.className = "game";
+  let div = document.createElement("div");
+  div.className = "game";
 
-  let title = document.createElement("div");
-  title.innerHTML = `<b>${w} vs ${b}</b>`;
-  container.appendChild(title);
+  div.innerHTML = `
+    <b>${w} vs ${b}</b><br>
+    <canvas width="160" height="160"></canvas>
+    <div class="moves"></div>
+  `;
 
-  let canvas = document.createElement("canvas");
-  canvas.width = 160;
-  canvas.height = 160;
+  document.getElementById("games").prepend(div);
 
-  container.appendChild(canvas);
-
-  document.getElementById("boards").prepend(container);
-
-  return { canvas, ctx: canvas.getContext("2d") };
-}
-
-// ---------------- CHESS STATE (MINIMAL) ----------------
-
-function initState() {
   return {
-    turn: "w",
-    move: 0,
-    moves: []
+    canvas: div.querySelector("canvas"),
+    ctx: div.querySelector("canvas").getContext("2d"),
+    moves: div.querySelector(".moves")
   };
 }
 
-// ---------------- BOT GAME ----------------
+// ---------------- PLAY ----------------
 
-function playGame(game) {
+function play(g) {
 
   let interval = setInterval(() => {
 
-    let s = game.state;
-
-    if (s.move > 25) {
-      finishGame(game);
+    if (g.chess.game_over()) {
       clearInterval(interval);
+      finish(g);
       return;
     }
 
-    let bot = s.turn === "w" ? game.white : game.black;
+    let turn = g.chess.turn();
 
-    let move = getMove(bot);
+    let engine = turn === "w" ? g.engineW : g.engineB;
 
-    s.moves.push(move);
+    engine.postMessage("position fen " + g.chess.fen());
+    engine.postMessage("go depth 10");
 
-    s.turn = s.turn === "w" ? "b" : "w";
-    s.move++;
+    engine.onmessage = function(event) {
 
-    drawBoard(game.board, s);
+      let line = event.data;
 
-  }, 120);
+      if (line.includes("bestmove")) {
+
+        let move = line.split(" ")[1];
+
+        g.chess.move(move);
+        g.moves.push(move);
+
+        draw(g);
+      }
+    };
+
+  }, 300);
 }
 
-// ---------------- BOT AI ----------------
+// ---------------- DRAW ----------------
 
-function getMove(bot) {
+function draw(g) {
 
-  let moves = ["e4", "d4", "Nf3", "c4", "a3", "h3"];
-
-  if (bot.includes("1") || bot.includes("2")) return moves[0];
-
-  return moves[Math.floor(Math.random() * moves.length)];
-}
-
-// ---------------- DRAW BOARD ----------------
-
-function drawBoard(board, state) {
-
-  let ctx = board.ctx;
+  let ctx = g.board.ctx;
+  let c = g.board.canvas;
 
   ctx.clearRect(0,0,160,160);
 
-  // simple grid
   for (let i=0;i<8;i++) {
     for (let j=0;j<8;j++) {
       ctx.fillStyle = (i+j)%2 ? "#769656" : "#eeeed2";
@@ -244,31 +247,32 @@ function drawBoard(board, state) {
   }
 
   ctx.fillStyle = "black";
-  ctx.font = "10px Arial";
-  ctx.fillText(state.moves.slice(-1)[0] || "", 5, 155);
+  ctx.fillText(g.moves.slice(-1)[0] || "", 10, 150);
+
+  g.board.moves.innerText = g.moves.slice(-6).join(" ");
 }
 
-// ---------------- RESULT ----------------
+// ---------------- FINISH ----------------
 
-function finishGame(game) {
+function finish(g) {
 
-  let winner = Math.random() > 0.5 ? game.white : game.black;
+  let winner = Math.random() > 0.5 ? g.white : g.black;
 
   scores[winner] += 2;
 
   renderScores();
 }
 
-// ---------------- SCOREBOARD ----------------
+// ---------------- SCORE ----------------
 
 function renderScores() {
 
   let sorted = Object.entries(scores)
-    .sort((a,b) => b[1]-a[1]);
+    .sort((a,b)=>b[1]-a[1]);
 
   let html = "<b>Leaderboard</b><br><br>";
 
-  sorted.forEach((p,i) => {
+  sorted.forEach((p,i)=>{
     html += `${i+1}. ${p[0]} — ${p[1]} pts<br>`;
   });
 
