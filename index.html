@@ -14,7 +14,6 @@ body {
   font-family: Arial;
   background: #202124;
   color: white;
-  overflow: hidden;
 }
 
 header {
@@ -33,11 +32,10 @@ header {
 
 #board {
   width: 420px;
-  touch-action: none;
 }
 
 .panel {
-  width: 260px;
+  width: 300px;
   background: #2a2a2a;
   padding: 10px;
   border-radius: 8px;
@@ -60,17 +58,25 @@ header {
 .log {
   margin-top: 10px;
   font-size: 13px;
-  max-height: 200px;
+  max-height: 180px;
   overflow-y: auto;
   background: #1b1b1b;
   padding: 5px;
+}
+
+.liveGames {
+  margin-top: 15px;
+  font-size: 12px;
+  background: #111;
+  padding: 8px;
+  border-radius: 5px;
 }
 </style>
 </head>
 
 <body>
 
-<header>♟ Mini Lichess Arena (Fixed Live Version)</header>
+<header>♟ Mini Lichess Arena (Live Fixed)</header>
 
 <div class="container">
 
@@ -80,26 +86,18 @@ header {
 
 <h3>Arena Controls</h3>
 
-<select id="botLevel">
-  <option value="random">Random Bot</option>
-  <option value="easy">Easy Bot</option>
-  <option value="medium">Medium Bot</option>
-</select>
-
 <button class="btn" onclick="startArena()">Start Arena</button>
-
-<hr>
-
-<div id="status"></div>
 
 <h3>Live Matches</h3>
 <div class="log" id="log"></div>
+
+<h3>Live Bot Games</h3>
+<div class="liveGames" id="liveGames"></div>
 
 <h3>Results</h3>
 <div id="results"></div>
 
 </div>
-
 </div>
 
 <!-- LIBS -->
@@ -109,18 +107,22 @@ header {
 
 <script>
 
+// ✅ FIX: Piece Theme (WICHTIG für sichtbare Figuren)
 let board = Chessboard('board', {
-  draggable: true,
-  position: 'start'
+  draggable: false,
+  position: 'start',
+  pieceTheme: 'https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/img/chesspieces/wikipedia/{piece}.png'
 });
 
-// ---------------- ARENA STATE ----------------
+// ---------------- STATE ----------------
 
 let arenaScores = {};
 let arenaQueue = [];
 let arenaRunning = false;
 
-// ---------------- START ARENA ----------------
+let liveGames = []; // 🟢 echte laufende Bot-Games
+
+// ---------------- START ----------------
 
 function startArena() {
 
@@ -139,7 +141,7 @@ function startArena() {
 
   arenaRunning = true;
 
-  log("Arena started...");
+  log("Arena gestartet...");
   nextMatch();
 }
 
@@ -156,7 +158,10 @@ function nextMatch() {
 
   log("Match: " + a + " vs " + b);
 
-  let result = playGame(a, b);
+  let game = createLiveGame(a, b);
+  liveGames.push(game);
+
+  let result = simulateGame(game);
 
   if (result === "a") arenaScores[a] += 2;
   if (result === "b") arenaScores[b] += 2;
@@ -165,22 +170,40 @@ function nextMatch() {
     arenaScores[b] += 1;
   }
 
-  setTimeout(nextMatch, 300);
+  renderLiveGames();
+
+  setTimeout(nextMatch, 400);
 }
 
-// ---------------- REAL GAME SIM ----------------
+// ---------------- LIVE GAME ----------------
 
-function playGame(a, b) {
+function createLiveGame(a, b) {
+  return {
+    white: a,
+    black: b,
+    game: new Chess(),
+    moves: []
+  };
+}
 
-  let g = new Chess();
+// ---------------- SIMULATION + LIVE DISPLAY ----------------
 
-  for (let i = 0; i < 40; i++) {
+function simulateGame(liveGame) {
+
+  let g = liveGame.game;
+
+  for (let i = 0; i < 30; i++) {
 
     if (g.game_over()) break;
 
-    let move = getMove(g, g.turn() === "w" ? a : b);
+    let bot = g.turn() === "w" ? liveGame.white : liveGame.black;
 
+    let move = getMove(g, bot);
     g.move(move);
+
+    liveGame.moves.push(move);
+
+    renderLiveGames();
   }
 
   if (g.in_checkmate()) {
@@ -196,18 +219,34 @@ function getMove(game, bot) {
 
   let moves = game.moves();
 
-  if (bot.includes("Easy")) {
-    return moves[0];
-  }
+  if (bot.includes("Easy")) return moves[0];
 
   if (bot.includes("Medium")) {
-    return moves[Math.floor(Math.random() * (moves.length / 2))];
+    return moves[Math.floor(Math.random() * Math.max(1, moves.length / 2))];
   }
 
   return moves[Math.floor(Math.random() * moves.length)];
 }
 
-// ---------------- OUTPUT ----------------
+// ---------------- LIVE DISPLAY ----------------
+
+function renderLiveGames() {
+
+  let html = "";
+
+  liveGames.slice(-5).forEach((g, i) => {
+    html += `
+      <div>
+        <b>${g.white} vs ${g.black}</b><br>
+        Moves: ${g.moves.slice(-6).join(" ")}
+      </div><hr>
+    `;
+  });
+
+  document.getElementById("liveGames").innerHTML = html;
+}
+
+// ---------------- RESULTS ----------------
 
 function showResults() {
 
