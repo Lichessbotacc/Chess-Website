@@ -98,6 +98,8 @@ let pairs = [];
 
 function startArena() {
 
+  console.log("START clicked");
+
   let count = parseInt(document.getElementById("botCount").value);
 
   bots = [];
@@ -106,17 +108,21 @@ function startArena() {
 
   document.getElementById("boards").innerHTML = "";
 
-  for (let i=1;i<=count;i++){
+  for (let i = 1; i <= count; i++) {
     let name = "Bot " + i;
     bots.push(name);
     scores[name] = 0;
   }
 
-  for (let i=0;i<bots.length;i++){
-    for (let j=i+1;j<bots.length;j++){
+  console.log("Bots:", bots);
+
+  for (let i = 0; i < bots.length; i++) {
+    for (let j = i + 1; j < bots.length; j++) {
       pairs.push([bots[i], bots[j]]);
     }
   }
+
+  console.log("Pairs:", pairs);
 
   nextGame();
 }
