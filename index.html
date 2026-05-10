@@ -213,17 +213,24 @@ function draw(game, ctx){
 
   let board = game.board();
 
-  for (let i=0;i<8;i++){
-    for (let j=0;j<8;j++){
+  for (let i = 0; i < 8; i++){
+    for (let j = 0; j < 8; j++){
 
-      ctx.fillStyle = (i+j)%2 ? "#769656" : "#eeeed2";
-      ctx.fillRect(j*20,i*20,20,20);
+      ctx.fillStyle = (i + j) % 2 ? "#769656" : "#eeeed2";
+      ctx.fillRect(j * 20, i * 20, 20, 20);
 
       let piece = board[i][j];
+
       if (piece){
+        let symbol = pieces[piece.type];
+
+        if (piece.color === "w") {
+          symbol = symbol.toUpperCase();
+        }
+
         ctx.fillStyle = "black";
         ctx.font = "16px Arial";
-        ctx.fillText(pieces[piece.type.toUpperCase() === piece.type ? piece.type : piece.type] || "", j*20+4,i*20+15);
+        ctx.fillText(symbol, j * 20 + 4, i * 20 + 15);
       }
     }
   }
