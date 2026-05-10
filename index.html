@@ -7,7 +7,7 @@
 
   <!-- Chessboard CSS -->
   <link rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+        href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
 
   <style>
     body {
@@ -24,9 +24,8 @@
       width: 100%;
       padding: 15px;
       background: #111;
-      display: flex;
-      justify-content: space-between;
-      box-sizing: border-box;
+      text-align: center;
+      font-size: 18px;
     }
 
     .container {
@@ -64,18 +63,18 @@
     }
 
     .moves {
-      font-size: 14px;
       margin-top: 10px;
+      font-size: 14px;
       max-height: 250px;
       overflow-y: auto;
     }
 
     .clock {
       margin-top: 10px;
-      font-size: 14px;
       background: #1b1b1b;
       padding: 8px;
       border-radius: 5px;
+      font-size: 14px;
     }
   </style>
 </head>
@@ -83,8 +82,7 @@
 <body>
 
 <header>
-  <div>♟ MyChess</div>
-  <div>Rating: 1200 (demo)</div>
+  ♟ MyChess – Lichess Clone Base
 </header>
 
 <div class="container">
@@ -92,7 +90,8 @@
   <div id="board"></div>
 
   <div class="panel">
-    <h3>Game Panel</h3>
+
+    <h3>Game</h3>
 
     <button class="btn" onclick="resetGame()">New Game</button>
 
@@ -102,23 +101,25 @@
     </div>
 
     <div class="moves" id="moves"></div>
+
   </div>
 
 </div>
 
-<!-- Libraries -->
+<!-- LIBS -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chess.js@0.13.4/chess.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
 
 <script>
 let game = new Chess();
 
 let whiteTime = 300;
 let blackTime = 300;
-let clockInterval;
 let clockRunning = false;
+let clockInterval;
 
+// BOARD
 let board = Chessboard('board', {
   draggable: true,
   position: 'start',
