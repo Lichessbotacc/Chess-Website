@@ -1,126 +1,128 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MyChess - Lichess Feel</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mini Lichess Clone</title>
 
-  <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
+<link rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
 
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial;
-      background: #202124;
-      color: white;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
+<style>
+body {
+  margin: 0;
+  font-family: Arial;
+  background: #202124;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
 
-    header {
-      width: 100%;
-      padding: 12px;
-      background: #111;
-      text-align: center;
-    }
+header {
+  width: 100%;
+  padding: 12px;
+  background: #111;
+  text-align: center;
+}
 
-    .container {
-      display: flex;
-      gap: 20px;
-      margin-top: 20px;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
+.container {
+  display: flex;
+  gap: 20px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
 
-    #board {
-      width: 420px;
-    }
+#board { width: 420px; }
 
-    .panel {
-      width: 240px;
-      background: #2a2a2a;
-      padding: 10px;
-      border-radius: 8px;
-    }
+.panel {
+  width: 240px;
+  background: #2a2a2a;
+  padding: 10px;
+  border-radius: 8px;
+}
 
-    .btn {
-      width: 100%;
-      padding: 10px;
-      margin-top: 10px;
-      border: none;
-      cursor: pointer;
-      background: #444;
-      color: white;
-      border-radius: 5px;
-    }
+.btn {
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px;
+  border: none;
+  cursor: pointer;
+  background: #444;
+  color: white;
+  border-radius: 5px;
+}
 
-    .btn:hover {
-      background: #666;
-    }
+.btn:hover { background: #666; }
 
-    .moves {
-      font-size: 14px;
-      margin-top: 10px;
-      max-height: 250px;
-      overflow-y: auto;
-    }
-
-    .clock {
-      margin-top: 10px;
-      background: #1b1b1b;
-      padding: 8px;
-      border-radius: 5px;
-    }
-  </style>
+.small {
+  font-size: 13px;
+  margin-top: 10px;
+}
+</style>
 </head>
 
 <body>
 
-<header>
-  ♟ MyChess – Lichess Style V3
-</header>
+<header>♟ Mini Lichess Clone (Browser Edition)</header>
 
 <div class="container">
 
-  <div id="board"></div>
+<div id="board"></div>
 
-  <div class="panel">
+<div class="panel">
 
-    <button class="btn" onclick="resetGame()">New Game</button>
+<h3>Controls</h3>
 
-    <div class="clock" id="clock"></div>
+<button class="btn" onclick="resetGame()">New Game</button>
+<button class="btn" onclick="toggleBot()">Toggle Bot</button>
+<button class="btn" onclick="startTournament()">Start Tournament</button>
 
-    <div class="moves" id="moves"></div>
+<div class="small" id="status"></div>
 
-  </div>
+<hr>
+
+<h3>Ratings</h3>
+<div id="ratings"></div>
 
 </div>
 
-<!-- LIBS -->
+</div>
+
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
 
 <script>
+
 let game = new Chess();
+let botEnabled = true;
 
-let whiteTime = 300;
-let blackTime = 300;
-let clockInterval;
-let clockRunning = false;
+// --- RATINGS (LOCAL STORAGE)
+let ratings = JSON.parse(localStorage.getItem("ratings")) || {
+  Player: 1200,
+  Bot: 1200,
+  Bot2: 1200
+};
 
-let moveSound = new Audio("https://www.soundjay.com/buttons/sounds/button-16.mp3");
+function saveRatings() {
+  localStorage.setItem("ratings", JSON.stringify(ratings));
+}
 
-// BOARD
+function updateRatingsUI() {
+  document.getElementById("ratings").innerHTML =
+    Object.entries(ratings)
+      .map(([k,v]) => k + ": " + v)
+      .join("<br>");
+}
+
+updateRatingsUI();
+
+// --- BOARD
 let board = Chessboard('board', {
   draggable: true,
   position: 'start',
-
-  onDragStart: function (source, piece) {
-    if (game.game_over()) return false;
-  },
 
   onDrop: function (source, target) {
 
@@ -132,118 +134,81 @@ let board = Chessboard('board', {
 
     if (move === null) return 'snapback';
 
-    moveSound.play();
+    updateStatus();
 
-    updateUI();
-    startClock();
+    setTimeout(botMove, 400);
   },
 
   onSnapEnd: function () {
     board.position(game.fen());
-  },
-
-  onMouseoverSquare: function(square) {
-    showMoves(square);
-  },
-
-  onMouseoutSquare: function(square) {
-    removeHighlights();
   }
 });
 
-// SHOW LEGAL MOVES (lichess style idea simplified)
-function showMoves(square) {
-  let moves = game.moves({ square: square, verbose: true });
+// --- BOT (random legal move)
+function botMove() {
+  if (!botEnabled) return;
+  if (game.game_over()) return;
 
-  if (moves.length === 0) return;
+  let moves = game.moves();
+  let move = moves[Math.floor(Math.random() * moves.length)];
 
-  moves.forEach(m => {
-    highlightSquare(m.to);
-  });
+  game.move(move);
+  board.position(game.fen());
+
+  updateStatus();
 }
 
-// HIGHLIGHT SQUARE
-function highlightSquare(square) {
-  let el = document.querySelector('[data-square="' + square + '"]');
-  if (el) {
-    el.style.background = "rgba(0,255,0,0.3)";
-  }
-}
-
-// CLEAR HIGHLIGHTS
-function removeHighlights() {
-  document.querySelectorAll('.square-55d63').forEach(el => {
-    el.style.background = "";
-  });
-}
-
-// MOVE LIST
-function updateUI() {
-  let history = game.history();
-  let html = "";
-
-  for (let i = 0; i < history.length; i += 2) {
-    html += (i / 2 + 1) + ". " + history[i];
-
-    if (history[i + 1]) html += " " + history[i + 1];
-
-    html += "<br>";
-  }
-
-  document.getElementById("moves").innerHTML = html;
-}
-
-// RESET
+// --- RESET
 function resetGame() {
   game = new Chess();
   board.start();
-
-  whiteTime = 300;
-  blackTime = 300;
-
-  updateUI();
-  updateClock();
-  stopClock();
+  updateStatus();
 }
 
-// CLOCK
-function startClock() {
-  if (clockRunning) return;
-
-  clockRunning = true;
-
-  clockInterval = setInterval(() => {
-
-    if (game.game_over()) return stopClock();
-
-    if (game.turn() === "w") whiteTime--;
-    else blackTime--;
-
-    updateClock();
-
-  }, 1000);
+// --- BOT TOGGLE
+function toggleBot() {
+  botEnabled = !botEnabled;
+  document.getElementById("status").innerHTML =
+    "Bot: " + (botEnabled ? "ON" : "OFF");
 }
 
-function stopClock() {
-  clearInterval(clockInterval);
-  clockRunning = false;
+// --- STATUS
+function updateStatus() {
+  document.getElementById("status").innerHTML =
+    "Turn: " + game.turn() + "<br>" +
+    (game.game_over() ? "Game Over" : "Playing");
 }
 
-function updateClock() {
-  document.getElementById("clock").innerHTML =
-    "White: " + format(whiteTime) + "<br>" +
-    "Black: " + format(blackTime);
-}
+// --- SIMPLE TOURNAMENT SYSTEM (LOCAL SIM)
+function startTournament() {
 
-function format(t) {
-  let m = Math.floor(t / 60);
-  let s = t % 60;
-  return m + ":" + (s < 10 ? "0" : "") + s;
+  let players = ["Player", "Bot", "Bot2"];
+  let results = {};
+
+  for (let i = 0; i < players.length; i++) {
+    for (let j = i + 1; j < players.length; j++) {
+
+      let a = players[i];
+      let b = players[j];
+
+      let winner = Math.random() > 0.5 ? a : b;
+
+      results[winner] = (results[winner] || 0) + 1;
+
+      // rating update
+      ratings[winner] += 10;
+      ratings[winner === a ? b : a] -= 10;
+    }
+  }
+
+  saveRatings();
+  updateRatingsUI();
+
+  alert("Tournament finished!");
 }
 
 // INIT
-updateUI();
-updateClock();
+updateStatus();
 
 </script>
 
