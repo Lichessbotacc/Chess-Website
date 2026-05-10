@@ -3,9 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My Chess (Lichess Style)</title>
+  <title>MyChess - Lichess Feel</title>
 
-  <!-- Chessboard CSS -->
   <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
 
@@ -22,10 +21,9 @@
 
     header {
       width: 100%;
-      padding: 15px;
+      padding: 12px;
       background: #111;
       text-align: center;
-      font-size: 18px;
     }
 
     .container {
@@ -41,7 +39,7 @@
     }
 
     .panel {
-      width: 220px;
+      width: 240px;
       background: #2a2a2a;
       padding: 10px;
       border-radius: 8px;
@@ -63,8 +61,8 @@
     }
 
     .moves {
-      margin-top: 10px;
       font-size: 14px;
+      margin-top: 10px;
       max-height: 250px;
       overflow-y: auto;
     }
@@ -74,7 +72,6 @@
       background: #1b1b1b;
       padding: 8px;
       border-radius: 5px;
-      font-size: 14px;
     }
   </style>
 </head>
@@ -82,7 +79,7 @@
 <body>
 
 <header>
-  ♟ MyChess – Lichess Clone Base
+  ♟ MyChess – Lichess Style V3
 </header>
 
 <div class="container">
@@ -91,14 +88,9 @@
 
   <div class="panel">
 
-    <h3>Game</h3>
-
     <button class="btn" onclick="resetGame()">New Game</button>
 
-    <div class="clock" id="clock">
-      White: 5:00 <br>
-      Black: 5:00
-    </div>
+    <div class="clock" id="clock"></div>
 
     <div class="moves" id="moves"></div>
 
@@ -116,15 +108,17 @@ let game = new Chess();
 
 let whiteTime = 300;
 let blackTime = 300;
-let clockRunning = false;
 let clockInterval;
+let clockRunning = false;
+
+let moveSound = new Audio("https://www.soundjay.com/buttons/sounds/button-16.mp3");
 
 // BOARD
 let board = Chessboard('board', {
   draggable: true,
   position: 'start',
 
-  onDragStart: function () {
+  onDragStart: function (source, piece) {
     if (game.game_over()) return false;
   },
 
@@ -138,26 +132,60 @@ let board = Chessboard('board', {
 
     if (move === null) return 'snapback';
 
-    updateMoves();
+    moveSound.play();
+
+    updateUI();
     startClock();
   },
 
   onSnapEnd: function () {
     board.position(game.fen());
+  },
+
+  onMouseoverSquare: function(square) {
+    showMoves(square);
+  },
+
+  onMouseoutSquare: function(square) {
+    removeHighlights();
   }
 });
 
+// SHOW LEGAL MOVES (lichess style idea simplified)
+function showMoves(square) {
+  let moves = game.moves({ square: square, verbose: true });
+
+  if (moves.length === 0) return;
+
+  moves.forEach(m => {
+    highlightSquare(m.to);
+  });
+}
+
+// HIGHLIGHT SQUARE
+function highlightSquare(square) {
+  let el = document.querySelector('[data-square="' + square + '"]');
+  if (el) {
+    el.style.background = "rgba(0,255,0,0.3)";
+  }
+}
+
+// CLEAR HIGHLIGHTS
+function removeHighlights() {
+  document.querySelectorAll('.square-55d63').forEach(el => {
+    el.style.background = "";
+  });
+}
+
 // MOVE LIST
-function updateMoves() {
+function updateUI() {
   let history = game.history();
   let html = "";
 
   for (let i = 0; i < history.length; i += 2) {
     html += (i / 2 + 1) + ". " + history[i];
 
-    if (history[i + 1]) {
-      html += " " + history[i + 1];
-    }
+    if (history[i + 1]) html += " " + history[i + 1];
 
     html += "<br>";
   }
@@ -173,12 +201,12 @@ function resetGame() {
   whiteTime = 300;
   blackTime = 300;
 
-  updateMoves();
+  updateUI();
   updateClock();
   stopClock();
 }
 
-// CLOCK START
+// CLOCK
 function startClock() {
   if (clockRunning) return;
 
@@ -186,49 +214,35 @@ function startClock() {
 
   clockInterval = setInterval(() => {
 
-    if (game.game_over()) {
-      stopClock();
-      return;
-    }
+    if (game.game_over()) return stopClock();
 
-    if (game.turn() === "w") {
-      whiteTime--;
-    } else {
-      blackTime--;
-    }
+    if (game.turn() === "w") whiteTime--;
+    else blackTime--;
 
     updateClock();
-
-    if (whiteTime <= 0 || blackTime <= 0) {
-      stopClock();
-      alert("Time over!");
-    }
 
   }, 1000);
 }
 
-// CLOCK STOP
 function stopClock() {
   clearInterval(clockInterval);
   clockRunning = false;
 }
 
-// CLOCK UI
 function updateClock() {
   document.getElementById("clock").innerHTML =
-    "White: " + formatTime(whiteTime) + "<br>" +
-    "Black: " + formatTime(blackTime);
+    "White: " + format(whiteTime) + "<br>" +
+    "Black: " + format(blackTime);
 }
 
-// TIME FORMAT
-function formatTime(sec) {
-  let m = Math.floor(sec / 60);
-  let s = sec % 60;
+function format(t) {
+  let m = Math.floor(t / 60);
+  let s = t % 60;
   return m + ":" + (s < 10 ? "0" : "") + s;
 }
 
 // INIT
-updateMoves();
+updateUI();
 updateClock();
 
 </script>
