@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mini Lichess Arena</title>
+<title>Lichess Arena Lite</title>
 
 <link rel="stylesheet"
   href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
@@ -36,7 +36,7 @@ header {
 }
 
 .panel {
-  width: 320px;
+  width: 340px;
   background: #2a2a2a;
   padding: 10px;
   border-radius: 8px;
@@ -62,7 +62,7 @@ header {
   padding: 8px;
   border-radius: 5px;
   font-size: 13px;
-  max-height: 200px;
+  max-height: 220px;
   overflow-y: auto;
 }
 </style>
@@ -70,7 +70,7 @@ header {
 
 <body>
 
-<header>♟ Mini Lichess Arena System</header>
+<header>♟ Lichess Arena Lite (Fixed Live Version)</header>
 
 <div class="container">
 
@@ -101,7 +101,7 @@ header {
 
 <script>
 
-// ♟ Board fix (FIGUREN SICHTBAR!)
+// ♟ Main board (optional display only)
 let board = Chessboard('board', {
   position: 'start',
   draggable: false,
@@ -114,6 +114,7 @@ let bots = [];
 let scores = {};
 let pairs = [];
 let games = [];
+let boards = {};
 let running = false;
 
 // ---------------- START ARENA ----------------
@@ -126,6 +127,10 @@ function startArena() {
   scores = {};
   pairs = [];
   games = [];
+  boards = {};
+
+  document.getElementById("liveGames").innerHTML = "";
+  document.getElementById("results").innerHTML = "";
 
   for (let i = 1; i <= count; i++) {
     let name = "Bot " + i;
@@ -133,7 +138,7 @@ function startArena() {
     scores[name] = 0;
   }
 
-  // Round Robin
+  // Round Robin Pairings (Lichess style light)
   for (let i = 0; i < bots.length; i++) {
     for (let j = i + 1; j < bots.length; j++) {
       pairs.push([bots[i], bots[j]]);
@@ -141,7 +146,6 @@ function startArena() {
   }
 
   running = true;
-  logLive("Arena gestartet mit " + count + " Bots");
 
   nextMatch();
 }
@@ -151,27 +155,54 @@ function startArena() {
 function nextMatch() {
 
   if (!running || pairs.length === 0) {
-    renderBoard();
+    renderScores();
     return;
   }
 
-  let [w, b] = pairs.shift();
+  let [white, black] = pairs.shift();
 
   let gameObj = {
-    white: w,
-    black: b,
+    id: Date.now() + Math.random(),
+    white,
+    black,
     game: new Chess(),
     moves: []
   };
 
   games.push(gameObj);
 
+  createGameUI(gameObj);
   playGame(gameObj);
 
-  renderLive();
   renderScores();
 
-  setTimeout(nextMatch, 300);
+  setTimeout(nextMatch, 250);
+}
+
+// ---------------- CREATE LIVE BOARD ----------------
+
+function createGameUI(g) {
+
+  let id = "board_" + g.id;
+
+  let wrapper = document.createElement("div");
+
+  wrapper.innerHTML = `
+    <div style="margin-bottom:10px;">
+      <b>${g.white} vs ${g.black}</b>
+      <div id="${id}" style="width:200px;"></div>
+      <small id="moves_${g.id}"></small>
+    </div>
+    <hr>
+  `;
+
+  document.getElementById("liveGames").prepend(wrapper);
+
+  boards[g.id] = Chessboard(id, {
+    position: 'start',
+    draggable: false,
+    pieceTheme: 'https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/img/chesspieces/wikipedia/{piece}.png'
+  });
 }
 
 // ---------------- GAME SIMULATION ----------------
@@ -179,10 +210,15 @@ function nextMatch() {
 function playGame(gObj) {
 
   let g = gObj.game;
+  let turn = 0;
 
-  for (let i = 0; i < 35; i++) {
+  let interval = setInterval(() => {
 
-    if (g.game_over()) break;
+    if (g.game_over() || turn > 50) {
+      clearInterval(interval);
+      finishGame(gObj);
+      return;
+    }
 
     let bot = g.turn() === "w" ? gObj.white : gObj.black;
 
@@ -190,27 +226,44 @@ function playGame(gObj) {
     g.move(move);
 
     gObj.moves.push(move);
-  }
 
-  let result = "draw";
+    boards[gObj.id].position(g.fen());
 
-  if (g.in_checkmate()) {
-    result = g.turn() === "w" ? "b" : "a";
-  }
+    document.getElementById("moves_" + gObj.id).innerText =
+      gObj.moves.slice(-6).join(" ");
 
-  if (result === "a") scores[gObj.white] += 2;
-  if (result === "b") scores[gObj.black] += 2;
-  if (result === "draw") {
-    scores[gObj.white] += 1;
-    scores[gObj.black] += 1;
-  }
+    turn++;
+
+  }, 120);
 }
 
-// ---------------- BOT AI ----------------
+// ---------------- RESULT SYSTEM (FIXED) ----------------
+
+function finishGame(gObj) {
+
+  let g = gObj.game;
+
+  let white = gObj.white;
+  let black = gObj.black;
+
+  if (g.in_checkmate()) {
+    let winner = g.turn() === "w" ? black : white;
+    scores[winner] += 2;
+  } else {
+    scores[white] += 1;
+    scores[black] += 1;
+  }
+
+  renderScores();
+}
+
+// ---------------- BOT LOGIC ----------------
 
 function getMove(game, bot) {
 
   let moves = game.moves();
+
+  if (!moves.length) return null;
 
   if (bot.includes("1") || bot.includes("2")) {
     return moves[0];
@@ -223,25 +276,7 @@ function getMove(game, bot) {
   return moves[Math.floor(Math.random() * moves.length)];
 }
 
-// ---------------- LIVE UI ----------------
-
-function renderLive() {
-
-  let html = "<b>Live Games</b><br><br>";
-
-  games.slice(-6).forEach(g => {
-    html += `
-      <div>
-        ♟ ${g.white} vs ${g.black}<br>
-        <small>${g.moves.slice(-8).join(" ")}</small>
-      </div><hr>
-    `;
-  });
-
-  document.getElementById("liveGames").innerHTML = html;
-}
-
-// ---------------- SCOREBOARD ----------------
+// ---------------- LEADERBOARD ----------------
 
 function renderScores() {
 
@@ -255,12 +290,6 @@ function renderScores() {
   });
 
   document.getElementById("results").innerHTML = html;
-}
-
-// ---------------- LOG ----------------
-
-function logLive(msg) {
-  console.log(msg);
 }
 
 </script>
