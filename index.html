@@ -2,8 +2,8 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<title>Stockfish Arena Fixed</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bot Arena</title>
 
 <style>
 body {
@@ -14,9 +14,9 @@ body {
 }
 
 header {
-  text-align:center;
   padding:10px;
   background:#111;
+  text-align:center;
 }
 
 .container {
@@ -34,256 +34,204 @@ header {
   border-radius:8px;
 }
 
-input, button {
+button, input {
   width:100%;
   padding:10px;
   margin-top:10px;
-  border:none;
-  border-radius:5px;
 }
 
 button {
   background:#444;
   color:white;
+  border:none;
+  cursor:pointer;
 }
 
 button:hover {
   background:#666;
 }
 
+#boards {
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  max-width:900px;
+}
+
 .game {
   background:#111;
   padding:8px;
-  margin-bottom:10px;
   border-radius:6px;
 }
-
-.board {
-  font-size:22px;
-  line-height:22px;
-  width:160px;
-  height:160px;
-  display:grid;
-  grid-template-columns: repeat(8, 1fr);
-  grid-template-rows: repeat(8, 1fr);
-  margin-top:5px;
+canvas {
+  background:#ddd;
 }
-
-.square {
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:18px;
-}
-
-.light { background:#eeeed2; }
-.dark { background:#769656; }
-
 </style>
 </head>
 
 <body>
 
-<header>♟ Stockfish Arena FIXED (real scoring + pieces)</header>
+<header>♟ Bot Arena (echte Partien)</header>
 
 <div class="container">
 
-<div id="games"></div>
+<div id="boards"></div>
 
 <div class="panel">
-
-<h3>Arena</h3>
-<input id="botCount" type="number" value="4" min="2" max="10">
-<button onclick="start()">Start</button>
+<h3>Arena Setup</h3>
+<input id="botCount" type="number" value="6" min="2" max="20">
+<button onclick="startArena()">Start</button>
 
 <h3>Leaderboard</h3>
-<div id="score"></div>
-
-</div>
+<div id="scores"></div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/stockfish@16.0.0/src/stockfish.js"></script>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/1.0.0/chess.min.js"></script>
 
 <script>
-
-// ---------------- STATE ----------------
 
 let bots = [];
 let scores = {};
 let pairs = [];
 
-// ---------------- ENGINE ----------------
+function startArena() {
 
-function engine() {
-  let e = Stockfish();
-  e.postMessage("uci");
-  e.postMessage("isready");
-  return e;
-}
-
-// ---------------- START ----------------
-
-function start() {
-
-  let n = +document.getElementById("botCount").value;
+  let count = parseInt(document.getElementById("botCount").value);
 
   bots = [];
   scores = {};
   pairs = [];
 
-  document.getElementById("games").innerHTML = "";
+  document.getElementById("boards").innerHTML = "";
 
-  for (let i=1;i<=n;i++) {
+  for (let i=1;i<=count;i++){
     let name = "Bot " + i;
     bots.push(name);
     scores[name] = 0;
   }
 
-  for (let i=0;i<bots.length;i++) {
-    for (let j=i+1;j<bots.length;j++) {
+  for (let i=0;i<bots.length;i++){
+    for (let j=i+1;j<bots.length;j++){
       pairs.push([bots[i], bots[j]]);
     }
   }
 
-  next();
+  nextGame();
 }
 
 // ---------------- GAME LOOP ----------------
 
-function next() {
-
+function nextGame() {
   if (pairs.length === 0) {
-    render();
+    renderScores();
     return;
   }
 
   let [w,b] = pairs.shift();
+  let game = new Chess();
 
-  let g = {
-    white: w,
-    black: b,
-    chess: new Chess(),
-    ew: engine(),
-    eb: engine(),
-    el: null,
-    moves: [],
-    board: createBoard(w,b)
-  };
+  let ui = createBoardUI(w,b);
 
-  play(g);
+  playGame(game, w, b, ui);
 
-  setTimeout(next, 200);
+  setTimeout(nextGame, 500);
 }
 
-// ---------------- BOARD ----------------
+// ---------------- UI ----------------
 
-function createBoard(w,b) {
-
+function createBoardUI(w,b){
   let div = document.createElement("div");
-  div.className = "game";
+  div.className="game";
 
-  div.innerHTML = `
-    <b>${w} vs ${b}</b>
-    <div class="board"></div>
-    <small class="moves"></small>
-  `;
+  let canvas = document.createElement("canvas");
+  canvas.width=160;
+  canvas.height=160;
 
-  document.getElementById("games").prepend(div);
+  div.innerHTML = `<b>${w} vs ${b}</b><br>`;
+  div.appendChild(canvas);
 
-  return {
-    el: div.querySelector(".board"),
-    moves: div.querySelector(".moves")
-  };
+  document.getElementById("boards").prepend(div);
+
+  return canvas.getContext("2d");
+}
+
+// ---------------- BOT ----------------
+
+function botMove(game){
+  let moves = game.moves();
+  return moves[Math.floor(Math.random()*moves.length)];
 }
 
 // ---------------- PLAY ----------------
 
-function play(g) {
+function playGame(game, white, black, ctx){
 
-  let interval = setInterval(() => {
+  let interval = setInterval(()=>{
 
-    if (g.chess.game_over()) {
+    if (game.isGameOver()){
+
       clearInterval(interval);
-      finish(g);
+
+      let winner = getWinner(game, white, black);
+      if (winner) scores[winner] += 2;
+
+      renderScores();
       return;
     }
 
-    let turn = g.chess.turn();
-    let eng = turn === "w" ? g.ew : g.eb;
+    let move = botMove(game);
+    game.move(move);
 
-    eng.postMessage("position fen " + g.chess.fen());
-    eng.postMessage("go depth 10");
+    draw(game, ctx);
 
-    eng.onmessage = e => {
-
-      if (e.data.includes("bestmove")) {
-
-        let move = e.data.split(" ")[1];
-
-        g.chess.move(move);
-        g.moves.push(move);
-
-        draw(g);
-      }
-    };
-
-  }, 300);
+  }, 120);
 }
 
-// ---------------- DRAW ----------------
+// ---------------- WINNER ----------------
+
+function getWinner(game, white, black){
+
+  if (game.in_checkmate()) {
+    return game.turn() === "w" ? black : white;
+  }
+
+  return null;
+}
+
+// ---------------- DRAW BOARD ----------------
 
 const pieces = {
   p:"♟", r:"♜", n:"♞", b:"♝", q:"♛", k:"♚",
   P:"♙", R:"♖", N:"♘", B:"♗", Q:"♕", K:"♔"
 };
 
-function draw(g) {
+function draw(game, ctx){
 
-  let html = "";
+  ctx.clearRect(0,0,160,160);
 
-  let board = g.chess.board();
+  let board = game.board();
 
-  for (let r=0;r<8;r++) {
-    for (let c=0;c<8;c++) {
+  for (let i=0;i<8;i++){
+    for (let j=0;j<8;j++){
 
-      let piece = board[r][c];
+      ctx.fillStyle = (i+j)%2 ? "#769656" : "#eeeed2";
+      ctx.fillRect(j*20,i*20,20,20);
 
-      let isDark = (r+c)%2;
-
-      html += `
-        <div class="square ${isDark?'dark':'light'}">
-          ${piece ? pieces[piece.type.toUpperCase() === piece.type ? piece.type : piece.type] : ""}
-        </div>
-      `;
+      let piece = board[i][j];
+      if (piece){
+        ctx.fillStyle = "black";
+        ctx.font = "16px Arial";
+        ctx.fillText(pieces[piece.type.toUpperCase() === piece.type ? piece.type : piece.type] || "", j*20+4,i*20+15);
+      }
     }
   }
-
-  g.board.el.innerHTML = html;
-  g.board.moves.innerText = g.moves.slice(-6).join(" ");
-}
-
-// ---------------- FINISH (REAL RESULT FIXED) ----------------
-
-function finish(g) {
-
-  let w = g.white;
-  let b = g.black;
-
-  if (g.chess.in_checkmate()) {
-    let winner = g.chess.turn() === "w" ? b : w;
-    scores[winner] += 2;
-  } else {
-    scores[w] += 1;
-    scores[b] += 1;
-  }
-
-  render();
 }
 
 // ---------------- SCORE ----------------
 
-function render() {
+function renderScores(){
 
   let sorted = Object.entries(scores)
     .sort((a,b)=>b[1]-a[1]);
@@ -294,7 +242,7 @@ function render() {
     html += `${i+1}. ${p[0]} — ${p[1]} pts<br>`;
   });
 
-  document.getElementById("score").innerHTML = html;
+  document.getElementById("scores").innerHTML = html;
 }
 
 </script>
