@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mini Lichess</title>
+<title>Mini Lichess Arena</title>
 
 <link rel="stylesheet"
   href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
@@ -37,7 +37,7 @@ header {
 }
 
 .panel {
-  width: 240px;
+  width: 260px;
   background: #2a2a2a;
   padding: 10px;
   border-radius: 8px;
@@ -56,12 +56,21 @@ header {
 .btn:hover {
   background: #666;
 }
+
+.log {
+  margin-top: 10px;
+  font-size: 13px;
+  max-height: 200px;
+  overflow-y: auto;
+  background: #1b1b1b;
+  padding: 5px;
+}
 </style>
 </head>
 
 <body>
 
-<header>♟ Mini Lichess Clone</header>
+<header>♟ Mini Lichess Arena (Fixed Live Version)</header>
 
 <div class="container">
 
@@ -69,23 +78,25 @@ header {
 
 <div class="panel">
 
-<h3>Controls</h3>
+<h3>Arena Controls</h3>
 
 <select id="botLevel">
-  <option value="random">Bot: Random</option>
-  <option value="easy">Bot: Easy</option>
-  <option value="medium">Bot: Medium</option>
+  <option value="random">Random Bot</option>
+  <option value="easy">Easy Bot</option>
+  <option value="medium">Medium Bot</option>
 </select>
 
-<button class="btn" onclick="resetGame()">New Game</button>
-<button class="btn" onclick="toggleBot()">Toggle Bot</button>
-<button class="btn" onclick="startTournament()">Start Tournament</button>
-
-<div id="status"></div>
+<button class="btn" onclick="startArena()">Start Arena</button>
 
 <hr>
 
-<div id="tournament"></div>
+<div id="status"></div>
+
+<h3>Live Matches</h3>
+<div class="log" id="log"></div>
+
+<h3>Results</h3>
+<div id="results"></div>
 
 </div>
 
@@ -98,137 +109,52 @@ header {
 
 <script>
 
-let game = new Chess();
-let botEnabled = true;
-
-// BOT LEVELS
-function botMove() {
-  if (!botEnabled) return;
-  if (game.game_over()) return;
-
-  let moves = game.moves();
-  let level = document.getElementById("botLevel").value;
-
-  let move;
-
-  if (level === "random") {
-    move = moves[Math.floor(Math.random() * moves.length)];
-  }
-
-  if (level === "easy") {
-    move = moves[0];
-  }
-
-  if (level === "medium") {
-    move = moves[Math.floor(Math.random() * (moves.length / 2))];
-  }
-
-  game.move(move);
-  board.position(game.fen());
-
-  updateStatus();
-}
-
-// BOARD
 let board = Chessboard('board', {
   draggable: true,
-  position: 'start',
-
-  pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
-
-  onDragStart: function () {
-    if (game.game_over()) return false;
-  },
-
-  onDrop: function (source, target) {
-
-    let move = game.move({
-      from: source,
-      to: target,
-      promotion: 'q'
-    });
-
-    if (move === null) return 'snapback';
-
-    updateStatus();
-
-    setTimeout(botMove, 400);
-  },
-
-  onSnapEnd: function () {
-    board.position(game.fen());
-  }
+  position: 'start'
 });
 
-// RESET
-function resetGame() {
-  game = new Chess();
-  board.start();
-  updateStatus();
-}
-
-// BOT TOGGLE
-function toggleBot() {
-  botEnabled = !botEnabled;
-  updateStatus();
-}
-
-// STATUS
-function updateStatus() {
-  document.getElementById("status").innerHTML =
-    "Turn: " + game.turn() +
-    "<br>Bot: " + botEnabled +
-    "<br>Level: " + document.getElementById("botLevel").value;
-}
-
-updateStatus();
-
-
-// ======================================================
-// 🏆 FIX 1: ARENA SYSTEM STATE
-// ======================================================
+// ---------------- ARENA STATE ----------------
 
 let arenaScores = {};
+let arenaQueue = [];
 let arenaRunning = false;
 
+// ---------------- START ARENA ----------------
 
-// ======================================================
-// 🏆 FIX 2: START TOURNAMENT (REAL GAMES)
-// ======================================================
+function startArena() {
 
-function startTournament() {
-
-  let players = ["You", "Bot Easy", "Bot Medium", "Bot Random"];
+  let bots = ["Bot Easy", "Bot Medium", "Bot Random"];
 
   arenaScores = {};
-  arenaRunning = true;
+  bots.forEach(b => arenaScores[b] = 0);
 
-  players.forEach(p => arenaScores[p] = 0);
+  arenaQueue = [];
 
-  let matches = [];
-
-  for (let i = 0; i < players.length; i++) {
-    for (let j = i + 1; j < players.length; j++) {
-      matches.push([players[i], players[j]]);
+  for (let i = 0; i < bots.length; i++) {
+    for (let j = i + 1; j < bots.length; j++) {
+      arenaQueue.push([bots[i], bots[j]]);
     }
   }
 
-  runMatches(matches);
+  arenaRunning = true;
+
+  log("Arena started...");
+  nextMatch();
 }
 
+// ---------------- MATCH LOOP ----------------
 
-// ======================================================
-// 🏆 FIX 3: MATCH ENGINE (REAL CHESS GAMES)
-// ======================================================
+function nextMatch() {
 
-function runMatches(queue) {
-
-  if (queue.length === 0) {
-    showTournament();
+  if (!arenaRunning || arenaQueue.length === 0) {
+    showResults();
     return;
   }
 
-  let [a, b] = queue.shift();
+  let [a, b] = arenaQueue.shift();
+
+  log("Match: " + a + " vs " + b);
 
   let result = playGame(a, b);
 
@@ -239,26 +165,20 @@ function runMatches(queue) {
     arenaScores[b] += 1;
   }
 
-  setTimeout(() => runMatches(queue), 200);
+  setTimeout(nextMatch, 300);
 }
 
-
-// ======================================================
-// 🏆 FIX 4: REAL BOT VS BOT GAME
-// ======================================================
+// ---------------- REAL GAME SIM ----------------
 
 function playGame(a, b) {
 
   let g = new Chess();
-  let maxMoves = 40;
 
-  for (let i = 0; i < maxMoves; i++) {
+  for (let i = 0; i < 40; i++) {
 
     if (g.game_over()) break;
 
-    let player = g.turn() === "w" ? a : b;
-
-    let move = getBotMove(g, player);
+    let move = getMove(g, g.turn() === "w" ? a : b);
 
     g.move(move);
   }
@@ -270,34 +190,28 @@ function playGame(a, b) {
   return "draw";
 }
 
+// ---------------- BOT LOGIC ----------------
 
-// ======================================================
-// 🏆 FIX 5: BOT LOGIC (DIFFERENT LEVELS)
-// ======================================================
-
-function getBotMove(game, player) {
+function getMove(game, bot) {
 
   let moves = game.moves();
 
-  if (player.includes("Easy")) {
+  if (bot.includes("Easy")) {
     return moves[0];
   }
 
-  if (player.includes("Medium")) {
+  if (bot.includes("Medium")) {
     return moves[Math.floor(Math.random() * (moves.length / 2))];
   }
 
   return moves[Math.floor(Math.random() * moves.length)];
 }
 
+// ---------------- OUTPUT ----------------
 
-// ======================================================
-// 📊 OUTPUT
-// ======================================================
+function showResults() {
 
-function showTournament() {
-
-  let html = "<h3>Tournament Result</h3>";
+  let html = "<b>Arena Finished</b><br>";
 
   let sorted = Object.entries(arenaScores)
     .sort((a,b) => b[1] - a[1]);
@@ -306,7 +220,15 @@ function showTournament() {
     html += name + ": " + score + " pts<br>";
   }
 
-  document.getElementById("tournament").innerHTML = html;
+  document.getElementById("results").innerHTML = html;
+}
+
+// ---------------- LOG ----------------
+
+function log(msg) {
+  let el = document.getElementById("log");
+  el.innerHTML += msg + "<br>";
+  el.scrollTop = el.scrollHeight;
 }
 
 </script>
