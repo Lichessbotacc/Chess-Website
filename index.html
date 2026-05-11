@@ -137,8 +137,8 @@ th {
 <script src="https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
 
 <script>
-const BOT_COUNT = 10;
-const TOURNAMENT_MINUTES = 10;
+const BOT_COUNT = 8;
+const TOURNAMENT_MINUTES = 2;
 const MOVE_DELAY = 120;
 
 let arenaRunning = false;
@@ -146,16 +146,16 @@ let tournamentEnd = 0;
 let lastPairings = [];
 
 const botNames = [
-  "Seher",
-  "Berkay",
-  "Melisa",
-  "Melda",
-  "Hatice",
-  "Metin",
-  "Onur",
-  "Anas",
-  "Anes",
-  "Ahmet"
+  "AlphaBot",
+  "Shadow",
+  "DarkKnight",
+  "Nova",
+  "Blizzard",
+  "Inferno",
+  "Titan",
+  "Ghost",
+  "Falcon",
+  "Hydra"
 ];
 
 const bots = [];
@@ -190,137 +190,48 @@ function updateRanking() {
   });
 }
 
-function evaluateBoard(game) {
-  const values = {
-    p: 100,
-    n: 320,
-    b: 330,
-    r: 500,
-    q: 900,
-    k: 20000
-  };
-
-  let score = 0;
-
-  const board = game.board();
-
-  for (let row of board) {
-    for (let piece of row) {
-      if (piece) {
-        const value = values[piece.type];
-
-        score += piece.color === 'w'
-          ? value
-          : -value;
-      }
-    }
-  }
-
-  return score;
-}
-
-function stockfishLikeMove(game) {
+function randomMove(game) {
   const moves = game.moves();
   if (moves.length === 0) return null;
-
-  let bestMove = null;
-  let bestScore = game.turn() === 'w'
-    ? -999999
-    : 999999;
-
-  for (let move of moves) {
-    game.move(move);
-
-    let score = evaluateBoard(game);
-
-    if (game.in_checkmate()) {
-      score = game.turn() === 'w'
-        ? -999999
-        : 999999;
-    }
-
-    game.undo();
-
-    if (game.turn() === 'w') {
-      if (score > bestScore) {
-        bestScore = score;
-        bestMove = move;
-      }
-    } else {
-      if (score < bestScore) {
-        bestScore = score;
-        bestMove = move;
-      }
-    }
-  }
-
-  const topMoves = [];
-
-  for (let move of moves) {
-    game.move(move);
-
-    const score = evaluateBoard(game);
-
-    game.undo();
-
-    topMoves.push({
-      move,
-      score
-    });
-  }
-
-  topMoves.sort((a,b) =>
-    game.turn() === 'w'
-      ? b.score - a.score
-      : a.score - b.score
-  );
-
-  const limited = topMoves.slice(0, 3);
-
-  return limited[Math.floor(Math.random() * limited.length)].move;
+  return moves[Math.floor(Math.random() * moves.length)];
 }
 
 function pickPair() {
+  const available = bots.filter(bot => !bot.busy);
 
-  const available = bots
-    .filter(bot => !bot.busy)
-    .sort((a,b) => b.score - a.score);
+  if (available.length < 2) return null;
 
-  if (available.length < 2) {
-    return null;
-  }
+  const shuffled = [...available].sort(() => Math.random() - 0.5);
 
-  for (let i = 0; i < available.length; i++) {
-
-    const a = available[i];
-
-    for (let j = i + 1; j < available.length; j++) {
-
-      const b = available[j];
+  for (let a of shuffled) {
+    for (let b of shuffled) {
+      if (a === b) continue;
 
       const pair1 = `${a.name}-${b.name}`;
       const pair2 = `${b.name}-${a.name}`;
 
-      if (
-        !lastPairings.includes(pair1) &&
-        !lastPairings.includes(pair2)
-      ) {
+      if (!lastPairings.includes(pair1) && !lastPairings.includes(pair2)) {
+        lastPairings.push(pair1);
+
+        if (lastPairings.length > 20) {
+          lastPairings.shift();
+        }
 
         a.busy = true;
         b.busy = true;
-
-        lastPairings.push(pair1);
-
-        if (lastPairings.length > 50) {
-          lastPairings.shift();
-        }
 
         return [a, b];
       }
     }
   }
 
-  return null;
+  const a = shuffled[0];
+  const b = shuffled[1];
+
+  a.busy = true;
+  b.busy = true;
+
+  return [a, b];
 }
 
 function createBoard(bot1, bot2, boardId) {
@@ -358,14 +269,13 @@ function createBoard(bot1, bot2, boardId) {
   });
 
   const match = {
-  game,
-  board,
-  bot1,
-  bot2,
-  boardId,
-  card,
-  thinking: false
-};
+    game,
+    board,
+    bot1,
+    bot2,
+    boardId,
+    card
+  };
 
   currentGames.push(match);
 
@@ -428,22 +338,14 @@ function playGame(match) {
       return;
     }
 
-    if (!match.thinking) {
-
-  match.thinking = true;
-
-  setTimeout(() => {
-
-    const move = botMove(game);
+    const move = randomMove(game);
 
     if (move) {
       game.move(move);
       board.position(game.fen());
     }
 
-    match.thinking = false;
-
-  }, THINK_TIME);
+  }, MOVE_DELAY);
 }
 
 function fillArena() {
@@ -504,4 +406,4 @@ Danach:
 6. Speichern
 7. 1–2 Minuten warten
 
-Dann läuft die Seite direkt über GitHub Pages.
+Dann läuft die Seite direkt über GitHub Pages.  Die bots machen Random Züge, die sollen wie StockFish 3 spielen und die pairings sollen eins zu eins wie bei Lichess sein (also Platz 1 gegen 2, 3 gegen 4, 5 gegen 6 usw AUSSER wenn grade zb Platz 2 gegen 3 spielt dann soll Platz 1 gegen 4 spielen usw)
