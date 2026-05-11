@@ -8,7 +8,7 @@ Erstelle eine Datei namens `index.html` und füge diesen kompletten Code ein:
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lichess Bot Simul Arena</title>
+<title>Mini Lichess</title>
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
 
@@ -159,7 +159,6 @@ const botNames = [
 ];
 
 const bots = [];
-let globalRound = 0;
 
 for (let i = 0; i < BOT_COUNT; i++) {
   bots.push({
@@ -167,9 +166,7 @@ for (let i = 0; i < BOT_COUNT; i++) {
     elo: 1800 + Math.floor(Math.random() * 400),
     score: 0,
     games: 0,
-    busy: false,
-    lastOpponent: null,
-    lastResult: null
+    busy: false
   });
 }
 
@@ -200,39 +197,31 @@ function randomMove(game) {
 }
 
 function pickPair() {
-  const freeBots = bots
-    .filter(bot => !bot.busy)
-    .sort((a, b) => b.score - a.score);
+  const available = bots.filter(bot => !bot.busy);
 
-  if (freeBots.length < 2) {
-    return null;
-  }
+  if (available.length < 2) return null;
 
-  for (let i = 0; i < freeBots.length; i++) {
-    for (let j = i + 1; j < freeBots.length; j++) {
+  const shuffled = [...available].sort(() => Math.random() - 0.5);
 
-      const a = freeBots[i];
-      const b = freeBots[j];
+  for (let a of shuffled) {
+    for (let b of shuffled) {
+      if (a === b) continue;
 
-      if (a.lastOpponent === b.name || b.lastOpponent === a.name) {
-        continue;
+      const pair1 = `${a.name}-${b.name}`;
+      const pair2 = `${b.name}-${a.name}`;
+
+      if (!lastPairings.includes(pair1) && !lastPairings.includes(pair2)) {
+        lastPairings.push(pair1);
+
+        if (lastPairings.length > 20) {
+          lastPairings.shift();
+        }
+
+        a.busy = true;
+        b.busy = true;
+
+        return [a, b];
       }
-
-      a.busy = true;
-      b.busy = true;
-
-      return [a, b];
-    }
-  }
-
-  const a = freeBots[0];
-  const b = freeBots[1];
-
-  a.busy = true;
-  b.busy = true;
-
-  return [a, b];
-}
     }
   }
 
@@ -318,24 +307,15 @@ function playGame(match) {
       if (game.in_checkmate()) {
         if (game.turn() === 'w') {
           bot2.score += 2;
-          bot2.lastResult = 'win';
-          bot1.lastResult = 'loss';
           text = `${bot2.name} gewinnt`;
         } else {
           bot1.score += 2;
-          bot1.lastResult = 'win';
-          bot2.lastResult = 'loss';
           text = `${bot1.name} gewinnt`;
         }
       } else {
         bot1.score += 1;
         bot2.score += 1;
-        bot1.lastResult = 'draw';
-        bot2.lastResult = 'draw';
       }
-
-      bot1.lastOpponent = bot2.name;
-      bot2.lastOpponent = bot1.name;
 
       bot1.games++;
       bot2.games++;
@@ -352,7 +332,9 @@ function playGame(match) {
 
         currentGames = currentGames.filter(g => g !== match);
 
-        fillArena();
+        if (arenaRunning) {
+          fillArena();
+        }
       }, 1000);
 
       return;
@@ -369,24 +351,18 @@ function playGame(match) {
 }
 
 function fillArena() {
-  while (true) {
-    const freeBots = bots.filter(b => !b.busy);
+  let boardId = currentGames.length;
 
-    if (freeBots.length < 2) {
-      break;
-    }
-
+  while (bots.filter(b => !b.busy).length >= 2) {
     const pair = pickPair();
 
-    if (!pair) {
-      break;
-    }
+    if (!pair) return;
 
     const [bot1, bot2] = pair;
 
-    const boardId = Date.now() + Math.floor(Math.random() * 999999);
-
     createBoard(bot1, bot2, boardId);
+
+    boardId++;
   }
 }
 
