@@ -190,48 +190,137 @@ function updateRanking() {
   });
 }
 
-function randomMove(game) {
+function evaluateBoard(game) {
+  const values = {
+    p: 100,
+    n: 320,
+    b: 330,
+    r: 500,
+    q: 900,
+    k: 20000
+  };
+
+  let score = 0;
+
+  const board = game.board();
+
+  for (let row of board) {
+    for (let piece of row) {
+      if (piece) {
+        const value = values[piece.type];
+
+        score += piece.color === 'w'
+          ? value
+          : -value;
+      }
+    }
+  }
+
+  return score;
+}
+
+function stockfishLikeMove(game) {
   const moves = game.moves();
   if (moves.length === 0) return null;
-  return moves[Math.floor(Math.random() * moves.length)];
+
+  let bestMove = null;
+  let bestScore = game.turn() === 'w'
+    ? -999999
+    : 999999;
+
+  for (let move of moves) {
+    game.move(move);
+
+    let score = evaluateBoard(game);
+
+    if (game.in_checkmate()) {
+      score = game.turn() === 'w'
+        ? -999999
+        : 999999;
+    }
+
+    game.undo();
+
+    if (game.turn() === 'w') {
+      if (score > bestScore) {
+        bestScore = score;
+        bestMove = move;
+      }
+    } else {
+      if (score < bestScore) {
+        bestScore = score;
+        bestMove = move;
+      }
+    }
+  }
+
+  const topMoves = [];
+
+  for (let move of moves) {
+    game.move(move);
+
+    const score = evaluateBoard(game);
+
+    game.undo();
+
+    topMoves.push({
+      move,
+      score
+    });
+  }
+
+  topMoves.sort((a,b) =>
+    game.turn() === 'w'
+      ? b.score - a.score
+      : a.score - b.score
+  );
+
+  const limited = topMoves.slice(0, 3);
+
+  return limited[Math.floor(Math.random() * limited.length)].move;
 }
 
 function pickPair() {
-  const available = bots.filter(bot => !bot.busy);
 
-  if (available.length < 2) return null;
+  const available = bots
+    .filter(bot => !bot.busy)
+    .sort((a,b) => b.score - a.score);
 
-  const shuffled = [...available].sort(() => Math.random() - 0.5);
+  if (available.length < 2) {
+    return null;
+  }
 
-  for (let a of shuffled) {
-    for (let b of shuffled) {
-      if (a === b) continue;
+  for (let i = 0; i < available.length; i++) {
+
+    const a = available[i];
+
+    for (let j = i + 1; j < available.length; j++) {
+
+      const b = available[j];
 
       const pair1 = `${a.name}-${b.name}`;
       const pair2 = `${b.name}-${a.name}`;
 
-      if (!lastPairings.includes(pair1) && !lastPairings.includes(pair2)) {
-        lastPairings.push(pair1);
-
-        if (lastPairings.length > 20) {
-          lastPairings.shift();
-        }
+      if (
+        !lastPairings.includes(pair1) &&
+        !lastPairings.includes(pair2)
+      ) {
 
         a.busy = true;
         b.busy = true;
+
+        lastPairings.push(pair1);
+
+        if (lastPairings.length > 50) {
+          lastPairings.shift();
+        }
 
         return [a, b];
       }
     }
   }
 
-  const a = shuffled[0];
-  const b = shuffled[1];
-
-  a.busy = true;
-  b.busy = true;
-
-  return [a, b];
+  return null;
 }
 
 function createBoard(bot1, bot2, boardId) {
@@ -338,7 +427,7 @@ function playGame(match) {
       return;
     }
 
-    const move = randomMove(game);
+    const move = stockfishLikeMove(game);
 
     if (move) {
       game.move(move);
