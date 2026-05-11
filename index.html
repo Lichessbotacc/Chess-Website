@@ -1,6 +1,4 @@
-# Mini Lichess – GitHub Pages Ready
 
-Erstelle eine Datei namens `index.html` und füge diesen kompletten Code ein:
 
 ```html
 <!DOCTYPE html>
@@ -165,11 +163,12 @@ for (let i = 0; i < BOT_COUNT; i++) {
     name: botNames[i % botNames.length] + "_" + (i + 1),
     elo: 1800 + Math.floor(Math.random() * 400),
     score: 0,
-    games: 0
+    games: 0,
+    busy: false
   });
 }
 
-let currentGame = null;
+let currentGames = [];
 
 function updateRanking() {
   const tbody = document.getElementById("rankingBody");
@@ -196,7 +195,11 @@ function randomMove(game) {
 }
 
 function pickPair() {
-  const shuffled = [...bots].sort(() => Math.random() - 0.5);
+  const available = bots.filter(bot => !bot.busy);
+
+  if (available.length < 2) return null;
+
+  const shuffled = [...available].sort(() => Math.random() - 0.5);
 
   for (let a of shuffled) {
     for (let b of shuffled) {
@@ -206,59 +209,79 @@ function pickPair() {
       const pair2 = `${b.name}-${a.name}`;
 
       if (!lastPairings.includes(pair1) && !lastPairings.includes(pair2)) {
-        lastPairings = [pair1];
+        lastPairings.push(pair1);
+
+        if (lastPairings.length > 20) {
+          lastPairings.shift();
+        }
+
+        a.busy = true;
+        b.busy = true;
+
         return [a, b];
       }
     }
   }
 
-  lastPairings = [];
-  return [shuffled[0], shuffled[1]];
+  const a = shuffled[0];
+  const b = shuffled[1];
+
+  a.busy = true;
+  b.busy = true;
+
+  return [a, b];
 }
 
-function createBoard(bot1, bot2) {
+function createBoard(bot1, bot2, boardId) {
   const gamesDiv = document.getElementById("games");
 
-  gamesDiv.innerHTML = `
-    <div class="board-card">
-      <div class="player-row">
-        <span>⚪ ${bot1.name}</span>
-        <span>${bot1.elo}</span>
-      </div>
+  const card = document.createElement("div");
+  card.className = "board-card";
 
-      <div id="board" class="board"></div>
+  card.innerHTML = `
+    <div class="player-row">
+      <span>⚪ ${bot1.name}</span>
+      <span>${bot1.elo}</span>
+    </div>
 
-      <div class="player-row">
-        <span>⚫ ${bot2.name}</span>
-        <span>${bot2.elo}</span>
-      </div>
+    <div id="board${boardId}" class="board"></div>
 
-      <div class="status" id="status">
-        Partie läuft...
-      </div>
+    <div class="player-row">
+      <span>⚫ ${bot2.name}</span>
+      <span>${bot2.elo}</span>
+    </div>
+
+    <div class="status" id="status${boardId}">
+      Partie läuft...
     </div>
   `;
 
+  gamesDiv.appendChild(card);
+
   const game = new Chess();
 
-  const board = Chessboard('board', {
+  const board = Chessboard(`board${boardId}`, {
     position: 'start',
     pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
     draggable: false
   });
 
-  currentGame = {
+  const match = {
     game,
     board,
     bot1,
-    bot2
+    bot2,
+    boardId,
+    card
   };
 
-  playGame();
+  currentGames.push(match);
+
+  playGame(match);
 }
 
-function playGame() {
-  const { game, board, bot1, bot2 } = currentGame;
+function playGame(match) {
+  const { game, board, bot1, bot2, boardId, card } = match;
 
   const interval = setInterval(() => {
 
@@ -269,7 +292,7 @@ function playGame() {
 
     if (Date.now() >= tournamentEnd) {
       arenaRunning = false;
-      document.getElementById("status").innerText = "🏁 Turnier beendet";
+      document.getElementById(`status${boardId}`).innerText = "🏁 Turnier beendet";
       clearInterval(interval);
       return;
     }
@@ -295,13 +318,20 @@ function playGame() {
       bot1.games++;
       bot2.games++;
 
-      document.getElementById("status").innerText = text;
+      bot1.busy = false;
+      bot2.busy = false;
+
+      document.getElementById(`status${boardId}`).innerText = text;
 
       updateRanking();
 
       setTimeout(() => {
+        card.remove();
+
+        currentGames = currentGames.filter(g => g !== match);
+
         if (arenaRunning) {
-          nextGame();
+          fillArena();
         }
       }, 1000);
 
@@ -318,23 +348,39 @@ function playGame() {
   }, MOVE_DELAY);
 }
 
-function nextGame() {
-  const [bot1, bot2] = pickPair();
-  createBoard(bot1, bot2);
+function fillArena() {
+  let boardId = currentGames.length;
+
+  while (bots.filter(b => !b.busy).length >= 2) {
+    const pair = pickPair();
+
+    if (!pair) return;
+
+    const [bot1, bot2] = pair;
+
+    createBoard(bot1, bot2, boardId);
+
+    boardId++;
+  }
 }
 
 function startArena() {
   arenaRunning = true;
 
+  document.getElementById("games").innerHTML = "";
+
+  currentGames = [];
+
   bots.forEach(bot => {
     bot.score = 0;
     bot.games = 0;
+    bot.busy = false;
   });
 
   tournamentEnd = Date.now() + (TOURNAMENT_MINUTES * 60 * 1000);
 
   updateRanking();
-  nextGame();
+  fillArena();
 }
 
 updateRanking();
@@ -344,14 +390,3 @@ updateRanking();
 </html>
 ```
 
-Danach:
-
-1. Datei als `index.html` speichern
-2. In dein GitHub Repo hochladen
-3. Repo → Settings → Pages
-4. Branch = `main`
-5. Folder = `/root`
-6. Speichern
-7. 1–2 Minuten warten
-
-Dann läuft die Seite direkt über GitHub Pages.
