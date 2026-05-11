@@ -135,12 +135,12 @@ th {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chess.js@0.10.3/chess.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/stockfish@16.1.0/src/stockfish-nnue-16-single.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/stockfish@16.1.0/src/stockfish.js"></script>
 
 <script>
 const BOT_COUNT = 8;
-const TOURNAMENT_MINUTES = 2;
-const MOVE_DELAY = 300;
+const TOURNAMENT_MINUTES = 10;
+const MOVE_DELAY = 10;
 const STOCKFISH_LEVEL = 4;
 
 let arenaRunning = false;
@@ -192,25 +192,30 @@ function updateRanking() {
   });
 }
 
-async function getBestMove(game, skill = STOCKFISH_LEVEL) {
+function getBestMove(game, skill = STOCKFISH_LEVEL) {
   return new Promise(resolve => {
 
-    const engine = new Worker('https://cdn.jsdelivr.net/npm/stockfish@16.1.0/src/stockfish-nnue-16-single.js');
+    const engine = new Worker('https://cdn.jsdelivr.net/npm/stockfish@16.1.0/src/stockfish.js');
 
     engine.postMessage('uci');
     engine.postMessage(`setoption name Skill Level value ${skill}`);
     engine.postMessage(`position fen ${game.fen()}`);
-    engine.postMessage('go depth 4');
+    engine.postMessage('go movetime 150');
 
     engine.onmessage = function(event) {
       const line = event.data;
 
-      if (line.startsWith('bestmove')) {
+      if (typeof line === 'string' && line.startsWith('bestmove')) {
         const move = line.split(' ')[1];
+
         engine.terminate();
+
         resolve(move);
       }
     };
+
+  });
+};
 
   });
 }
@@ -308,6 +313,8 @@ function playGame(match) {
 
   const interval = setInterval(async () => {
 
+    if (thinking) return;
+
     if (!arenaRunning) {
       clearInterval(interval);
       return;
@@ -361,13 +368,11 @@ function playGame(match) {
       return;
     }
 
-    if (thinking) return;
-
     thinking = true;
 
     const move = await getBestMove(game);
 
-    if (move) {
+    if (move && move !== '(none)') {
       game.move({
         from: move.substring(0,2),
         to: move.substring(2,4),
