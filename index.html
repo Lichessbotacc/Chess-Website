@@ -137,22 +137,39 @@ th {
 <script src="https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
 
 <script>
-const bots = [
-  { name: "AlphaBot", elo: 2100, score: 0 },
-  { name: "Shadow", elo: 2050, score: 0 },
-  { name: "DarkKnight", elo: 2000, score: 0 },
-  { name: "Nova", elo: 1980, score: 0 },
-  { name: "Blizzard", elo: 1950, score: 0 },
-  { name: "Inferno", elo: 1930, score: 0 }
+const BOT_COUNT = 8;
+const TOURNAMENT_MINUTES = 2;
+const MOVE_DELAY = 120;
+
+let arenaRunning = false;
+let tournamentEnd = 0;
+let lastPairings = [];
+
+const botNames = [
+  "AlphaBot",
+  "Shadow",
+  "DarkKnight",
+  "Nova",
+  "Blizzard",
+  "Inferno",
+  "Titan",
+  "Ghost",
+  "Falcon",
+  "Hydra"
 ];
 
-let boards = [];
+const bots = [];
 
-function randomMove(game) {
-  const moves = game.moves();
-  if (moves.length === 0) return null;
-  return moves[Math.floor(Math.random() * moves.length)];
+for (let i = 0; i < BOT_COUNT; i++) {
+  bots.push({
+    name: botNames[i % botNames.length] + "_" + (i + 1),
+    elo: 1800 + Math.floor(Math.random() * 400),
+    score: 0,
+    games: 0
+  });
 }
+
+let currentGame = null;
 
 function updateRanking() {
   const tbody = document.getElementById("rankingBody");
@@ -172,46 +189,90 @@ function updateRanking() {
   });
 }
 
-function createGame(bot1, bot2, index) {
+function randomMove(game) {
+  const moves = game.moves();
+  if (moves.length === 0) return null;
+  return moves[Math.floor(Math.random() * moves.length)];
+}
+
+function pickPair() {
+  const shuffled = [...bots].sort(() => Math.random() - 0.5);
+
+  for (let a of shuffled) {
+    for (let b of shuffled) {
+      if (a === b) continue;
+
+      const pair1 = `${a.name}-${b.name}`;
+      const pair2 = `${b.name}-${a.name}`;
+
+      if (!lastPairings.includes(pair1) && !lastPairings.includes(pair2)) {
+        lastPairings = [pair1];
+        return [a, b];
+      }
+    }
+  }
+
+  lastPairings = [];
+  return [shuffled[0], shuffled[1]];
+}
+
+function createBoard(bot1, bot2) {
   const gamesDiv = document.getElementById("games");
 
-  const card = document.createElement("div");
-  card.className = "board-card";
+  gamesDiv.innerHTML = `
+    <div class="board-card">
+      <div class="player-row">
+        <span>⚪ ${bot1.name}</span>
+        <span>${bot1.elo}</span>
+      </div>
 
-  card.innerHTML = `
-    <div class="player-row">
-      <span>⚪ ${bot1.name}</span>
-      <span>${bot1.elo}</span>
-    </div>
+      <div id="board" class="board"></div>
 
-    <div id="board${index}" class="board"></div>
+      <div class="player-row">
+        <span>⚫ ${bot2.name}</span>
+        <span>${bot2.elo}</span>
+      </div>
 
-    <div class="player-row">
-      <span>⚫ ${bot2.name}</span>
-      <span>${bot2.elo}</span>
-    </div>
-
-    <div class="status" id="status${index}">
-      Läuft...
+      <div class="status" id="status">
+        Partie läuft...
+      </div>
     </div>
   `;
 
-  gamesDiv.appendChild(card);
-
   const game = new Chess();
 
-  const board = Chessboard(`board${index}`, {
+  const board = Chessboard('board', {
     position: 'start',
+    pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
     draggable: false
   });
 
-  boards.push({ game, board, bot1, bot2, statusId: `status${index}` });
+  currentGame = {
+    game,
+    board,
+    bot1,
+    bot2
+  };
+
+  playGame();
 }
 
-function playGame(match) {
-  const { game, board, bot1, bot2, statusId } = match;
+function playGame() {
+  const { game, board, bot1, bot2 } = currentGame;
 
   const interval = setInterval(() => {
+
+    if (!arenaRunning) {
+      clearInterval(interval);
+      return;
+    }
+
+    if (Date.now() >= tournamentEnd) {
+      arenaRunning = false;
+      document.getElementById("status").innerText = "🏁 Turnier beendet";
+      clearInterval(interval);
+      return;
+    }
 
     if (game.game_over()) {
       clearInterval(interval);
@@ -231,8 +292,19 @@ function playGame(match) {
         bot2.score += 1;
       }
 
-      document.getElementById(statusId).innerText = text;
+      bot1.games++;
+      bot2.games++;
+
+      document.getElementById("status").innerText = text;
+
       updateRanking();
+
+      setTimeout(() => {
+        if (arenaRunning) {
+          nextGame();
+        }
+      }, 1000);
+
       return;
     }
 
@@ -243,30 +315,26 @@ function playGame(match) {
       board.position(game.fen());
     }
 
-  }, 300);
+  }, MOVE_DELAY);
+}
+
+function nextGame() {
+  const [bot1, bot2] = pickPair();
+  createBoard(bot1, bot2);
 }
 
 function startArena() {
-  document.getElementById("games").innerHTML = "";
+  arenaRunning = true;
 
-  bots.forEach(bot => bot.score = 0);
+  bots.forEach(bot => {
+    bot.score = 0;
+    bot.games = 0;
+  });
 
-  boards = [];
-
-  let index = 0;
-
-  for (let i = 0; i < bots.length; i += 2) {
-    if (bots[i+1]) {
-      createGame(bots[i], bots[i+1], index);
-      index++;
-    }
-  }
-
-  setTimeout(() => {
-    boards.forEach(match => playGame(match));
-  }, 500);
+  tournamentEnd = Date.now() + (TOURNAMENT_MINUTES * 60 * 1000);
 
   updateRanking();
+  nextGame();
 }
 
 updateRanking();
