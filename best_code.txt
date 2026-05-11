@@ -1,1 +1,222 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mini Lichess</title>
 
+<link rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial;
+  background: #202124;
+  color: white;
+  overflow: hidden;
+}
+
+header {
+  text-align: center;
+  padding: 10px;
+  background: #111;
+}
+
+.container {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+#board {
+  width: 420px;
+  touch-action: none;
+}
+
+.panel {
+  width: 240px;
+  background: #2a2a2a;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.btn, select {
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px;
+  border: none;
+  background: #444;
+  color: white;
+  border-radius: 5px;
+}
+
+.btn:hover {
+  background: #666;
+}
+</style>
+</head>
+
+<body>
+
+<header>♟ Mini Lichess Clone</header>
+
+<div class="container">
+
+<div id="board"></div>
+
+<div class="panel">
+
+<h3>Controls</h3>
+
+<select id="botLevel">
+  <option value="random">Bot: Random</option>
+  <option value="easy">Bot: Easy</option>
+  <option value="medium">Bot: Medium</option>
+</select>
+
+<button class="btn" onclick="resetGame()">New Game</button>
+<button class="btn" onclick="toggleBot()">Toggle Bot</button>
+<button class="btn" onclick="startTournament()">Start Tournament</button>
+
+<div id="status"></div>
+
+<hr>
+
+<div id="tournament"></div>
+
+</div>
+
+</div>
+
+<!-- LIBS -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
+
+<script>
+
+let game = new Chess();
+let botEnabled = true;
+
+// BOT LEVELS
+function botMove() {
+  if (!botEnabled) return;
+  if (game.game_over()) return;
+
+  let moves = game.moves();
+  let level = document.getElementById("botLevel").value;
+
+  let move;
+
+  if (level === "random") {
+    move = moves[Math.floor(Math.random() * moves.length)];
+  }
+
+  if (level === "easy") {
+    move = moves[0]; // stupid first move
+  }
+
+  if (level === "medium") {
+    move = moves[Math.floor(Math.random() * (moves.length / 2))];
+  }
+
+  game.move(move);
+  board.position(game.fen());
+
+  updateStatus();
+}
+
+// BOARD
+let board = Chessboard('board', {
+  draggable: true,
+  position: 'start',
+
+  pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
+
+  onDragStart: function () {
+    if (game.game_over()) return false;
+  },
+
+  onDrop: function (source, target) {
+
+    let move = game.move({
+      from: source,
+      to: target,
+      promotion: 'q'
+    });
+
+    if (move === null) return 'snapback';
+
+    updateStatus();
+
+    setTimeout(botMove, 400);
+  },
+
+  onSnapEnd: function () {
+    board.position(game.fen());
+  }
+});
+
+// RESET
+function resetGame() {
+  game = new Chess();
+  board.start();
+  updateStatus();
+}
+
+// BOT TOGGLE
+function toggleBot() {
+  botEnabled = !botEnabled;
+  updateStatus();
+}
+
+// STATUS
+function updateStatus() {
+  document.getElementById("status").innerHTML =
+    "Turn: " + game.turn() +
+    "<br>Bot: " + botEnabled +
+    "<br>Level: " + document.getElementById("botLevel").value;
+}
+
+// -------------------- TOURNAMENT SYSTEM --------------------
+
+function startTournament() {
+
+  let players = ["You", "Bot", "Bot Medium"];
+  let results = {};
+
+  for (let i = 0; i < players.length; i++) {
+    for (let j = i + 1; j < players.length; j++) {
+
+      let a = players[i];
+      let b = players[j];
+
+      let winner = Math.random() > 0.5 ? a : b;
+
+      results[winner] = (results[winner] || 0) + 1;
+    }
+  }
+
+  showTournament(results);
+}
+
+function showTournament(results) {
+  let html = "<h3>Tournament Result</h3>";
+
+  for (let p in results) {
+    html += p + ": " + results[p] + "<br>";
+  }
+
+  document.getElementById("tournament").innerHTML = html;
+}
+
+// INIT
+updateStatus();
+
+</script>
+
+</body>
+</html>
