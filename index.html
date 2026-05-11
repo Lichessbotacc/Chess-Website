@@ -1,8 +1,3 @@
-# Mini Lichess – GitHub Pages Ready
-
-Erstelle eine Datei namens `index.html` und füge diesen kompletten Code ein:
-
-```html
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -190,7 +185,7 @@ function updateRanking() {
   });
 }
 
-function evaluateBoard(game) {
+function evaluateSimple(game) {
   const values = {
     p: 100,
     n: 320,
@@ -201,17 +196,14 @@ function evaluateBoard(game) {
   };
 
   let score = 0;
-
   const board = game.board();
 
   for (let row of board) {
     for (let piece of row) {
       if (piece) {
-        const value = values[piece.type];
-
         score += piece.color === 'w'
-          ? value
-          : -value;
+          ? values[piece.type]
+          : -values[piece.type];
       }
     }
   }
@@ -219,25 +211,29 @@ function evaluateBoard(game) {
   return score;
 }
 
-function stockfishLikeMove(game) {
+function botMove(game) {
   const moves = game.moves();
   if (moves.length === 0) return null;
 
   let bestMove = null;
-  let bestScore = game.turn() === 'w'
-    ? -999999
-    : 999999;
+  let bestScore = game.turn() === 'w' ? -999999 : 999999;
 
   for (let move of moves) {
+
     game.move(move);
 
-    let score = evaluateBoard(game);
+    let score = evaluateSimple(game);
 
-    if (game.in_checkmate()) {
-      score = game.turn() === 'w'
-        ? -999999
-        : 999999;
+    const replies = game.moves();
+    let replyScore = 0;
+
+    for (let r of replies) {
+      game.move(r);
+      replyScore += evaluateSimple(game);
+      game.undo();
     }
+
+    score += (replyScore / Math.max(1, replies.length)) * 0.2;
 
     game.undo();
 
@@ -254,30 +250,7 @@ function stockfishLikeMove(game) {
     }
   }
 
-  const topMoves = [];
-
-  for (let move of moves) {
-    game.move(move);
-
-    const score = evaluateBoard(game);
-
-    game.undo();
-
-    topMoves.push({
-      move,
-      score
-    });
-  }
-
-  topMoves.sort((a,b) =>
-    game.turn() === 'w'
-      ? b.score - a.score
-      : a.score - b.score
-  );
-
-  const limited = topMoves.slice(0, 3);
-
-  return limited[Math.floor(Math.random() * limited.length)].move;
+  return bestMove;
 }
 
 function pickPair() {
@@ -286,34 +259,24 @@ function pickPair() {
     .filter(bot => !bot.busy)
     .sort((a,b) => b.score - a.score);
 
-  if (available.length < 2) {
-    return null;
-  }
+  if (available.length < 2) return null;
 
   for (let i = 0; i < available.length; i++) {
-
     const a = available[i];
 
     for (let j = i + 1; j < available.length; j++) {
-
       const b = available[j];
 
       const pair1 = `${a.name}-${b.name}`;
       const pair2 = `${b.name}-${a.name}`;
 
-      if (
-        !lastPairings.includes(pair1) &&
-        !lastPairings.includes(pair2)
-      ) {
+      if (!lastPairings.includes(pair1) && !lastPairings.includes(pair2)) {
 
         a.busy = true;
         b.busy = true;
 
         lastPairings.push(pair1);
-
-        if (lastPairings.length > 50) {
-          lastPairings.shift();
-        }
+        if (lastPairings.length > 50) lastPairings.shift();
 
         return [a, b];
       }
@@ -357,15 +320,7 @@ function createBoard(bot1, bot2, boardId) {
     draggable: false
   });
 
-  const match = {
-    game,
-    board,
-    bot1,
-    bot2,
-    boardId,
-    card
-  };
-
+  const match = { game, board, bot1, bot2, boardId, card };
   currentGames.push(match);
 
   playGame(match);
@@ -408,26 +363,23 @@ function playGame(match) {
 
       bot1.games++;
       bot2.games++;
-
       bot1.busy = false;
       bot2.busy = false;
 
-      document.getElementById(`status${boardId}`).innerText = text;
-
       updateRanking();
+
+      document.getElementById(`status${boardId}`).innerText = text;
 
       setTimeout(() => {
         card.remove();
-
         currentGames = currentGames.filter(g => g !== match);
-
         fillArena();
       }, 1000);
 
       return;
     }
 
-    const move = stockfishLikeMove(game);
+    const move = botMove(game);
 
     if (move) {
       game.move(move);
@@ -440,16 +392,10 @@ function playGame(match) {
 function fillArena() {
   while (true) {
     const freeBots = bots.filter(b => !b.busy);
-
-    if (freeBots.length < 2) {
-      break;
-    }
+    if (freeBots.length < 2) break;
 
     const pair = pickPair();
-
-    if (!pair) {
-      break;
-    }
+    if (!pair) break;
 
     const [bot1, bot2] = pair;
 
@@ -463,7 +409,6 @@ function startArena() {
   arenaRunning = true;
 
   document.getElementById("games").innerHTML = "";
-
   currentGames = [];
 
   bots.forEach(bot => {
@@ -483,16 +428,3 @@ updateRanking();
 
 </body>
 </html>
-```
-
-Danach:
-
-1. Datei als `index.html` speichern
-2. In dein GitHub Repo hochladen
-3. Repo → Settings → Pages
-4. Branch = `main`
-5. Folder = `/root`
-6. Speichern
-7. 1–2 Minuten warten
-
-Dann läuft die Seite direkt über GitHub Pages.
