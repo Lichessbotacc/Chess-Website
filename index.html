@@ -358,13 +358,14 @@ function createBoard(bot1, bot2, boardId) {
   });
 
   const match = {
-    game,
-    board,
-    bot1,
-    bot2,
-    boardId,
-    card
-  };
+  game,
+  board,
+  bot1,
+  bot2,
+  boardId,
+  card,
+  thinking: false
+};
 
   currentGames.push(match);
 
@@ -427,14 +428,22 @@ function playGame(match) {
       return;
     }
 
-    const move = stockfishLikeMove(game);
+    if (!match.thinking) {
+
+  match.thinking = true;
+
+  setTimeout(() => {
+
+    const move = botMove(game);
 
     if (move) {
       game.move(move);
       board.position(game.fen());
     }
 
-  }, MOVE_DELAY);
+    match.thinking = false;
+
+  }, THINK_TIME);
 }
 
 function fillArena() {
