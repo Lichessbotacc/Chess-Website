@@ -329,7 +329,7 @@ function playGame(match) {
       return;
     }
 
-    if (!match.thinking) {
+        if (!match.thinking) {
       match.thinking = true;
 
       setTimeout(() => {
@@ -344,6 +344,10 @@ function playGame(match) {
 
       }, MOVE_DELAY);
     }
+
+  }, MOVE_DELAY);   // ❗ DAS FEHLT BEI DIR
+
+}
 
 
 function fillArena() {
