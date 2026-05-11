@@ -135,13 +135,11 @@ th {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chess.js@0.10.3/chess.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/stockfish@16.1.0/src/stockfish.js"></script>
 
 <script>
 const BOT_COUNT = 8;
-const TOURNAMENT_MINUTES = 10;
-const MOVE_DELAY = 10;
-const STOCKFISH_LEVEL = 4;
+const TOURNAMENT_MINUTES = 2;
+const MOVE_DELAY = 120;
 
 let arenaRunning = false;
 let tournamentEnd = 0;
@@ -192,32 +190,10 @@ function updateRanking() {
   });
 }
 
-function getBestMove(game, skill = STOCKFISH_LEVEL) {
-  return new Promise(resolve => {
-
-    const engine = new Worker('https://cdn.jsdelivr.net/npm/stockfish@16.1.0/src/stockfish.js');
-
-    engine.postMessage('uci');
-    engine.postMessage(`setoption name Skill Level value ${skill}`);
-    engine.postMessage(`position fen ${game.fen()}`);
-    engine.postMessage('go movetime 150');
-
-    engine.onmessage = function(event) {
-      const line = event.data;
-
-      if (typeof line === 'string' && line.startsWith('bestmove')) {
-        const move = line.split(' ')[1];
-
-        engine.terminate();
-
-        resolve(move);
-      }
-    };
-
-  });
-};
-
-  });
+function randomMove(game) {
+  const moves = game.moves();
+  if (moves.length === 0) return null;
+  return moves[Math.floor(Math.random() * moves.length)];
 }
 
 function pickPair() {
@@ -309,11 +285,7 @@ function createBoard(bot1, bot2, boardId) {
 function playGame(match) {
   const { game, board, bot1, bot2, boardId, card } = match;
 
-  let thinking = false;
-
-  const interval = setInterval(async () => {
-
-    if (thinking) return;
+  const interval = setInterval(() => {
 
     if (!arenaRunning) {
       clearInterval(interval);
@@ -360,35 +332,29 @@ function playGame(match) {
 
         currentGames = currentGames.filter(g => g !== match);
 
-        if (arenaRunning) {
-          fillArena();
-        }
+        fillArena();
       }, 1000);
 
       return;
     }
 
-    thinking = true;
+    const move = randomMove(game);
 
-    const move = await getBestMove(game);
-
-    if (move && move !== '(none)') {
-      game.move({
-        from: move.substring(0,2),
-        to: move.substring(2,4),
-        promotion: 'q'
-      });
-
+    if (move) {
+      game.move(move);
       board.position(game.fen());
     }
-
-    thinking = false;
 
   }, MOVE_DELAY);
 }
 
 function fillArena() {
-  while (bots.filter(b => !b.busy).length >= 2) {
+  while (true) {
+    const freeBots = bots.filter(b => !b.busy);
+
+    if (freeBots.length < 2) {
+      break;
+    }
 
     const pair = pickPair();
 
@@ -398,7 +364,7 @@ function fillArena() {
 
     const [bot1, bot2] = pair;
 
-    const boardId = Math.floor(Math.random() * 99999999);
+    const boardId = Date.now() + Math.floor(Math.random() * 999999);
 
     createBoard(bot1, bot2, boardId);
   }
