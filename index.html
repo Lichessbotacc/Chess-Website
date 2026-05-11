@@ -1,4 +1,6 @@
+# Mini Lichess – GitHub Pages Ready
 
+Erstelle eine Datei namens `index.html` und füge diesen kompletten Code ein:
 
 ```html
 <!DOCTYPE html>
@@ -136,7 +138,7 @@ th {
 
 <script>
 const BOT_COUNT = 8;
-const TOURNAMENT_MINUTES = 100;
+const TOURNAMENT_MINUTES = 2;
 const MOVE_DELAY = 120;
 
 let arenaRunning = false;
@@ -330,9 +332,7 @@ function playGame(match) {
 
         currentGames = currentGames.filter(g => g !== match);
 
-        if (arenaRunning) {
-          fillArena();
-        }
+        fillArena();
       }, 1000);
 
       return;
@@ -349,18 +349,24 @@ function playGame(match) {
 }
 
 function fillArena() {
-  let boardId = currentGames.length;
+  while (true) {
+    const freeBots = bots.filter(b => !b.busy);
 
-  while (bots.filter(b => !b.busy).length >= 2) {
+    if (freeBots.length < 2) {
+      break;
+    }
+
     const pair = pickPair();
 
-    if (!pair) return;
+    if (!pair) {
+      break;
+    }
 
     const [bot1, bot2] = pair;
 
-    createBoard(bot1, bot2, boardId);
+    const boardId = Date.now() + Math.floor(Math.random() * 999999);
 
-    boardId++;
+    createBoard(bot1, bot2, boardId);
   }
 }
 
@@ -390,3 +396,14 @@ updateRanking();
 </html>
 ```
 
+Danach:
+
+1. Datei als `index.html` speichern
+2. In dein GitHub Repo hochladen
+3. Repo → Settings → Pages
+4. Branch = `main`
+5. Folder = `/root`
+6. Speichern
+7. 1–2 Minuten warten
+
+Dann läuft die Seite direkt über GitHub Pages.
