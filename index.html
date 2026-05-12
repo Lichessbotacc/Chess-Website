@@ -265,10 +265,11 @@ function createBoard(bot1, bot2, boardId) {
   });
 
   const engine = new Worker(
-    "https://cdn.jsdelivr.net/npm/stockfish@16.0.0/src/stockfish.js"
+    "https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js"
   );
 
   engine.postMessage("uci");
+  engine.postMessage("isready");
   engine.postMessage("setoption name Skill Level value 3");
 
   const match = {
@@ -293,22 +294,29 @@ function stockfishMove(match) {
 
     const fen = match.game.fen();
 
-    match.engine.onmessage = function(event) {
+    function handleMessage(event) {
 
       const line = event.data;
 
+      console.log(line);
+
       if (line.startsWith("bestmove")) {
+
+        match.engine.removeEventListener("message", handleMessage);
 
         const move = line.split(" ")[1];
 
         resolve(move);
       }
-    };
+    }
 
+    match.engine.addEventListener("message", handleMessage);
+
+    match.engine.postMessage("ucinewgame");
     match.engine.postMessage("position fen " + fen);
 
-    // Stärke / Denkzeit
-    match.engine.postMessage("go depth 3");
+    // schwächer + schneller
+    match.engine.postMessage("go depth 2");
   });
 }
 
