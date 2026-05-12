@@ -3,104 +3,106 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mini Lichess Arena</title>
+<title>Mini Lichess</title>
 
-<link rel="stylesheet"
-href="https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
 
 <style>
-body{
-  margin:0;
-  background:#1f1f1f;
-  color:white;
-  font-family:Arial;
+body {
+  margin: 0;
+  background: #1f1f1f;
+  color: white;
+  font-family: Arial;
 }
 
-header{
-  background:#111;
-  padding:15px;
-  font-size:24px;
-  font-weight:bold;
-  text-align:center;
-  border-bottom:2px solid #333;
+header {
+  background: #111;
+  padding: 15px;
+  font-size: 24px;
+  font-weight: bold;
+  text-align: center;
+  border-bottom: 2px solid #333;
 }
 
-.controls{
-  text-align:center;
-  margin:20px;
+.container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px;
+  padding: 20px;
 }
 
-button{
-  background:#8bc34a;
-  border:none;
-  color:black;
-  padding:12px 20px;
-  border-radius:10px;
-  font-size:16px;
-  font-weight:bold;
-  cursor:pointer;
+.board-card {
+  background: #2b2b2b;
+  border-radius: 14px;
+  padding: 15px;
+  width: 360px;
+  box-shadow: 0 0 15px rgba(0,0,0,0.4);
 }
 
-.container{
-  display:flex;
-  flex-wrap:wrap;
-  justify-content:center;
-  gap:20px;
-  padding:20px;
+.player-row {
+  display: flex;
+  justify-content: space-between;
+  margin: 8px 0;
+  font-weight: bold;
 }
 
-.board-card{
-  background:#2b2b2b;
-  border-radius:14px;
-  padding:15px;
-  width:360px;
-  box-shadow:0 0 15px rgba(0,0,0,0.4);
+.board {
+  width: 330px;
+  margin: auto;
 }
 
-.player-row{
-  display:flex;
-  justify-content:space-between;
-  margin:8px 0;
-  font-weight:bold;
+.status {
+  text-align: center;
+  margin-top: 10px;
+  color: #aaa;
 }
 
-.board{
-  width:330px;
-  margin:auto;
+.controls {
+  text-align: center;
+  margin-top: 20px;
 }
 
-.status{
-  text-align:center;
-  margin-top:10px;
-  color:#aaa;
+button {
+  background: #8bc34a;
+  border: none;
+  color: black;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 16px;
 }
 
-.ranking{
-  max-width:900px;
-  margin:auto;
-  padding:20px;
+button:hover {
+  opacity: 0.9;
 }
 
-table{
-  width:100%;
-  border-collapse:collapse;
-  background:#2b2b2b;
-  border-radius:10px;
-  overflow:hidden;
+.ranking {
+  max-width: 900px;
+  margin: auto;
+  padding: 20px;
 }
 
-th,td{
-  padding:12px;
-  border-bottom:1px solid #444;
-  text-align:center;
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #2b2b2b;
+  border-radius: 10px;
+  overflow: hidden;
 }
 
-th{
-  background:#111;
+th, td {
+  padding: 12px;
+  border-bottom: 1px solid #444;
+  text-align: center;
+}
+
+th {
+  background: #111;
 }
 </style>
 </head>
-
 <body>
 
 <header>♟ Mini Lichess Arena</header>
@@ -113,7 +115,6 @@ th{
 
 <div class="ranking">
   <h2>🏆 Ranking</h2>
-
   <table>
     <thead>
       <tr>
@@ -122,26 +123,22 @@ th{
         <th>Punkte</th>
       </tr>
     </thead>
-
     <tbody id="rankingBody"></tbody>
   </table>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-
 <script src="https://cdn.jsdelivr.net/npm/chess.js@0.10.3/chess.min.js"></script>
-
 <script src="https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
-
-<script src="https://cdn.jsdelivr.net/npm/stockfish@11/stockfish.min.js"></script>
 
 <script>
 const BOT_COUNT = 10;
-const MOVE_DELAY = 100;
 const TOURNAMENT_MINUTES = 10;
+const MOVE_DELAY = 120;
 
 let arenaRunning = false;
 let tournamentEnd = 0;
+let lastPairings = [];
 
 const botNames = [
   "Seher",
@@ -158,30 +155,29 @@ const botNames = [
 
 const bots = [];
 
-for(let i=0;i<BOT_COUNT;i++){
-
+for (let i = 0; i < BOT_COUNT; i++) {
   bots.push({
-    name: botNames[i % botNames.length] + "_" + (i+1),
-    elo: 1800 + Math.floor(Math.random()*300),
-    score:0,
-    busy:false
+    name: botNames[i % botNames.length] + "_" + (i + 1),
+    elo: 1800 + Math.floor(Math.random() * 400),
+    score: 0,
+    games: 0,
+    busy: false
   });
 }
 
-function updateRanking(){
+let currentGames = [];
 
-  const tbody =
-    document.getElementById("rankingBody");
+function updateRanking() {
+  const tbody = document.getElementById("rankingBody");
 
-  bots.sort((a,b)=>b.score-a.score);
+  bots.sort((a,b) => b.score - a.score);
 
   tbody.innerHTML = "";
 
-  bots.forEach((bot,index)=>{
-
+  bots.forEach((bot, index) => {
     tbody.innerHTML += `
       <tr>
-        <td>${index+1}</td>
+        <td>${index + 1}</td>
         <td>${bot.name}</td>
         <td>${bot.score}</td>
       </tr>
@@ -189,31 +185,52 @@ function updateRanking(){
   });
 }
 
-function pickPair(){
+function randomMove(game) {
+  const moves = game.moves();
+  if (moves.length === 0) return null;
+  return moves[Math.floor(Math.random() * moves.length)];
+}
 
-  const free = bots.filter(b=>!b.busy);
+function pickPair() {
+  const available = bots.filter(bot => !bot.busy);
 
-  if(free.length < 2) return null;
+  if (available.length < 2) return null;
 
-  free.sort(()=>Math.random()-0.5);
+  const shuffled = [...available].sort(() => Math.random() - 0.5);
 
-  const a = free[0];
-  const b = free[1];
+  for (let a of shuffled) {
+    for (let b of shuffled) {
+      if (a === b) continue;
+
+      const pair1 = `${a.name}-${b.name}`;
+      const pair2 = `${b.name}-${a.name}`;
+
+      if (!lastPairings.includes(pair1) && !lastPairings.includes(pair2)) {
+        lastPairings.push(pair1);
+
+        if (lastPairings.length > 20) lastPairings.shift();
+
+        a.busy = true;
+        b.busy = true;
+
+        return [a, b];
+      }
+    }
+  }
+
+  const a = shuffled[0];
+  const b = shuffled[1];
 
   a.busy = true;
   b.busy = true;
 
-  return [a,b];
+  return [a, b];
 }
 
-function createBoard(bot1, bot2, id){
+function createBoard(bot1, bot2, boardId) {
+  const gamesDiv = document.getElementById("games");
 
-  const games =
-    document.getElementById("games");
-
-  const card =
-    document.createElement("div");
-
+  const card = document.createElement("div");
   card.className = "board-card";
 
   card.innerHTML = `
@@ -222,227 +239,150 @@ function createBoard(bot1, bot2, id){
       <span>${bot1.elo}</span>
     </div>
 
-    <div id="board${id}" class="board"></div>
+    <div id="board${boardId}" class="board"></div>
 
     <div class="player-row">
       <span>⚫ ${bot2.name}</span>
       <span>${bot2.elo}</span>
     </div>
 
-    <div class="status" id="status${id}">
+    <div class="status" id="status${boardId}">
       Partie läuft...
     </div>
   `;
 
-  games.appendChild(card);
+  gamesDiv.appendChild(card);
 
   const game = new Chess();
 
-  const board = Chessboard(`board${id}`,{
-    position:"start",
-    draggable:false,
-    pieceTheme:
-    "https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png"
+  const board = Chessboard(`board${boardId}`, {
+    position: 'start',
+    pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
+    draggable: false
   });
 
-  const engine = STOCKFISH();
-
-  engine.postMessage("uci");
-
-  engine.postMessage(
-    "setoption name Skill Level value 3"
-  );
-
-  playGame({
+  const match = {
     game,
     board,
-    engine,
     bot1,
     bot2,
-    id,
+    boardId,
     card
-  });
+  };
+
+  currentGames.push(match);
+
+  playGame(match);
 }
 
-function getBestMove(engine, game){
+function playGame(match) {
+  const { game, board, bot1, bot2, boardId, card } = match;
 
-  return new Promise(resolve=>{
+  const interval = setInterval(() => {
 
-    const fen = game.fen();
-
-    engine.onmessage = function(event){
-
-      let line = event;
-
-      if(typeof event === "object"){
-        line = event.data;
-      }
-
-      console.log(line);
-
-      if(line.startsWith("bestmove")){
-
-        const move =
-          line.split(" ")[1];
-
-        resolve(move);
-      }
-    };
-
-    engine.postMessage(
-      "position fen " + fen
-    );
-
-    engine.postMessage("go depth 2");
-  });
-}
-
-function playGame(match){
-
-  const {
-    game,
-    board,
-    engine,
-    bot1,
-    bot2,
-    id,
-    card
-  } = match;
-
-  let thinking = false;
-
-  const interval = setInterval(async ()=>{
-
-    if(!arenaRunning){
-
+    if (!arenaRunning) {
       clearInterval(interval);
       return;
     }
 
-    if(Date.now() >= tournamentEnd){
-
+    if (Date.now() >= tournamentEnd) {
+      arenaRunning = false;
+      document.getElementById(`status${boardId}`).innerText = "🏁 Turnier beendet";
       clearInterval(interval);
-
-      document.getElementById(
-        `status${id}`
-      ).innerText = "🏁 Turnier beendet";
-
       return;
     }
 
-    if(game.game_over()){
-
+    if (game.game_over()) {
       clearInterval(interval);
 
       let text = "Remis";
 
-      if(game.in_checkmate()){
-
-        if(game.turn() === "w"){
-
+      if (game.in_checkmate()) {
+        if (game.turn() === 'w') {
           bot2.score += 2;
           text = `${bot2.name} gewinnt`;
-
-        }else{
-
+        } else {
           bot1.score += 2;
           text = `${bot1.name} gewinnt`;
         }
-
-      }else{
-
+      } else {
         bot1.score += 1;
         bot2.score += 1;
       }
 
+      bot1.games++;
+      bot2.games++;
+
       bot1.busy = false;
       bot2.busy = false;
 
+      document.getElementById(`status${boardId}`).innerText = text;
+
       updateRanking();
 
-      document.getElementById(
-        `status${id}`
-      ).innerText = text;
-
-      setTimeout(()=>{
-
+      setTimeout(() => {
         card.remove();
-
+        currentGames = currentGames.filter(g => g !== match);
         fillArena();
-
-      },1500);
+      }, 1000);
 
       return;
     }
 
-    if(thinking) return;
+        if (!match.thinking) {
+      match.thinking = true;
 
-    thinking = true;
+      setTimeout(() => {
+        const move = randomMove(game);
 
-    try{
+        if (move) {
+          game.move(move);
+          board.position(game.fen());
+        }
 
-      const move =
-        await getBestMove(engine, game);
+        match.thinking = false;
 
-      if(move && move !== "(none)"){
-
-        game.move({
-          from: move.substring(0,2),
-          to: move.substring(2,4),
-          promotion:"q"
-        });
-
-        board.position(game.fen());
-      }
-
-    }catch(err){
-
-      console.log(err);
+      }, MOVE_DELAY);
     }
 
-    thinking = false;
+  }, MOVE_DELAY);   // ❗ DAS FEHLT BEI DIR
 
-  }, MOVE_DELAY);
 }
 
-function fillArena(){
 
-  while(true){
+function fillArena() {
+  while (true) {
+    const freeBots = bots.filter(b => !b.busy);
+
+    if (freeBots.length < 2) break;
 
     const pair = pickPair();
 
-    if(!pair) break;
+    if (!pair) break;
 
     const [bot1, bot2] = pair;
 
-    createBoard(
-      bot1,
-      bot2,
-      "b" + Date.now() + Math.floor(Math.random()*999999)
-    );
+    const boardId = Date.now() + Math.floor(Math.random() * 999999);
+
+    createBoard(bot1, bot2, boardId);
   }
 }
 
-function startArena(){
-
+function startArena() {
   arenaRunning = true;
 
-  tournamentEnd =
-    Date.now() +
-    TOURNAMENT_MINUTES * 60 * 1000;
+  document.getElementById("games").innerHTML = "";
+  currentGames = [];
 
-  document.getElementById(
-    "games"
-  ).innerHTML = "";
-
-  bots.forEach(bot=>{
-
+  bots.forEach(bot => {
     bot.score = 0;
+    bot.games = 0;
     bot.busy = false;
   });
 
-  updateRanking();
+  tournamentEnd = Date.now() + (TOURNAMENT_MINUTES * 60 * 1000);
 
+  updateRanking();
   fillArena();
 }
 
@@ -450,4 +390,4 @@ updateRanking();
 </script>
 
 </body>
-</html>
+</html>  Er soll StockFish 3 spielen offiziell, oder meinen bot DarkOnWeakBot 
