@@ -1,14 +1,13 @@
 class GameEngine {
-
   constructor() {
     this.game = new Chess();
   }
 
-  move(move) {
-    return this.game.move(move);
+  move(m) {
+    return this.game.move(m);
   }
 
-  getFen() {
+  fen() {
     return this.game.fen();
   }
 
@@ -16,12 +15,11 @@ class GameEngine {
     return this.game.moves();
   }
 
-  isGameOver() {
-    return this.game.game_over();
-  }
-
   turn() {
     return this.game.turn();
   }
 
+  over() {
+    return this.game.game_over();
+  }
 }
