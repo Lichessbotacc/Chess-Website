@@ -1,3 +1,5 @@
+console.log("APP LOADED");
+
 let board;
 let engine;
 let bot1;
@@ -5,7 +7,7 @@ let bot2;
 
 function startGame() {
 
-  console.log("GAME STARTED");
+  console.log("START CLICKED");
 
   engine = new GameEngine();
 
@@ -22,7 +24,7 @@ function startGame() {
   loop();
 }
 
-async function loop() {
+function loop() {
 
   if (engine.over()) {
     document.getElementById("status").innerText = "Game Over";
@@ -45,5 +47,5 @@ async function loop() {
   setTimeout(loop, 400);
 }
 
-// 🔥 DAS war dein Hauptfehler
+// 🔥 WICHTIG: macht Button global
 window.startGame = startGame;
