@@ -130,7 +130,7 @@ th {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chess.js@0.10.3/chess.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/stockfish@16.0.0/src/stockfish.js"></script>
+
 <script>
 const BOT_COUNT = 10;
 const TOURNAMENT_MINUTES = 10;
@@ -193,23 +193,30 @@ async function getStockfishMove(game, level = 3) {
       "https://cdn.jsdelivr.net/npm/stockfish@16.0.0/src/stockfish.js"
     );
 
-    engine.postMessage("uci");
-
-    engine.postMessage(
-      "setoption name Skill Level value " + level
-    );
-
-    engine.postMessage(
-      "position fen " + game.fen()
-    );
-
-    engine.postMessage("go depth 8");
+    let ready = false;
 
     engine.onmessage = function(event) {
 
       const line = event.data;
 
-      if (line.startsWith("bestmove")) {
+      console.log(line);
+
+      if (line === "uciok") {
+
+        engine.postMessage(
+          "setoption name Skill Level value " + level
+        );
+
+        engine.postMessage(
+          "position fen " + game.fen()
+        );
+
+        engine.postMessage("go movetime 200");
+
+        ready = true;
+      }
+
+      if (ready && line.startsWith("bestmove")) {
 
         const move = line.split(" ")[1];
 
@@ -217,7 +224,10 @@ async function getStockfishMove(game, level = 3) {
 
         resolve(move);
       }
+
     };
+
+    engine.postMessage("uci");
 
   });
 
@@ -367,7 +377,12 @@ function playGame(match) {
       setTimeout(async () => {
         let move;
 
-if (bot1.name.includes("DarkOnWeakBot")) {
+const currentBot =
+  game.turn() === "w"
+    ? bot1
+    : bot2;
+
+if (currentBot.name.includes("DarkOnWeakBot")) {
 
   // Dein eigener schwacher Bot
   const moves = game.moves();
