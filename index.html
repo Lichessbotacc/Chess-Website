@@ -317,39 +317,44 @@ function createBoard(bot1, bot2, boardId) {
   playGame(match);
 }
 
-function playGame(match) {
+async function playGame(match) {
+
   const { game, board, bot1, bot2, boardId, card } = match;
 
-  const interval = setInterval(() => {
+  async function nextMove() {
 
-    if (!arenaRunning) {
-      clearInterval(interval);
-      return;
-    }
+    if (!arenaRunning) return;
 
     if (Date.now() >= tournamentEnd) {
       arenaRunning = false;
-      document.getElementById(`status${boardId}`).innerText = "🏁 Turnier beendet";
-      clearInterval(interval);
+      document.getElementById(`status${boardId}`).innerText =
+        "🏁 Turnier beendet";
       return;
     }
 
     if (game.moves().length === 0) {
-      clearInterval(interval);
 
       let text = "Remis";
 
       if (game.in_checkmate && game.in_checkmate()) {
-        if (game.turn() === 'w') {
+
+        if (game.turn() === "w") {
+
           bot2.score += 2;
           text = `${bot2.name} gewinnt`;
+
         } else {
+
           bot1.score += 2;
           text = `${bot1.name} gewinnt`;
+
         }
+
       } else {
+
         bot1.score += 1;
         bot2.score += 1;
+
       }
 
       bot1.games++;
@@ -363,53 +368,51 @@ function playGame(match) {
       updateRanking();
 
       setTimeout(() => {
+
         card.remove();
-        currentGames = currentGames.filter(g => g !== match);
+
+        currentGames =
+          currentGames.filter(g => g !== match);
+
         fillArena();
+
       }, 1000);
 
       return;
     }
 
-        if (!match.thinking) {
-      match.thinking = true;
-      console.log("TURN:", game.turn());
-      setTimeout(async () => {
-        let move;
+    let move;
 
-const currentBot =
-  game.turn() === "w"
-    ? bot1
-    : bot2;
+    const currentBot =
+      game.turn() === "w"
+        ? bot1
+        : bot2;
 
-if (currentBot.name.includes("DarkOnWeakBot")) {
+    if (currentBot.name.includes("DarkOnWeakBot")) {
 
-  // Dein eigener schwacher Bot
-  const moves = game.moves();
+      const moves = game.moves();
 
-  move = moves[Math.floor(Math.random() * moves.length)];
+      move =
+        moves[Math.floor(Math.random() * moves.length)];
 
-} else {
-  console.log("Stockfish denkt...");
-  // Stockfish Stärke 3
-  move = await getStockfishMove(game, 3);
+    } else {
 
-}
+      move = await getStockfishMove(game, 3);
 
-if (move) {
-console.log("MOVE:", move);
-  game.move(move, { sloppy:true });
-
-  board.position(game.fen());
-}
-
-        match.thinking = false;
-
-      }, MOVE_DELAY);
     }
 
-  }, MOVE_DELAY);   // ❗ DAS FEHLT BEI DIR
+    if (move) {
 
+      game.move(move, { sloppy: true });
+
+      board.position(game.fen());
+
+    }
+
+    setTimeout(nextMove, MOVE_DELAY);
+  }
+
+  nextMove();
 }
 
 
