@@ -334,12 +334,12 @@ function playGame(match) {
       return;
     }
 
-    if (game.game_over()) {
+    if (game.moves().length === 0) {
       clearInterval(interval);
 
       let text = "Remis";
 
-      if (game.in_checkmate()) {
+      if (game.in_checkmate && game.in_checkmate()) {
         if (game.turn() === 'w') {
           bot2.score += 2;
           text = `${bot2.name} gewinnt`;
@@ -373,7 +373,7 @@ function playGame(match) {
 
         if (!match.thinking) {
       match.thinking = true;
-
+      console.log("TURN:", game.turn());
       setTimeout(async () => {
         let move;
 
@@ -390,14 +390,14 @@ if (currentBot.name.includes("DarkOnWeakBot")) {
   move = moves[Math.floor(Math.random() * moves.length)];
 
 } else {
-
+  console.log("Stockfish denkt...");
   // Stockfish Stärke 3
   move = await getStockfishMove(game, 3);
 
 }
 
 if (move) {
-
+console.log("MOVE:", move);
   game.move(move, { sloppy:true });
 
   board.position(game.fen());
