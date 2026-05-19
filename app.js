@@ -5,6 +5,8 @@ let bot2;
 
 function startGame() {
 
+  console.log("GAME STARTED");
+
   engine = new GameEngine();
 
   bot1 = new DarkOnWeakBot();
@@ -15,27 +17,33 @@ function startGame() {
     draggable: false
   });
 
-  document.getElementById("status").innerText = "Game started";
+  document.getElementById("status").innerText = "Game läuft...";
 
   loop();
 }
 
 async function loop() {
 
-  if (engine.isGameOver()) {
+  if (engine.over()) {
     document.getElementById("status").innerText = "Game Over";
     return;
   }
 
-  const currentBot = engine.turn() === "w" ? bot1 : bot2;
+  const currentBot =
+    engine.turn() === "w" ? bot1 : bot2;
 
   const move = currentBot.getMove(engine);
 
-  engine.move(move);
-  board.position(engine.getFen());
+  if (move) {
+    engine.move(move);
+    board.position(engine.fen());
+  }
 
   document.getElementById("status").innerText =
-    currentBot.name + " played " + move;
+    currentBot.name + " spielt " + move;
 
-  setTimeout(loop, 300);
+  setTimeout(loop, 400);
 }
+
+// 🔥 DAS war dein Hauptfehler
+window.startGame = startGame;
