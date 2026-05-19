@@ -130,7 +130,7 @@ th {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chess.js@0.10.3/chess.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
-
+<script src="https://cdn.jsdelivr.net/npm/stockfish@16.0.0/src/stockfish.min.js"></script>
 <script>
 const BOT_COUNT = 10;
 const TOURNAMENT_MINUTES = 10;
@@ -185,10 +185,37 @@ function updateRanking() {
   });
 }
 
-function randomMove(game) {
-  const moves = game.moves();
-  if (moves.length === 0) return null;
-  return moves[Math.floor(Math.random() * moves.length)];
+async function getStockfishMove(game, level=3) {
+
+  return new Promise(resolve => {
+
+    const engine = STOCKFISH();
+
+    engine.postMessage("uci");
+    engine.postMessage("setoption name Skill Level value " + level);
+
+    engine.postMessage("position fen " + game.fen());
+
+    engine.postMessage("go depth 8");
+
+    engine.onmessage = function(event) {
+
+      const line = typeof event === "string"
+        ? event
+        : event.data;
+
+      if (line.startsWith("bestmove")) {
+
+        const move = line.split(" ")[1];
+
+        resolve(move);
+
+        engine.terminate();
+      }
+    };
+
+  });
+
 }
 
 function pickPair() {
@@ -332,13 +359,29 @@ function playGame(match) {
         if (!match.thinking) {
       match.thinking = true;
 
-      setTimeout(() => {
-        const move = randomMove(game);
+      setTimeout(async () => {
+        let move;
 
-        if (move) {
-          game.move(move);
-          board.position(game.fen());
-        }
+if (bot1.name.includes("DarkOnWeakBot")) {
+
+  // Dein eigener schwacher Bot
+  const moves = game.moves();
+
+  move = moves[Math.floor(Math.random() * moves.length)];
+
+} else {
+
+  // Stockfish Stärke 3
+  move = await getStockfishMove(game, 3);
+
+}
+
+if (move) {
+
+  game.move(move, { sloppy:true });
+
+  board.position(game.fen());
+}
 
         match.thinking = false;
 
