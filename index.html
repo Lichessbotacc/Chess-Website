@@ -131,17 +131,18 @@ th {
 <script src="https://cdn.jsdelivr.net/npm/chess.js@0.10.3/chess.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
 
+
 <script>
 const BOT_COUNT = 10;
 const TOURNAMENT_MINUTES = 10;
-const MOVE_DELAY = 120;
+const MOVE_DELAY = 300;
 
 let arenaRunning = false;
 let tournamentEnd = 0;
 let lastPairings = [];
 
 const botNames = [
-  "Seher",
+  "DarkOnWeakBot",
   "Berkay",
   "Metin",
   "Melda",
@@ -168,114 +169,137 @@ for (let i = 0; i < BOT_COUNT; i++) {
 let currentGames = [];
 
 function updateRanking() {
+
   const tbody = document.getElementById("rankingBody");
 
-  bots.sort((a,b) => b.score - a.score);
+  bots.sort((a,b)=>b.score-a.score);
 
   tbody.innerHTML = "";
 
-  bots.forEach((bot, index) => {
+  bots.forEach((bot,index)=>{
+
     tbody.innerHTML += `
       <tr>
-        <td>${index + 1}</td>
+        <td>${index+1}</td>
         <td>${bot.name}</td>
         <td>${bot.score}</td>
       </tr>
     `;
+
   });
 }
 
-async function getStockfishMove(game, level = 3) {
+function randomMove(game) {
+
+  const moves = game.moves();
+
+  if (!moves.length) return null;
+
+  return moves[Math.floor(Math.random()*moves.length)];
+}
+
+async function getStockfishMove(game) {
 
   return new Promise(resolve => {
 
-    const engine = new Worker(
-      "https://cdn.jsdelivr.net/npm/stockfish@16.0.0/src/stockfish.js"
-    );
+    try {
 
-    let ready = false;
+      const engine = new Worker(
+        "https://cdn.jsdelivr.net/npm/stockfish@16.0.0/src/stockfish.js"
+      );
 
-    engine.onmessage = function(event) {
+      let answered = false;
 
-      const line = event.data;
+      const timeout = setTimeout(()=>{
 
-      console.log(line);
+        if (!answered) {
+          answered = true;
+          engine.terminate();
+          resolve(randomMove(game));
+        }
 
-      if (line === "uciok") {
+      }, 1500);
 
-        engine.postMessage(
-          "setoption name Skill Level value " + level
-        );
+      engine.onmessage = function(event) {
 
-        engine.postMessage(
-          "position fen " + game.fen()
-        );
+        const line = event.data;
 
-        engine.postMessage("go movetime 200");
+        if (line.startsWith("bestmove")) {
 
-        ready = true;
-      }
+          answered = true;
 
-      if (ready && line.startsWith("bestmove")) {
+          clearTimeout(timeout);
 
-        const move = line.split(" ")[1];
+          const move = line.split(" ")[1];
 
-        engine.terminate();
+          engine.terminate();
 
-        resolve(move);
-      }
+          resolve(move);
+        }
+      };
 
-    };
+      engine.postMessage("uci");
+      engine.postMessage("position fen " + game.fen());
+      engine.postMessage("go movetime 120");
 
-    engine.postMessage("uci");
+    } catch(err) {
+
+      resolve(randomMove(game));
+
+    }
 
   });
-
 }
 
 function pickPair() {
-  const available = bots.filter(bot => !bot.busy);
+
+  const available = bots.filter(bot=>!bot.busy);
 
   if (available.length < 2) return null;
 
-  const shuffled = [...available].sort(() => Math.random() - 0.5);
+  const shuffled = [...available]
+    .sort(()=>Math.random()-0.5);
 
   for (let a of shuffled) {
+
     for (let b of shuffled) {
-      if (a === b) continue;
+
+      if (a===b) continue;
 
       const pair1 = `${a.name}-${b.name}`;
       const pair2 = `${b.name}-${a.name}`;
 
-      if (!lastPairings.includes(pair1) && !lastPairings.includes(pair2)) {
+      if (
+        !lastPairings.includes(pair1) &&
+        !lastPairings.includes(pair2)
+      ) {
+
         lastPairings.push(pair1);
 
-        if (lastPairings.length > 20) lastPairings.shift();
+        if (lastPairings.length > 20)
+          lastPairings.shift();
 
         a.busy = true;
         b.busy = true;
 
-        return [a, b];
+        return [a,b];
       }
     }
   }
 
-  const a = shuffled[0];
-  const b = shuffled[1];
-
-  a.busy = true;
-  b.busy = true;
-
-  return [a, b];
+  return null;
 }
 
 function createBoard(bot1, bot2, boardId) {
+
   const gamesDiv = document.getElementById("games");
 
   const card = document.createElement("div");
+
   card.className = "board-card";
 
   card.innerHTML = `
+
     <div class="player-row">
       <span>⚪ ${bot1.name}</span>
       <span>${bot1.elo}</span>
@@ -291,6 +315,7 @@ function createBoard(bot1, bot2, boardId) {
     <div class="status" id="status${boardId}">
       Partie läuft...
     </div>
+
   `;
 
   gamesDiv.appendChild(card);
@@ -298,8 +323,12 @@ function createBoard(bot1, bot2, boardId) {
   const game = new Chess();
 
   const board = Chessboard(`board${boardId}`, {
+
     position: 'start',
-    pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
+
+    pieceTheme:
+      'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
+
     draggable: false
   });
 
@@ -319,16 +348,27 @@ function createBoard(bot1, bot2, boardId) {
 
 async function playGame(match) {
 
-  const { game, board, bot1, bot2, boardId, card } = match;
+  const {
+    game,
+    board,
+    bot1,
+    bot2,
+    boardId,
+    card
+  } = match;
 
   async function nextMove() {
 
     if (!arenaRunning) return;
 
     if (Date.now() >= tournamentEnd) {
+
       arenaRunning = false;
-      document.getElementById(`status${boardId}`).innerText =
-        "🏁 Turnier beendet";
+
+      document.getElementById(
+        `status${boardId}`
+      ).innerText = "🏁 Turnier beendet";
+
       return;
     }
 
@@ -338,23 +378,18 @@ async function playGame(match) {
 
       if (game.in_checkmate && game.in_checkmate()) {
 
-        if (game.turn() === "w") {
-
+        if (game.turn() === 'w') {
           bot2.score += 2;
           text = `${bot2.name} gewinnt`;
-
         } else {
-
           bot1.score += 2;
           text = `${bot1.name} gewinnt`;
-
         }
 
       } else {
 
         bot1.score += 1;
         bot2.score += 1;
-
       }
 
       bot1.games++;
@@ -363,50 +398,54 @@ async function playGame(match) {
       bot1.busy = false;
       bot2.busy = false;
 
-      document.getElementById(`status${boardId}`).innerText = text;
+      document.getElementById(
+        `status${boardId}`
+      ).innerText = text;
 
       updateRanking();
 
-      setTimeout(() => {
+      setTimeout(()=>{
 
         card.remove();
 
-        currentGames =
-          currentGames.filter(g => g !== match);
+        currentGames = currentGames
+          .filter(g=>g!==match);
 
         fillArena();
 
-      }, 1000);
+      },1000);
 
       return;
     }
 
-    let move;
-
     const currentBot =
-      game.turn() === "w"
+      game.turn() === 'w'
         ? bot1
         : bot2;
 
+    let move;
+
     if (currentBot.name.includes("DarkOnWeakBot")) {
 
-      const moves = game.moves();
-
-      move =
-        moves[Math.floor(Math.random() * moves.length)];
+      move = randomMove(game);
 
     } else {
 
-      move = await getStockfishMove(game, 3);
-
+      move = await getStockfishMove(game);
     }
 
     if (move) {
 
-      game.move(move, { sloppy: true });
+      try {
 
-      board.position(game.fen());
+        game.move(move, { sloppy:true });
 
+        board.position(game.fen());
+
+      } catch(err) {
+
+        console.log(err);
+      }
     }
 
     setTimeout(nextMove, MOVE_DELAY);
@@ -415,10 +454,11 @@ async function playGame(match) {
   nextMove();
 }
 
-
 function fillArena() {
-  while (true) {
-    const freeBots = bots.filter(b => !b.busy);
+
+  while(true) {
+
+    const freeBots = bots.filter(b=>!b.busy);
 
     if (freeBots.length < 2) break;
 
@@ -428,32 +468,40 @@ function fillArena() {
 
     const [bot1, bot2] = pair;
 
-    const boardId = Date.now() + Math.floor(Math.random() * 999999);
+    const boardId =
+      Date.now() + Math.floor(Math.random()*999999);
 
     createBoard(bot1, bot2, boardId);
   }
 }
 
 function startArena() {
+
   arenaRunning = true;
 
   document.getElementById("games").innerHTML = "";
+
   currentGames = [];
 
-  bots.forEach(bot => {
+  bots.forEach(bot=>{
+
     bot.score = 0;
     bot.games = 0;
     bot.busy = false;
+
   });
 
-  tournamentEnd = Date.now() + (TOURNAMENT_MINUTES * 60 * 1000);
+  tournamentEnd =
+    Date.now() + (TOURNAMENT_MINUTES*60*1000);
 
   updateRanking();
+
   fillArena();
 }
 
 updateRanking();
 </script>
+
 
 </body>
 </html>  Er soll StockFish 3 spielen offiziell, oder meinen bot DarkOnWeakBot 
