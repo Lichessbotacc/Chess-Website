@@ -18,3 +18,8 @@ button {
   font-weight: bold;
   cursor: pointer;
 }
+
+#status {
+  margin-top: 10px;
+  color: #aaa;
+}
