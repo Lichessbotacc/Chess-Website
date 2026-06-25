@@ -2149,11 +2149,17 @@ function pickPair(avail) {
 let gameBoards = {};
 
 function startGame(pA, pB) {
-  const game = new Chess();
+  const game = new Chess();  // Chess.js startet automatisch mit Weiß am Zug
   const gameId = 'g_' + Date.now() + '_' + Math.random().toString(36).slice(2,5);
 
   const isMyGame = pA.isPlayer || pB.isPlayer;
-  const white = pA, black = pB;
+
+  // === FIX: Immer Weiß zuerst ziehen lassen ===
+  let white = pA;
+  let black = pB;
+
+  // Zufällige Farbzuweisung nur vermeiden – Weiß hat immer den ersten Zug
+  // Falls gewünscht später randomisieren, aber aktuell: Weiß = erster Teilnehmer
 
   // Time control
   const baseMs = arena.config.baseTime * 60 * 1000;
@@ -2164,7 +2170,8 @@ function startGame(pA, pB) {
     whiteClock: baseMs, blackClock: baseMs,
     incMs, clockInterval: null,
     thinking: false, done: false, isMyGame,
-    playerColor: pA.isPlayer ? 'w' : (pB.isPlayer ? 'b' : null)
+    playerColor: (pA.isPlayer || pB.isPlayer) ? 
+                 (pA.isPlayer ? 'w' : 'b') : null
   };
 
   if (isMyGame) {
@@ -2175,7 +2182,8 @@ function startGame(pA, pB) {
 
   arena.activeGames.push(gameState);
   scheduleNextMove(gameState);
-  startClock(gameState);
+    startClock(gameState);
+  updateClockUI(gameState);  // ← Zusätzlich: Sofort korrekten Timer anzeigen
 }
 
 function startClock(gs) {
@@ -2234,13 +2242,13 @@ function createBotBoardUI(gs) {
   const fmt = ms => { const m=Math.floor(ms/60000); const s=Math.floor((ms%60000)/1000); return `${m}:${s.toString().padStart(2,'0')}`; };
   div.innerHTML = `
     <div class="player-row">
-      <div><span class="player-name">${gs.black.name}</span> <span class="player-elo">(${gs.black.elo})</span></div>
-      <span class="player-clock" id="bclk_b_${gs.id}">${fmt(gs.blackClock)}</span>
+      <div><span class="player-name">${gs.white.name}</span> <span class="player-elo">(${gs.white.elo})</span></div>
+      <span class="player-clock active" id="bclk_w_${gs.id}">${fmt(gs.whiteClock)}</span>
     </div>
     <div class="board-wrap" id="bw_${gs.id}"></div>
     <div class="player-row">
-      <div><span class="player-name">${gs.white.name}</span> <span class="player-elo">(${gs.white.elo})</span></div>
-      <span class="player-clock active" id="bclk_w_${gs.id}">${fmt(gs.whiteClock)}</span>
+      <div><span class="player-name">${gs.black.name}</span> <span class="player-elo">(${gs.black.elo})</span></div>
+      <span class="player-clock" id="bclk_b_${gs.id}">${fmt(gs.blackClock)}</span>
     </div>
     <div class="game-status" id="bst_${gs.id}">Partie läuft…</div>
   `;
