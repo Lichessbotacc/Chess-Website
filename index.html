@@ -14,7 +14,7 @@
 <!-- Stockfish via CDN -->
 <script>
 // We'll load Stockfish as a Worker from CDN
-const STOCKFISH_SRC = "https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js";
+const STOCKFISH_SRC = "https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.wasm.js";
 </script>
 
 <style>
@@ -1926,6 +1926,13 @@ function darkOnWeakMove(game) {
 }
 
 function getBotMove(gameId, bot, game, callback) {
+  if (!gameId || !bot || !game) {
+    console.error("getBotMove: Fehlende Parameter", {gameId, bot});
+    const moves = game ? game.moves() : [];
+    callback(moves.length ? moves[Math.floor(Math.random()*moves.length)] : null);
+    return;
+  }
+
   const fen = game.fen();
 
   // Apply randomization (error rate) — intentional blunder
@@ -2309,9 +2316,16 @@ function scheduleNextMove(gs) {
 
   setTimeout(()=>{
     if (gs.done || !arena || !arena.running) { gs.thinking=false; return; }
-    const botRef = actingParticipant.ref;
+        const botRef = actingParticipant.ref;
 
-    getBotMove(botRef, gs.game, (san)=>{
+    // === FIX: Richtige Parameter-Reihenfolge ===
+    if (!botRef || !gs.id) {
+      console.error("Bot oder Game-ID fehlt!", actingParticipant);
+      gs.thinking = false;
+      return;
+    }
+
+    getBotMove(gs.id, botRef, gs.game, (san)=>{
       if (gs.done || !arena || !arena.running) { gs.thinking=false; return; }
       if (!san) { gs.thinking=false; return; }
       const moved = gs.game.move(san);
