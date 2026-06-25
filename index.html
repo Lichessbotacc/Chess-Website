@@ -1935,7 +1935,7 @@ function getBotMove(gameId, bot, game, callback) {
 
   const fen = game.fen();
 
-  // Apply randomization (error rate) — intentional blunder
+  // Apply randomization...
   if (bot.randomize && Math.random() * 100 < (bot.randomPct || 10)) {
     const moves = game.moves();
     if (moves.length) callback(moves[Math.floor(Math.random() * moves.length)]);
@@ -2314,33 +2314,48 @@ function scheduleNextMove(gs) {
 
   const delay = gs.isMyGame ? 500 : (arena.config.animSpeed||300);
 
-  setTimeout(()=>{
-    if (gs.done || !arena || !arena.running) { gs.thinking=false; return; }
-        const botRef = actingParticipant.ref;
+  setTimeout(() => {
+    if (gs.done || !arena || !arena.running) { 
+      gs.thinking = false; 
+      return; 
+    }
 
-    // === FIX: Richtige Parameter-Reihenfolge ===
-    if (!botRef || !gs.id) {
-      console.error("Bot oder Game-ID fehlt!", actingParticipant);
+    const botRef = actingParticipant.ref;
+    if (!botRef) {
       gs.thinking = false;
       return;
     }
 
-    getBotMove(gs.id, botRef, gs.game, (san)=>{
-      if (gs.done || !arena || !arena.running) { gs.thinking=false; return; }
-      if (!san) { gs.thinking=false; return; }
+    // === KORRIGIERTER AUFRUF ===
+    getBotMove(gs.id, botRef, gs.game, (san) => {
+      if (gs.done || !arena || !arena.running) { 
+        gs.thinking = false; 
+        return; 
+      }
+      if (!san) { 
+        gs.thinking = false; 
+        return; 
+      }
+
       const moved = gs.game.move(san);
-      if (!moved) { gs.thinking=false; return; }
+      if (!moved) { 
+        gs.thinking = false; 
+        return; 
+      }
 
       // Add increment
       if (gs.incMs > 0) {
-        if (turn==='w') gs.whiteClock += gs.incMs;
+        if (turn === 'w') gs.whiteClock += gs.incMs;
         else gs.blackClock += gs.incMs;
       }
 
       // Update board
       if (gs.isMyGame && gs.board) {
         gs.board.position(gs.game.fen());
-        if (!gs.done) document.getElementById('myGameStatus').textContent = gs.game.turn()===gs.playerColor ? '♟ Dein Zug' : '⌛ Gegner denkt…';
+        if (!gs.done) {
+          document.getElementById('myGameStatus').textContent = 
+            gs.game.turn() === gs.playerColor ? '♟ Dein Zug' : '⌛ Gegner denkt…';
+        }
       } else {
         const b = gameBoards[gs.id];
         if (b) b.position(gs.game.fen());
@@ -2348,7 +2363,10 @@ function scheduleNextMove(gs) {
 
       gs.thinking = false;
       checkGameOver(gs);
-      if (!gs.done) scheduleNextMove(gs);
+      if (!gs.done) {
+        // Kleiner Delay damit der nächste Zug nicht zu schnell kommt
+        setTimeout(() => scheduleNextMove(gs), 50);
+      }
     });
   }, delay);
 }
