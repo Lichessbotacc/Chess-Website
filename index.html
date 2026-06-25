@@ -1817,89 +1817,98 @@ function renderTournamentList() {
 // ──────────────────────────────────────────────
 //  ARENA ENGINE
 // ──────────────────────────────────────────────
-let stockfishWorkers = {}; // botId -> Worker
 
-function createStockfishWorker() {
-  try {
-    return new Worker(STOCKFISH_SRC);
-  } catch(e) {
-    return null;
-  }
+// Each game gets its own isolated Stockfish worker to prevent race conditions.
+// Workers are stored per-game-id and terminated when the game ends.
+let stockfishWorkers = {}; // gameId -> {worker, busy, queue:[{fen,params,cb}]}
+
+function sfLevelToParams(level) {
+  // depth, skillLevel (0-20), moveTime ms
+  const table = [
+    {depth:1,  skill:0,  ms:100},  // 1  ~800
+    {depth:1,  skill:2,  ms:150},  // 2  ~1000
+    {depth:2,  skill:4,  ms:200},  // 3  ~1200
+    {depth:2,  skill:6,  ms:250},  // 4  ~1350
+    {depth:3,  skill:8,  ms:300},  // 5  ~1500
+    {depth:3,  skill:10, ms:350},  // 6  ~1650
+    {depth:4,  skill:12, ms:450},  // 7  ~1800
+    {depth:5,  skill:14, ms:550},  // 8  ~1950
+    {depth:6,  skill:15, ms:650},  // 9  ~2050
+    {depth:7,  skill:16, ms:750},  // 10 ~2150
+    {depth:8,  skill:17, ms:850},  // 11 ~2250
+    {depth:9,  skill:17, ms:950},  // 12 ~2350
+    {depth:10, skill:18, ms:1100}, // 13 ~2450
+    {depth:11, skill:18, ms:1300}, // 14 ~2500
+    {depth:12, skill:19, ms:1600}, // 15 ~2600
+    {depth:13, skill:19, ms:1900}, // 16 ~2650
+    {depth:14, skill:20, ms:2200}, // 17 ~2700
+    {depth:15, skill:20, ms:2600}, // 18 ~2750
+    {depth:17, skill:20, ms:3200}, // 19 ~2800
+    {depth:20, skill:20, ms:4000}, // 20 ~2850
+  ];
+  return table[Math.max(0, Math.min(level - 1, 19))];
 }
 
-function getOrCreateWorker(botId) {
-  if (!stockfishWorkers[botId]) {
-    const w = createStockfishWorker();
-    if (w) {
-      w.postMessage('uci');
-      stockfishWorkers[botId] = w;
-    }
+function getGameWorker(gameId) {
+  if (!stockfishWorkers[gameId]) {
+    let worker = null;
+    try { worker = new Worker(STOCKFISH_SRC); } catch(e) {}
+    if (!worker) return null;
+    const entry = { worker, busy: false, queue: [] };
+    worker.onmessage = function(e) {
+      const msg = e.data;
+      if (typeof msg !== 'string') return;
+      if (msg.startsWith('bestmove')) {
+        const uci = msg.split(' ')[1];
+        entry.busy = false;
+        const pending = entry.queue.shift();
+        if (pending) pending.cb(uci && uci !== '(none)' ? uci : null);
+        // Process next in queue
+        if (entry.queue.length > 0) processNext(entry);
+      }
+    };
+    worker.onerror = function() { entry.busy = false; };
+    worker.postMessage('uci');
+    worker.postMessage('isready');
+    stockfishWorkers[gameId] = entry;
   }
-  return stockfishWorkers[botId];
+  return stockfishWorkers[gameId];
+}
+
+function processNext(entry) {
+  if (entry.busy || entry.queue.length === 0) return;
+  const { fen, params, cb } = entry.queue[0];
+  // Don't shift yet — we shift after bestmove arrives
+  entry.busy = true;
+  entry.worker.postMessage(`setoption name Skill Level value ${params.skill}`);
+  entry.worker.postMessage(`position fen ${fen}`);
+  entry.worker.postMessage(`go depth ${params.depth} movetime ${params.ms}`);
+}
+
+function getStockfishMove(gameId, bot, fen, callback) {
+  const entry = getGameWorker(gameId);
+  if (!entry) {
+    // Worker unavailable — fall back to random
+    const g = new Chess(fen);
+    const mvs = g.moves();
+    callback(mvs[Math.floor(Math.random() * mvs.length)] || null);
+    return;
+  }
+  const params = sfLevelToParams(bot.sfLevel || 5);
+  entry.queue.push({ fen, params, cb: callback });
+  processNext(entry);
+}
+
+function terminateGameWorker(gameId) {
+  const entry = stockfishWorkers[gameId];
+  if (entry) {
+    try { entry.worker.terminate(); } catch(e) {}
+    delete stockfishWorkers[gameId];
+  }
 }
 
 function terminateAllWorkers() {
-  Object.values(stockfishWorkers).forEach(w=>{ try { w.terminate(); } catch(e){} });
-  stockfishWorkers = {};
-}
-
-function sfLevelToDepthAndSkill(level) {
-  // Returns {depth, skillLevel, moveTime}
-  const table = [
-    {depth:1, skillLevel:0, moveTime:50},    // 1
-    {depth:1, skillLevel:2, moveTime:100},   // 2
-    {depth:2, skillLevel:4, moveTime:150},   // 3
-    {depth:2, skillLevel:6, moveTime:200},   // 4
-    {depth:3, skillLevel:8, moveTime:250},   // 5
-    {depth:3, skillLevel:10, moveTime:300},  // 6
-    {depth:4, skillLevel:12, moveTime:400},  // 7
-    {depth:5, skillLevel:14, moveTime:500},  // 8
-    {depth:6, skillLevel:16, moveTime:600},  // 9
-    {depth:7, skillLevel:17, moveTime:700},  // 10
-    {depth:8, skillLevel:18, moveTime:800},  // 11
-    {depth:9, skillLevel:18, moveTime:900},  // 12
-    {depth:10, skillLevel:19, moveTime:1000},// 13
-    {depth:12, skillLevel:19, moveTime:1200},// 14
-    {depth:13, skillLevel:20, moveTime:1500},// 15
-    {depth:14, skillLevel:20, moveTime:1800},// 16
-    {depth:15, skillLevel:20, moveTime:2000},// 17
-    {depth:16, skillLevel:20, moveTime:2500},// 18
-    {depth:18, skillLevel:20, moveTime:3000},// 19
-    {depth:20, skillLevel:20, moveTime:4000},// 20
-  ];
-  return table[Math.min(level-1, 19)];
-}
-
-// Get best move from Stockfish
-function getStockfishMove(bot, fen, callback) {
-  const worker = getOrCreateWorker(bot.id);
-  if (!worker) {
-    // fallback to random
-    const game = new Chess(fen);
-    const moves = game.moves();
-    callback(moves[Math.floor(Math.random()*moves.length)]);
-    return;
-  }
-  const params = sfLevelToDepthAndSkill(bot.sfLevel||5);
-
-  worker.onmessage = function(e) {
-    const msg = e.data;
-    if (msg.startsWith('bestmove')) {
-      const parts = msg.split(' ');
-      const move = parts[1];
-      if (move && move !== '(none)') {
-        callback(move);
-      } else {
-        const game = new Chess(fen);
-        const moves = game.moves();
-        callback(moves.length ? moves[Math.floor(Math.random()*moves.length)] : null);
-      }
-    }
-  };
-
-  worker.postMessage(`setoption name Skill Level value ${params.skillLevel}`);
-  worker.postMessage(`position fen ${fen}`);
-  worker.postMessage(`go depth ${params.depth} movetime ${params.moveTime}`);
+  Object.keys(stockfishWorkers).forEach(terminateGameWorker);
 }
 
 // DarkOnWeakBot heuristic
@@ -1916,35 +1925,46 @@ function darkOnWeakMove(game) {
   return moves[Math.floor(Math.random()*moves.length)].san;
 }
 
-function getBotMove(bot, game, callback) {
+function getBotMove(gameId, bot, game, callback) {
   const fen = game.fen();
 
-  // Apply randomization (error rate)
-  if (bot.randomize && Math.random() * 100 < (bot.randomPct||10)) {
+  // Apply randomization (error rate) — intentional blunder
+  if (bot.randomize && Math.random() * 100 < (bot.randomPct || 10)) {
     const moves = game.moves();
-    callback(moves[Math.floor(Math.random()*moves.length)]);
+    if (moves.length) callback(moves[Math.floor(Math.random() * moves.length)]);
     return;
   }
 
   if (bot.engine === 'random') {
     const moves = game.moves();
-    setTimeout(()=>callback(moves[Math.floor(Math.random()*moves.length)]), 50);
+    setTimeout(() => callback(moves[Math.floor(Math.random() * moves.length)]), 50);
     return;
   }
   if (bot.engine === 'darkbot') {
-    setTimeout(()=>callback(darkOnWeakMove(game)), 100);
+    setTimeout(() => callback(darkOnWeakMove(game)), 100);
     return;
   }
-  // Stockfish
-  getStockfishMove(bot, fen, (uciMove) => {
-    if (!uciMove) { callback(game.moves()[0]); return; }
-    // Convert UCI to SAN
+
+  // Stockfish — use isolated per-game worker
+  getStockfishMove(gameId, bot, fen, (uciMove) => {
+    if (!uciMove) {
+      const mvs = game.moves();
+      callback(mvs.length ? mvs[0] : null);
+      return;
+    }
+    // Convert UCI (e.g. "e2e4") to SAN
     const g2 = new Chess(fen);
-    const from = uciMove.slice(0,2);
-    const to = uciMove.slice(2,4);
-    const promo = uciMove[4]||undefined;
-    const move = g2.move({from, to, promotion: promo||'q'});
-    callback(move ? move.san : game.moves()[0]);
+    const from = uciMove.slice(0, 2);
+    const to   = uciMove.slice(2, 4);
+    const promo = uciMove[4] || 'q';
+    const moved = g2.move({ from, to, promotion: promo });
+    if (moved) {
+      callback(moved.san);
+    } else {
+      // Rare: UCI move invalid for current position — fall back
+      const mvs = game.moves();
+      callback(mvs.length ? mvs[0] : null);
+    }
   });
 }
 
@@ -2321,23 +2341,40 @@ function scheduleNextMove(gs) {
 
 function checkGameOver(gs) {
   const g = gs.game;
+  if (gs.done) return;
   if (!g.game_over()) return;
   gs.done = true;
-  if (gs.clockInterval) clearInterval(gs.clockInterval);
+  if (gs.clockInterval) { clearInterval(gs.clockInterval); gs.clockInterval = null; }
 
-  let winner = null, reason = '';
-  if (g.in_checkmate()) { winner = g.turn()==='w'?'b':'w'; reason='Matt'; }
-  else if (g.in_stalemate()) reason='Patt';
-  else if (g.in_draw()) reason='Remis';
-  else reason='Beendet';
+  let winnerColor = null, reason = '';
+  if (g.in_checkmate()) {
+    winnerColor = g.turn() === 'w' ? 'b' : 'w';
+    reason = 'Matt';
+  } else if (g.in_stalemate()) {
+    reason = 'Patt';
+  } else if (g.in_threefold_repetition()) {
+    reason = '3-fach Wiederholung';
+  } else if (g.insufficient_material()) {
+    reason = 'Zu wenig Material';
+  } else if (g.in_draw()) {
+    reason = 'Remis (50-Züge)';
+  } else {
+    reason = 'Beendet';
+  }
 
-  finishGame(gs, winner, reason);
+  resolveGame(gs, winnerColor, reason);
 }
 
 function finishGame(gs, winnerColor, reason) {
-  if (gs.done && reason!=='Zeit') return; // prevent double
+  if (gs.done) return;
   gs.done = true;
-  if (gs.clockInterval) clearInterval(gs.clockInterval);
+  if (gs.clockInterval) { clearInterval(gs.clockInterval); gs.clockInterval = null; }
+  resolveGame(gs, winnerColor, reason);
+}
+
+function resolveGame(gs, winnerColor, reason) {
+  // Terminate this game's Stockfish worker
+  terminateGameWorker(gs.id);
 
   const cfg = arena.config;
   const white = gs.white, black = gs.black;
@@ -2345,65 +2382,130 @@ function finishGame(gs, winnerColor, reason) {
 
   if (winnerColor === 'w') {
     white.score += cfg.pointsWin;
-    white.streak = (white.streak||0)+1;
+    white.streak = (white.streak || 0) + 1;
     if (white.streak >= 2) white.score += cfg.streakBonus;
     black.streak = 0;
     text = `${white.name} gewinnt (${reason})`;
-    addResultFeed(`🟢 ${white.name} ♔ ${black.name} — ${reason}`);
+    addResultFeed(`🟢 ${white.name} ⚔️ ${black.name} — ${reason}`);
+    // Track W/L on participant refs
+    white.wins = (white.wins || 0) + 1;
+    black.losses = (black.losses || 0) + 1;
   } else if (winnerColor === 'b') {
     black.score += cfg.pointsWin;
-    black.streak = (black.streak||0)+1;
+    black.streak = (black.streak || 0) + 1;
     if (black.streak >= 2) black.score += cfg.streakBonus;
     white.streak = 0;
     text = `${black.name} gewinnt (${reason})`;
-    addResultFeed(`🟢 ${black.name} ♔ ${white.name} — ${reason}`);
+    addResultFeed(`🟢 ${black.name} ⚔️ ${white.name} — ${reason}`);
+    black.wins = (black.wins || 0) + 1;
+    white.losses = (white.losses || 0) + 1;
   } else {
     white.score += cfg.pointsDraw;
     black.score += cfg.pointsDraw;
     white.streak = 0; black.streak = 0;
     text = `Remis (${reason})`;
     addResultFeed(`⚪ ${white.name} = ${black.name} — ${reason}`);
+    white.draws = (white.draws || 0) + 1;
+    black.draws = (black.draws || 0) + 1;
   }
 
   white.games++; black.games++;
   white.busy = false; black.busy = false;
 
-  // Update player stats
+  // ELO update per game (Glicko-simple: K=32)
+  if (cfg.updateElo) {
+    const K = 32;
+    const eloResult = (winner) => {
+      const [a, b] = winner === 'w' ? [white, black] : winner === 'b' ? [black, white] : [white, black];
+      const expected_a = 1 / (1 + Math.pow(10, (b.elo - a.elo) / 400));
+      const expected_b = 1 - expected_a;
+      const score_a = winner ? 1 : 0.5;
+      const score_b = winner ? 0 : 0.5;
+      const newEloA = Math.round(a.elo + K * (score_a - expected_a));
+      const newEloB = Math.round(b.elo + K * (score_b - expected_b));
+      return { a: Math.max(100, Math.min(3500, newEloA)), b: Math.max(100, Math.min(3500, newEloB)) };
+    };
+
+    let newElos;
+    if (winnerColor === 'w') {
+      newElos = eloResult('w');
+      white.elo = newElos.a; black.elo = newElos.b;
+    } else if (winnerColor === 'b') {
+      newElos = eloResult('b');
+      black.elo = newElos.a; white.elo = newElos.b;
+    } else {
+      const exp_w = 1 / (1 + Math.pow(10, (black.elo - white.elo) / 400));
+      white.elo = Math.max(100, Math.min(3500, Math.round(white.elo + K * (0.5 - exp_w))));
+      black.elo = Math.max(100, Math.min(3500, Math.round(black.elo + K * (0.5 - (1 - exp_w)))));
+    }
+
+    // Write back to state.bots immediately
+    [white, black].forEach(p => {
+      if (!p.isPlayer) {
+        const bot = state.bots.find(b => b.id === p.ref.id);
+        if (bot) {
+          bot.elo = p.elo;
+          if (!bot.ratingHistory) bot.ratingHistory = [];
+          bot.ratingHistory.push(bot.elo);
+          bot.games = (bot.games || 0) + 1;
+          if (p === (winnerColor === 'w' ? white : winnerColor === 'b' ? black : null)) {
+            bot.wins = (bot.wins || 0) + 1;
+          } else if (!winnerColor) {
+            bot.draws = (bot.draws || 0) + 1;
+          } else {
+            bot.losses = (bot.losses || 0) + 1;
+          }
+        }
+      }
+    });
+  }
+
+  // Player stats
   if (gs.isMyGame) {
     state.stats.totalGames++;
-    const pColor = gs.playerColor||'w';
+    const pColor = gs.playerColor || 'w';
     const playerWon = winnerColor === pColor;
     const isDraw = !winnerColor;
-    if (playerWon) { state.player.wins++; state.stats.totalWins++; state.stats.totalWins; }
-    else if (isDraw) state.player.draws++;
-    else state.player.losses++;
-    state.player.games++;
+    if (playerWon) { state.player.wins = (state.player.wins||0)+1; state.stats.totalWins++; }
+    else if (isDraw) state.player.draws = (state.player.draws||0)+1;
+    else state.player.losses = (state.player.losses||0)+1;
+    state.player.games = (state.player.games||0)+1;
+
+    // Player elo change
+    if (cfg.updateElo) {
+      const opp = pColor === 'w' ? black : white;
+      const K = 32;
+      const exp = 1 / (1 + Math.pow(10, (opp.elo - state.player.elo) / 400));
+      const score = playerWon ? 1 : isDraw ? 0.5 : 0;
+      const eloDiff = Math.round(K * (score - exp));
+      state.player.elo = Math.max(100, Math.min(3500, state.player.elo + eloDiff));
+      if (!state.player.ratingHistory) state.player.ratingHistory = [];
+      state.player.ratingHistory.push(state.player.elo);
+      document.getElementById('playerRatingDisplay').textContent = state.player.elo;
+    }
 
     document.getElementById('myGameStatus').textContent = text;
     const statusEl = document.getElementById('myGameStatus');
-    statusEl.className = 'game-status ' + (playerWon?'win':isDraw?'':'loss');
-
-    setTimeout(()=>{
-      document.getElementById('myGamePanel').style.display='none';
-    }, 3000);
+    statusEl.className = 'game-status ' + ((!winnerColor) ? '' : playerWon ? 'win' : 'loss');
+    setTimeout(() => { if (document.getElementById('myGamePanel')) document.getElementById('myGamePanel').style.display = 'none'; }, 3000);
   } else {
     state.stats.totalGames++;
-    const card = document.getElementById('bc_'+gs.id);
+    const card = document.getElementById('bc_' + gs.id);
     if (card) {
-      const st = card.querySelector('.game-status')||document.getElementById('bst_'+gs.id);
+      const st = document.getElementById('bst_' + gs.id);
       if (st) st.textContent = text;
-      setTimeout(()=>{
+      setTimeout(() => {
         if (card.parentNode) card.remove();
         delete gameBoards[gs.id];
-      }, 1500);
+      }, 1800);
     }
   }
 
-  arena.activeGames = arena.activeGames.filter(g=>g.id!==gs.id);
+  arena.activeGames = arena.activeGames.filter(g => g.id !== gs.id);
   updateLeaderboard();
   saveState();
 
-  if (arena && arena.running) setTimeout(fillArena, 800);
+  if (arena && arena.running) setTimeout(fillArena, 600);
 }
 
 function addResultFeed(text) {
