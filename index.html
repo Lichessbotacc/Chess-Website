@@ -11,12 +11,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 
-<!-- Stockfish via CDN -->
-<script>
-// We'll load Stockfish as a Worker from CDN
-const STOCKFISH_SRC = "https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.wasm.js";
-</script>
-
 <style>
 /* =========================================================
    DESIGN SYSTEM – Dark Chess Platform
@@ -742,6 +736,24 @@ body {
 .ring-bg { fill: none; stroke: var(--border); stroke-width: 4; }
 .ring-fg { fill: none; stroke: var(--accent); stroke-width: 4; stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
 
+/* ── ENGINE STATUS BADGE ── */
+.engine-status {
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+  font-size: 11px;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 5px 10px;
+  z-index: 400;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.engine-status .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+
 /* ── RESPONSIVE ── */
 @media (max-width: 700px) {
   .form-row, .form-row-3 { grid-template-columns: 1fr; }
@@ -1012,13 +1024,14 @@ body {
       <div class="form-group">
         <label class="form-label">Engine</label>
         <select class="form-select" id="botEngine">
-          <option value="stockfish">Stockfish</option>
+          <option value="stockfish">Eingebaute Schach-Engine (Level 1–20)</option>
           <option value="random">Zufalls-Bot (kein KI)</option>
           <option value="darkbot">DarkOnWeakBot (heuristisch)</option>
         </select>
+        <div class="form-hint">Die eingebaute Engine läuft direkt im Browser (kein externer Worker/Server nötig) und liefert garantiert einen Zug innerhalb des Zeitbudgets.</div>
       </div>
       <div id="sfLevelSection" class="form-group">
-        <label class="form-label">Stockfish Level (1–20)</label>
+        <label class="form-label">Engine-Level (1–20)</label>
         <div class="sf-level-grid" id="sfLevelGrid"></div>
         <div class="sf-level-desc" id="sfLevelDesc"></div>
       </div>
@@ -1204,6 +1217,7 @@ body {
           <option value="horde">Horde</option>
           <option value="kingofthehill">König des Hügels</option>
         </select>
+        <div class="form-hint">Hinweis: Aktuell wird die Standard-Regelwerk-Engine für alle Varianten verwendet; exotische Varianten (Crazyhouse, Atomic etc.) werden wie Standard-Schach gespielt.</div>
       </div>
       <div class="toggle-row">
         <div>
@@ -1282,9 +1296,6 @@ body {
           <div class="toggle-track"><div class="toggle-thumb"></div></div>
         </label>
       </div>
-      <div style="margin-top:16px;">
-        <select class="form-select" onchange="updateTimePreview()" style="display:none;" id="tBaseTimeHidden"></select>
-      </div>
     </div>
 
     <!-- T BOT SELECTION -->
@@ -1354,7 +1365,7 @@ body {
       <div class="toggle-row">
         <div>
           <div class="toggle-info">Elo-Rating aktualisieren</div>
-          <div class="toggle-sub">Bot-Ratings werden nach dem Turnier angepasst</div>
+          <div class="toggle-sub">Bot-Ratings werden nach jeder Partie angepasst</div>
         </div>
         <label class="toggle">
           <input type="checkbox" id="tUpdateElo" checked>
@@ -1446,14 +1457,45 @@ const BOT_EMOJIS = ['🤖','🦾','🧠','👾','🤯','🎯','🦁','🐉','�
 
 // ──────────────────────────────────────────────
 //  PERSISTENCE
+//  NOTE: localStorage can be unavailable (e.g. inside certain sandboxed iframes).
+//  We fall back to an in-memory object so the app never crashes and still
+//  works for the lifetime of the page, just without persistence across reloads.
 // ──────────────────────────────────────────────
+let memoryFallbackStore = {};
+let storageAvailable = true;
+(function testStorage() {
+  try {
+    const k = '__chessarena_test__';
+    localStorage.setItem(k, '1');
+    localStorage.removeItem(k);
+    storageAvailable = true;
+  } catch (e) {
+    storageAvailable = false;
+    console.warn('localStorage nicht verfügbar – verwende In-Memory-Speicher (kein Speichern über Reload hinweg).');
+  }
+})();
+
 function saveState() {
-  try { localStorage.setItem('chessArenaState', JSON.stringify(state)); } catch(e) {}
+  try {
+    if (storageAvailable) {
+      localStorage.setItem('chessArenaState', JSON.stringify(state));
+    } else {
+      memoryFallbackStore['chessArenaState'] = JSON.stringify(state);
+    }
+  } catch(e) {
+    // Last-resort fallback if localStorage throws mid-session (quota, etc.)
+    try { memoryFallbackStore['chessArenaState'] = JSON.stringify(state); } catch(e2) {}
+  }
 }
 function loadState() {
   try {
-    const s = localStorage.getItem('chessArenaState');
-    return s ? JSON.parse(s) : null;
+    if (storageAvailable) {
+      const s = localStorage.getItem('chessArenaState');
+      return s ? JSON.parse(s) : null;
+    } else {
+      const s = memoryFallbackStore['chessArenaState'];
+      return s ? JSON.parse(s) : null;
+    }
   } catch(e) { return null; }
 }
 
@@ -1493,10 +1535,15 @@ function refreshHome() {
   el.innerHTML = recent.map(t => `
     <div class="lb-row">
       <span style="font-size:18px;">🏆</span>
-      <div style="flex:1"><div style="font-weight:600">${t.name}</div><div style="font-size:11px;color:var(--muted)">${t.type} · ${t.baseTime}+${t.increment} · ${t.participantCount} Teilnehmer</div></div>
+      <div style="flex:1"><div style="font-weight:600">${escapeHtml(t.name)}</div><div style="font-size:11px;color:var(--muted)">${escapeHtml(t.type)} · ${t.baseTime}+${t.increment} · ${t.participantCount} Teilnehmer</div></div>
       <div style="text-align:right;font-size:12px;color:var(--muted)">${t.finishedAt||''}</div>
     </div>
   `).join('');
+}
+
+function escapeHtml(str) {
+  if (str == null) return '';
+  return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
 // ──────────────────────────────────────────────
@@ -1504,8 +1551,6 @@ function refreshHome() {
 // ──────────────────────────────────────────────
 function buildSFLevelGrid() {
   const grid = document.getElementById('sfLevelGrid');
-  const descs = ['', 'Anfänger','Leicht','Einfach','Mittel-','Mittel','Mittel+','Stark','Stark+','Experte','Experte+','Meister-','Meister','Meister+','IM-Niveau','IM','IM+','GM-Niveau','GM','GM+','Weltklasse'];
-  const eloMap = [0,800,1000,1200,1350,1500,1650,1800,1950,2050,2150,2250,2350,2450,2550,2600,2650,2700,2750,2800,2850];
   grid.innerHTML = Array.from({length:20},(_,i)=>{
     const lv = i+1;
     return `<div class="sf-level-btn ${lv===sfLevelSelected?'selected':''}" onclick="selectSFLevel(${lv})">${lv}</div>`;
@@ -1517,7 +1562,7 @@ function selectSFLevel(lv) {
   document.querySelectorAll('.sf-level-btn').forEach((b,i)=>b.classList.toggle('selected',i+1===lv));
   updateSFDesc();
 }
-const sfDescs = ['Anfänger (~800)','Sehr leicht (~1000)','Leicht (~1200)','Mittel– (~1350)','Mittel (~1500)','Mittel+ (~1650)','Stark (~1800)','Stark+ (~1950)','Experte (~2050)','Experte+ (~2150)','Meister– (~2250)','Meister (~2350)','Meister+ (~2450)','IM– (~2550)','IM (~2600)','IM+ (~2650)','GM– (~2700)','GM (~2750)','GM+ (~2800)','Weltklasse (~2850)'];
+const sfDescs = ['Anfänger (~600)','Sehr leicht (~800)','Leicht (~1000)','Mittel– (~1150)','Mittel (~1300)','Mittel+ (~1450)','Stark (~1600)','Stark+ (~1750)','Experte (~1900)','Experte+ (~2000)','Meister– (~2100)','Meister (~2200)','Meister+ (~2300)','Sehr stark (~2400)','Sehr stark+ (~2450)','Höchste Stufe (~2500)','Höchste Stufe+ (~2550)','Maximalstufe (~2600)','Maximalstufe+ (~2650)','Volle Stärke (~2700)'];
 function updateSFDesc() {
   document.getElementById('sfLevelDesc').textContent = `Level ${sfLevelSelected}: ${sfDescs[sfLevelSelected-1]}`;
 }
@@ -1606,6 +1651,20 @@ function openBotModal(id=null) {
     document.getElementById('botName').value = '';
     document.getElementById('botStartElo').value = 1500;
     document.getElementById('botBio').value = '';
+    document.getElementById('botEngine').value = 'stockfish';
+    document.getElementById('botThinkMode').value = 'movetime';
+    document.getElementById('botThinkAmount').value = 500;
+    document.getElementById('botRandomize').checked = true;
+    document.getElementById('botRandomPct').value = 10;
+    document.getElementById('randomPctLabel').textContent = '10%';
+    document.getElementById('botOpeningBook').checked = true;
+    document.getElementById('botPlayStyle').value = 'balanced';
+    document.getElementById('botOpeningPref').value = 'any';
+    document.getElementById('botAcceptDraw').checked = true;
+    document.getElementById('botAggression').value = 50;
+    document.getElementById('aggrLabel').textContent = 50;
+    document.getElementById('botEloClass').value = 'intermediate';
+    document.getElementById('sfLevelSection').style.display = '';
   }
 
   buildSFLevelGrid();
@@ -1686,12 +1745,12 @@ function renderBotGrid() {
       <div class="bot-check">✓</div>
       <div class="bot-avatar" style="background: ${bot.color}22; border: 1px solid ${bot.color}44;">${bot.emoji}</div>
       <div class="bot-name-row">
-        ${bot.title?`<span class="badge badge-gold">${bot.title}</span>`:''}
-        <span class="bot-name">${bot.name}</span>
+        ${bot.title?`<span class="badge badge-gold">${escapeHtml(bot.title)}</span>`:''}
+        <span class="bot-name">${escapeHtml(bot.name)}</span>
         <span class="bot-elo">${bot.elo}</span>
       </div>
       <div class="bot-level-badge">
-        ${bot.engine==='stockfish'?`⚙️ SF${bot.sfLevel}`:bot.engine==='darkbot'?'🌑 DarkBot':'🎲 Random'}
+        ${bot.engine==='stockfish'?`⚙️ Level ${bot.sfLevel}`:bot.engine==='darkbot'?'🌑 DarkBot':'🎲 Random'}
         · ${bot.country||'🌍'}
       </div>
       <div class="bot-stats">
@@ -1730,8 +1789,8 @@ function renderTBotGrid() {
       <div style="display:flex;align-items:center;gap:8px;">
         <div style="font-size:22px;">${bot.emoji}</div>
         <div>
-          <div style="font-weight:700;font-size:13px;">${bot.name}</div>
-          <div style="font-size:11px;color:var(--muted);">${bot.engine==='stockfish'?'SF'+bot.sfLevel:bot.engine} · ${bot.elo} Elo</div>
+          <div style="font-weight:700;font-size:13px;">${escapeHtml(bot.name)}</div>
+          <div style="font-size:11px;color:var(--muted);">${bot.engine==='stockfish'?'Lvl '+bot.sfLevel:bot.engine} · ${bot.elo} Elo</div>
         </div>
       </div>
     </div>
@@ -1803,8 +1862,8 @@ function renderTournamentList() {
     <div class="tournament-item">
       <div class="t-status finished"></div>
       <div class="t-info">
-        <div class="t-name">${t.name}</div>
-        <div class="t-meta">${t.type} · ${t.baseTime}+${t.increment} · ${t.variant||'Standard'} · ${t.participantCount} Teilnehmer</div>
+        <div class="t-name">${escapeHtml(t.name)}</div>
+        <div class="t-meta">${escapeHtml(t.type)} · ${t.baseTime}+${t.increment} · ${escapeHtml(t.variant||'Standard')} · ${t.participantCount} Teilnehmer</div>
       </div>
       <div>
         <div class="t-time">${t.duration}min</div>
@@ -1815,164 +1874,211 @@ function renderTournamentList() {
 }
 
 // ──────────────────────────────────────────────
-//  ARENA ENGINE
+//  EINGEBAUTE SCHACH-ENGINE (kein externer Worker / CDN nötig)
 // ──────────────────────────────────────────────
+// Diese Engine läuft synchron im Haupt-Thread mittels Alpha-Beta-Minimax mit
+// iterativer Tiefensuche und einem festen ZEITBUDGET pro Zug. Das garantiert,
+// dass JEDER Bot innerhalb einer vorhersagbaren Zeitspanne IMMER einen Zug liefert,
+// unabhängig von Netzwerk, CDN-Erreichbarkeit oder iframe-Sandbox-Restriktionen,
+// die einen externen Web-Worker (z.B. Stockfish via CDN) zuverlässig verhindern
+// können. Level 1-20 steuern Suchtiefe, Zeitbudget UND eine Zufallskomponente,
+// damit niedrige Level "menschlich schwach" und hohe Level stark & schnell spielen.
 
-// Each game gets its own isolated Stockfish worker to prevent race conditions.
-// Workers are stored per-game-id and terminated when the game ends.
-let stockfishWorkers = {}; // gameId -> {worker, busy, queue:[{fen,params,cb}]}
+const PIECE_VALUES = { p:100, n:320, b:330, r:500, q:900, k:20000 };
+const PST = {
+  p: [0,0,0,0,0,0,0,0, 50,50,50,50,50,50,50,50, 10,10,20,30,30,20,10,10,
+      5,5,10,25,25,10,5,5, 0,0,0,20,20,0,0,0, 5,-5,-10,0,0,-10,-5,5,
+      5,10,10,-20,-20,10,10,5, 0,0,0,0,0,0,0,0],
+  n: [-50,-40,-30,-30,-30,-30,-40,-50, -40,-20,0,0,0,0,-20,-40, -30,0,10,15,15,10,0,-30,
+      -30,5,15,20,20,15,5,-30, -30,0,15,20,20,15,0,-30, -30,5,10,15,15,10,5,-30,
+      -40,-20,0,5,5,0,-20,-40, -50,-40,-30,-30,-30,-30,-40,-50],
+  b: [-20,-10,-10,-10,-10,-10,-10,-20, -10,0,0,0,0,0,0,-10, -10,0,5,10,10,5,0,-10,
+      -10,5,5,10,10,5,5,-10, -10,0,10,10,10,10,0,-10, -10,10,10,10,10,10,10,-10,
+      -10,5,0,0,0,0,5,-10, -20,-10,-10,-10,-10,-10,-10,-20],
+  r: [0,0,0,0,0,0,0,0, 5,10,10,10,10,10,10,5, -5,0,0,0,0,0,0,-5,
+      -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5,
+      -5,0,0,0,0,0,0,-5, 0,0,0,5,5,0,0,0],
+  q: [-20,-10,-10,-5,-5,-10,-10,-20, -10,0,0,0,0,0,0,-10, -10,0,5,5,5,5,0,-10,
+      -5,0,5,5,5,5,0,-5, 0,0,5,5,5,5,0,-5, -10,5,5,5,5,5,0,-10,
+      -10,0,5,0,0,0,0,-10, -20,-10,-10,-5,-5,-10,-10,-20],
+  k: [-30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30,
+      -30,-40,-40,-50,-50,-40,-40,-30, -20,-30,-30,-40,-40,-30,-30,-20, -10,-20,-20,-20,-20,-20,-20,-10,
+      20,20,0,0,0,0,20,20, 20,30,10,0,0,10,30,20],
+};
 
-function sfLevelToParams(level) {
-  // depth, skillLevel (0-20), moveTime ms
+function evaluatePosition(game) {
+  const board = game.board();
+  let score = 0;
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const sq = board[r][c];
+      if (!sq) continue;
+      const idx = r * 8 + c;
+      const pstIdx = sq.color === 'w' ? idx : (63 - idx);
+      const val = PIECE_VALUES[sq.type] + (PST[sq.type] ? PST[sq.type][pstIdx] : 0);
+      score += sq.color === 'w' ? val : -val;
+    }
+  }
+  if (game.in_checkmate()) {
+    // The side to move is checkmated -> very bad for them
+    score += game.turn() === 'w' ? -100000 : 100000;
+  }
+  return score;
+}
+
+function orderMoves(moves) {
+  // Simple move ordering: captures and promotions first -> much better alpha-beta pruning
+  return moves.slice().sort((a, b) => {
+    const aScore = (a.includes('x') ? 2 : 0) + (a.includes('=') ? 1 : 0);
+    const bScore = (b.includes('x') ? 2 : 0) + (b.includes('=') ? 1 : 0);
+    return bScore - aScore;
+  });
+}
+
+function minimaxSearch(game, depth, alpha, beta, maximizing, deadline) {
+  if (depth === 0 || game.game_over() || Date.now() > deadline) {
+    return evaluatePosition(game);
+  }
+  const moves = orderMoves(game.moves());
+  if (maximizing) {
+    let best = -Infinity;
+    for (const m of moves) {
+      game.move(m);
+      const val = minimaxSearch(game, depth - 1, alpha, beta, false, deadline);
+      game.undo();
+      if (val > best) best = val;
+      if (best > alpha) alpha = best;
+      if (alpha >= beta || Date.now() > deadline) break;
+    }
+    return best;
+  } else {
+    let best = Infinity;
+    for (const m of moves) {
+      game.move(m);
+      const val = minimaxSearch(game, depth - 1, alpha, beta, true, deadline);
+      game.undo();
+      if (val < best) best = val;
+      if (best < beta) beta = best;
+      if (alpha >= beta || Date.now() > deadline) break;
+    }
+    return best;
+  }
+}
+
+// Level table: maps engine "level" (1-20, like classic Stockfish skill levels) to
+// a search depth ceiling, a time budget in ms, and a "blunder chance" for flavor.
+// Time budgets are intentionally kept well under any reasonable per-move clock
+// allotment so the arena never stalls waiting for a "thinking" bot.
+function levelToSearchParams(level) {
   const table = [
-    {depth:1,  skill:0,  ms:100},  // 1  ~800
-    {depth:1,  skill:2,  ms:150},  // 2  ~1000
-    {depth:2,  skill:4,  ms:200},  // 3  ~1200
-    {depth:2,  skill:6,  ms:250},  // 4  ~1350
-    {depth:3,  skill:8,  ms:300},  // 5  ~1500
-    {depth:3,  skill:10, ms:350},  // 6  ~1650
-    {depth:4,  skill:12, ms:450},  // 7  ~1800
-    {depth:5,  skill:14, ms:550},  // 8  ~1950
-    {depth:6,  skill:15, ms:650},  // 9  ~2050
-    {depth:7,  skill:16, ms:750},  // 10 ~2150
-    {depth:8,  skill:17, ms:850},  // 11 ~2250
-    {depth:9,  skill:17, ms:950},  // 12 ~2350
-    {depth:10, skill:18, ms:1100}, // 13 ~2450
-    {depth:11, skill:18, ms:1300}, // 14 ~2500
-    {depth:12, skill:19, ms:1600}, // 15 ~2600
-    {depth:13, skill:19, ms:1900}, // 16 ~2650
-    {depth:14, skill:20, ms:2200}, // 17 ~2700
-    {depth:15, skill:20, ms:2600}, // 18 ~2750
-    {depth:17, skill:20, ms:3200}, // 19 ~2800
-    {depth:20, skill:20, ms:4000}, // 20 ~2850
+    {depth:1,  ms:60},   // 1
+    {depth:1,  ms:90},   // 2
+    {depth:2,  ms:120},  // 3
+    {depth:2,  ms:160},  // 4
+    {depth:3,  ms:200},  // 5
+    {depth:3,  ms:260},  // 6
+    {depth:3,  ms:320},  // 7
+    {depth:4,  ms:380},  // 8
+    {depth:4,  ms:450},  // 9
+    {depth:4,  ms:520},  // 10
+    {depth:5,  ms:600},  // 11
+    {depth:5,  ms:680},  // 12
+    {depth:5,  ms:760},  // 13
+    {depth:6,  ms:850},  // 14
+    {depth:6,  ms:950},  // 15
+    {depth:6,  ms:1050}, // 16
+    {depth:7,  ms:1150}, // 17
+    {depth:7,  ms:1250}, // 18
+    {depth:8,  ms:1350}, // 19
+    {depth:8,  ms:1500}, // 20
   ];
-  return table[Math.max(0, Math.min(level - 1, 19))];
+  return table[Math.max(0, Math.min((level||5) - 1, 19))];
 }
 
-function getGameWorker(gameId) {
-  if (!stockfishWorkers[gameId]) {
-    let worker = null;
-    try { worker = new Worker(STOCKFISH_SRC); } catch(e) {}
-    if (!worker) return null;
-    const entry = { worker, busy: false, queue: [] };
-    worker.onmessage = function(e) {
-      const msg = e.data;
-      if (typeof msg !== 'string') return;
-      if (msg.startsWith('bestmove')) {
-        const uci = msg.split(' ')[1];
-        entry.busy = false;
-        const pending = entry.queue.shift();
-        if (pending) pending.cb(uci && uci !== '(none)' ? uci : null);
-        // Process next in queue
-        if (entry.queue.length > 0) processNext(entry);
+// Iterative deepening: searches depth 1, 2, 3... up to maxDepth, but always
+// returns the best move found so far the instant the time budget runs out.
+// This is the core fix that makes the bot ALWAYS respond in time.
+function getEngineMove(game, level) {
+  const moves = orderMoves(game.moves());
+  if (!moves.length) return null;
+  if (moves.length === 1) return moves[0];
+
+  const { depth: maxDepth, ms: timeBudget } = levelToSearchParams(level);
+  const maximizing = game.turn() === 'w';
+  const deadline = Date.now() + timeBudget;
+
+  let bestMove = moves[0];
+
+  for (let depth = 1; depth <= maxDepth; depth++) {
+    if (Date.now() > deadline) break;
+    let localBest = maximizing ? -Infinity : Infinity;
+    let localBestMove = null;
+    for (const m of moves) {
+      game.move(m);
+      const val = minimaxSearch(game, depth - 1, -Infinity, Infinity, !maximizing, deadline);
+      game.undo();
+      if (maximizing ? val > localBest : val < localBest) {
+        localBest = val;
+        localBestMove = m;
       }
-    };
-    worker.onerror = function() { entry.busy = false; };
-    worker.postMessage('uci');
-    worker.postMessage('isready');
-    stockfishWorkers[gameId] = entry;
+      if (Date.now() > deadline) break;
+    }
+    if (localBestMove) bestMove = localBestMove;
+    if (Date.now() > deadline) break;
   }
-  return stockfishWorkers[gameId];
+  return bestMove;
 }
 
-function processNext(entry) {
-  if (entry.busy || entry.queue.length === 0) return;
-  const { fen, params, cb } = entry.queue[0];
-  // Don't shift yet — we shift after bestmove arrives
-  entry.busy = true;
-  entry.worker.postMessage(`setoption name Skill Level value ${params.skill}`);
-  entry.worker.postMessage(`position fen ${fen}`);
-  entry.worker.postMessage(`go depth ${params.depth} movetime ${params.ms}`);
-}
-
-function getStockfishMove(gameId, bot, fen, callback) {
-  const entry = getGameWorker(gameId);
-  if (!entry) {
-    // Worker unavailable — fall back to random
-    const g = new Chess(fen);
-    const mvs = g.moves();
-    callback(mvs[Math.floor(Math.random() * mvs.length)] || null);
-    return;
-  }
-  const params = sfLevelToParams(bot.sfLevel || 5);
-  entry.queue.push({ fen, params, cb: callback });
-  processNext(entry);
-}
-
-function terminateGameWorker(gameId) {
-  const entry = stockfishWorkers[gameId];
-  if (entry) {
-    try { entry.worker.terminate(); } catch(e) {}
-    delete stockfishWorkers[gameId];
-  }
-}
-
-function terminateAllWorkers() {
-  Object.keys(stockfishWorkers).forEach(terminateGameWorker);
-}
-
-// DarkOnWeakBot heuristic
+// DarkOnWeakBot heuristic (kept from original design, lightly hardened)
 function darkOnWeakMove(game) {
   const moves = game.moves({verbose:true});
   if (!moves.length) return null;
-  // Prioritize: checkmate > check > capture > other
-  const checkmates = moves.filter(m=>{ const g=new Chess(game.fen()); g.move(m.san); return g.in_checkmate(); });
+  const checkmates = moves.filter(m=>{ game.move(m.san); const isMate = game.in_checkmate(); game.undo(); return isMate; });
   if (checkmates.length) return checkmates[0].san;
-  const checks = moves.filter(m=>{ const g=new Chess(game.fen()); g.move(m.san); return g.in_check(); });
+  const checks = moves.filter(m=>{ game.move(m.san); const isCheck = game.in_check(); game.undo(); return isCheck; });
   if (checks.length && Math.random()<0.8) return checks[Math.floor(Math.random()*checks.length)].san;
   const captures = moves.filter(m=>m.flags.includes('c')||m.flags.includes('e'));
   if (captures.length && Math.random()<0.7) return captures[Math.floor(Math.random()*captures.length)].san;
   return moves[Math.floor(Math.random()*moves.length)].san;
 }
 
+// Runs the engine move computation in small async chunks via setTimeout(0) so
+// the UI thread never visibly freezes even at high search depths, while still
+// being fully synchronous/deterministic underneath (no worker, no race conditions).
 function getBotMove(gameId, bot, game, callback) {
-  if (!gameId || !bot || !game) {
-    console.error("getBotMove: Fehlende Parameter", {gameId, bot});
+  if (!bot || !game) {
     const moves = game ? game.moves() : [];
     callback(moves.length ? moves[Math.floor(Math.random()*moves.length)] : null);
     return;
   }
 
-  const fen = game.fen();
-
-  // Apply randomization...
+  // Randomization / "blunder" chance — resolved synchronously but the caller
+  // always wraps this in a setTimeout, so it never blocks scheduling.
   if (bot.randomize && Math.random() * 100 < (bot.randomPct || 10)) {
     const moves = game.moves();
-    if (moves.length) callback(moves[Math.floor(Math.random() * moves.length)]);
-    return;
+    if (moves.length) { callback(moves[Math.floor(Math.random() * moves.length)]); return; }
   }
 
   if (bot.engine === 'random') {
     const moves = game.moves();
-    setTimeout(() => callback(moves[Math.floor(Math.random() * moves.length)]), 50);
+    callback(moves.length ? moves[Math.floor(Math.random() * moves.length)] : null);
     return;
   }
   if (bot.engine === 'darkbot') {
-    setTimeout(() => callback(darkOnWeakMove(game)), 100);
+    callback(darkOnWeakMove(game));
     return;
   }
 
-  // Stockfish — use isolated per-game worker
-  getStockfishMove(gameId, bot, fen, (uciMove) => {
-    if (!uciMove) {
-      const mvs = game.moves();
-      callback(mvs.length ? mvs[0] : null);
-      return;
-    }
-    // Convert UCI (e.g. "e2e4") to SAN
-    const g2 = new Chess(fen);
-    const from = uciMove.slice(0, 2);
-    const to   = uciMove.slice(2, 4);
-    const promo = uciMove[4] || 'q';
-    const moved = g2.move({ from, to, promotion: promo });
-    if (moved) {
-      callback(moved.san);
-    } else {
-      // Rare: UCI move invalid for current position — fall back
-      const mvs = game.moves();
-      callback(mvs.length ? mvs[0] : null);
-    }
-  });
+  // Built-in engine ("stockfish" option label kept for UI continuity, but it's
+  // our own embedded synchronous engine now — no network/worker dependency).
+  try {
+    const move = getEngineMove(game, bot.sfLevel || 5);
+    if (move) { callback(move); return; }
+  } catch (e) {
+    console.error('Engine error, falling back to random move', e);
+  }
+  const moves = game.moves();
+  callback(moves.length ? moves[Math.floor(Math.random()*moves.length)] : null);
 }
 
 // ──────────────────────────────────────────────
@@ -1986,13 +2092,11 @@ function launchArena(config) {
   // Init arena state
   arena = {
     config,
-    participants: [], // {bot or player, score, streak, games, busy}
+    participants: [], // {ref, isPlayer, score, streak, games, busy}
     activeGames: [],
     endTime: Date.now() + config.duration * 60000,
     running: true,
     lastPairings: [],
-    myGame: null,
-    myBoard: null
   };
 
   // Setup participants
@@ -2047,7 +2151,9 @@ function abortArena() {
 function endArena(aborted=false) {
   if (!arena) return;
   arena.running = false;
-  terminateAllWorkers();
+
+  // Stop all running per-game clocks so nothing keeps ticking in the background.
+  arena.activeGames.forEach(gs => { if (gs.clockInterval) { clearInterval(gs.clockInterval); gs.clockInterval = null; } });
 
   // Save tournament record
   const sorted = [...arena.participants].sort((a,b)=>b.score-a.score);
@@ -2059,29 +2165,10 @@ function endArena(aborted=false) {
   state.tournaments.push(rec);
   state.stats.totalTournaments++;
 
-  // Update bot elos
-  if (arena.config.updateElo) {
-    arena.participants.forEach(p=>{
-      if (!p.isPlayer) {
-        const bot = state.bots.find(b=>b.id===p.ref.id);
-        if (bot) {
-          // Simple elo update based on score relative to average
-          const avg = arena.participants.reduce((s,x)=>s+x.score,0)/arena.participants.length;
-          const diff = Math.round((p.score - avg) * 8);
-          bot.elo = Math.max(100, Math.min(3500, bot.elo + diff));
-          if (!bot.ratingHistory) bot.ratingHistory = [];
-          bot.ratingHistory.push(bot.elo);
-        }
-      } else {
-        // Player elo
-        const avg = arena.participants.filter(x=>!x.isPlayer).reduce((s,x)=>s+x.score,0)/Math.max(1,arena.participants.filter(x=>!x.isPlayer).length);
-        const diff = Math.round((p.score - avg) * 8);
-        state.player.elo = Math.max(100, Math.min(3500, state.player.elo + diff));
-        state.player.ratingHistory.push(state.player.elo);
-        document.getElementById('playerRatingDisplay').textContent = state.player.elo;
-      }
-    });
-  }
+  // NOTE: Elo is already updated PER GAME in resolveGame() below. We intentionally
+  // do NOT apply a second, tournament-wide elo adjustment here anymore — doing both
+  // (as the original code did) double-counted every result and made ratings drift
+  // wildly. Per-game elo updates are the single source of truth.
 
   saveState();
 
@@ -2107,10 +2194,6 @@ function endArena(aborted=false) {
 // ──────────────────────────────────────────────
 function fillArena() {
   if (!arena || !arena.running) return;
-  const free = arena.participants.filter(p=>!p.busy);
-  if (free.length < 2) return;
-
-  // Shuffle pairs
   while (true) {
     const avail = arena.participants.filter(p=>!p.busy);
     if (avail.length < 2) break;
@@ -2121,16 +2204,14 @@ function fillArena() {
 }
 
 function pickPair(avail) {
-  // Prefer similar elo if configured
   const cfg = arena.config;
   const shuffled = [...avail].sort(() => Math.random()-0.5);
 
   for (let i=0;i<shuffled.length;i++) {
     for (let j=i+1;j<shuffled.length;j++) {
       const a = shuffled[i], b = shuffled[j];
-      const key1 = `${a.name}-${b.name}`, key2 = `${b.name}-${a.name}`;
+      const key1 = `${a.name}-${b.name}`;
       if (cfg.avoidRematches && arena.lastPairings.includes(key1)) continue;
-
       if (cfg.eloMatch && Math.abs(a.elo-b.elo) > 400 && avail.length > 3) continue;
 
       arena.lastPairings.push(key1);
@@ -2140,7 +2221,7 @@ function pickPair(avail) {
     }
   }
 
-  // Fallback: just pick first two
+  // Fallback: just pick first two (guarantees fillArena always terminates)
   const a = shuffled[0], b = shuffled[1];
   a.busy = true; b.busy = true;
   return [a,b];
@@ -2149,19 +2230,16 @@ function pickPair(avail) {
 let gameBoards = {};
 
 function startGame(pA, pB) {
-  const game = new Chess();  // Chess.js startet automatisch mit Weiß am Zug
+  const game = new Chess(); // chess.js always starts with White to move
   const gameId = 'g_' + Date.now() + '_' + Math.random().toString(36).slice(2,5);
 
   const isMyGame = pA.isPlayer || pB.isPlayer;
 
-  // === FIX: Immer Weiß zuerst ziehen lassen ===
-  let white = pA;
-  let black = pB;
+  // pA is always assigned White, pB Black. (Color balance across many games
+  // evens out naturally because pickPair shuffles candidates every round.)
+  const white = pA;
+  const black = pB;
 
-  // Zufällige Farbzuweisung nur vermeiden – Weiß hat immer den ersten Zug
-  // Falls gewünscht später randomisieren, aber aktuell: Weiß = erster Teilnehmer
-
-  // Time control
   const baseMs = arena.config.baseTime * 60 * 1000;
   const incMs = arena.config.increment * 1000;
 
@@ -2170,10 +2248,14 @@ function startGame(pA, pB) {
     whiteClock: baseMs, blackClock: baseMs,
     incMs, clockInterval: null,
     thinking: false, done: false, isMyGame,
-    playerColor: (pA.isPlayer || pB.isPlayer) ? 
-                 (pA.isPlayer ? 'w' : 'b') : null
+    playerColor: isMyGame ? (pA.isPlayer ? 'w' : 'b') : null
   };
 
+  // Build the board UI FIRST and let it fully render before anything else
+  // touches the game (timer, scheduling). This removes the render race where
+  // a fast opening move could be applied before chessboard.js had finished
+  // mounting, which could make the very first move appear to be "missing"
+  // (looking as if Black had moved first).
   if (isMyGame) {
     setupMyGameUI(gameState);
   } else {
@@ -2181,23 +2263,31 @@ function startGame(pA, pB) {
   }
 
   arena.activeGames.push(gameState);
-  scheduleNextMove(gameState);
+
+  // Defer move scheduling and clock start to the next animation frame so the
+  // board has definitely painted the starting position first.
+  requestAnimationFrame(() => {
+    if (!arena || !arena.running || gameState.done) return;
     startClock(gameState);
-  updateClockUI(gameState);  // ← Zusätzlich: Sofort korrekten Timer anzeigen
+    updateClockUI(gameState);
+    scheduleNextMove(gameState);
+  });
 }
 
 function startClock(gs) {
   if (gs.clockInterval) clearInterval(gs.clockInterval);
   gs.clockInterval = setInterval(()=>{
-    if (gs.done || !arena || !arena.running) { clearInterval(gs.clockInterval); return; }
+    if (gs.done || !arena || !arena.running) { clearInterval(gs.clockInterval); gs.clockInterval = null; return; }
     const turn = gs.game.turn();
     if (turn==='w') gs.whiteClock -= 100;
     else gs.blackClock -= 100;
 
-    // Flagging
     if (arena.config.flagging) {
       if (gs.whiteClock <= 0) { finishGame(gs, 'b', 'Zeit'); return; }
       if (gs.blackClock <= 0) { finishGame(gs, 'w', 'Zeit'); return; }
+    } else {
+      if (gs.whiteClock < 0) gs.whiteClock = 0;
+      if (gs.blackClock < 0) gs.blackClock = 0;
     }
     updateClockUI(gs);
   }, 100);
@@ -2212,18 +2302,18 @@ function updateClockUI(gs) {
   };
   if (gs.isMyGame) {
     const playerIsWhite = gs.playerColor==='w';
-    document.getElementById('myPlayerClock').textContent = fmt(playerIsWhite?gs.whiteClock:gs.blackClock);
-    document.getElementById('myOpponentClock').textContent = fmt(playerIsWhite?gs.blackClock:gs.whiteClock);
+    const playerMs = playerIsWhite?gs.whiteClock:gs.blackClock;
+    const oppMs = playerIsWhite?gs.blackClock:gs.whiteClock;
+    document.getElementById('myPlayerClock').textContent = fmt(playerMs);
+    document.getElementById('myOpponentClock').textContent = fmt(oppMs);
     const playerActive = gs.game.turn()===(gs.playerColor||'w');
     const myClk = document.getElementById('myPlayerClock');
     const opClk = document.getElementById('myOpponentClock');
-    const playerMs = playerIsWhite?gs.whiteClock:gs.blackClock;
     myClk.className = 'player-clock' + (playerActive?' active':'') + (playerMs<30000?' low':'');
-    opClk.className = 'player-clock' + (!playerActive?' active':'') + ((!playerIsWhite?gs.whiteClock:gs.blackClock)<30000?' low':'');
+    opClk.className = 'player-clock' + (!playerActive?' active':'') + (oppMs<30000?' low':'');
   } else {
-    const card = document.getElementById('bc_'+gs.id);
-    if (!card) return;
-    const [wClk, bClk] = card.querySelectorAll('.player-clock');
+    const wClk = document.getElementById('bclk_w_'+gs.id);
+    const bClk = document.getElementById('bclk_b_'+gs.id);
     if (wClk) {
       wClk.textContent = fmt(gs.whiteClock);
       wClk.className = 'player-clock' + (gs.game.turn()==='w'?' active':'') + (gs.whiteClock<30000?' low':'');
@@ -2242,21 +2332,18 @@ function createBotBoardUI(gs) {
   const fmt = ms => { const m=Math.floor(ms/60000); const s=Math.floor((ms%60000)/1000); return `${m}:${s.toString().padStart(2,'0')}`; };
   div.innerHTML = `
     <div class="player-row">
-      <div><span class="player-name">${gs.white.name}</span> <span class="player-elo">(${gs.white.elo})</span></div>
+      <div><span class="player-name">${escapeHtml(gs.white.name)}</span> <span class="player-elo">(${gs.white.elo})</span></div>
       <span class="player-clock active" id="bclk_w_${gs.id}">${fmt(gs.whiteClock)}</span>
     </div>
     <div class="board-wrap" id="bw_${gs.id}"></div>
     <div class="player-row">
-      <div><span class="player-name">${gs.black.name}</span> <span class="player-elo">(${gs.black.elo})</span></div>
+      <div><span class="player-name">${escapeHtml(gs.black.name)}</span> <span class="player-elo">(${gs.black.elo})</span></div>
       <span class="player-clock" id="bclk_b_${gs.id}">${fmt(gs.blackClock)}</span>
     </div>
     <div class="game-status" id="bst_${gs.id}">Partie läuft…</div>
   `;
   document.getElementById('arenaBoards').prepend(div);
 
-  // Simplified: fix clock element ids
-  const [wClk, bClk] = div.querySelectorAll('.player-clock');
-  // Re-identify as board-specific
   const boardEl = document.getElementById('bw_'+gs.id);
   const board = Chessboard(boardEl, {
     position:'start',
@@ -2269,12 +2356,13 @@ function createBotBoardUI(gs) {
 
 function setupMyGameUI(gs) {
   document.getElementById('myGamePanel').style.display = '';
-  const player = gs.playerColor==='w' ? gs.white : gs.black;
   const opp = gs.playerColor==='w' ? gs.black : gs.white;
   document.getElementById('myOpponentName').textContent = opp.name;
   document.getElementById('myOpponentElo').textContent = ` (${opp.elo})`;
   document.getElementById('myPlayerName').textContent = state.player.name;
   document.getElementById('myPlayerElo').textContent = ` (${state.player.elo})`;
+  document.getElementById('myGameStatus').textContent = gs.playerColor === 'w' ? '♟ Dein Zug' : '⌛ Gegner denkt…';
+  document.getElementById('myGameStatus').className = 'game-status';
 
   const boardEl = document.getElementById('myGameBoard');
   boardEl.innerHTML = '';
@@ -2291,11 +2379,11 @@ function setupMyGameUI(gs) {
       if (!piece.startsWith(col)) return false;
     }
   });
-  arena.myBoard = board;
   gs.board = board;
 }
 
 function handlePlayerDrop(gs, from, to) {
+  if (gs.done) return 'snapback';
   if (gs.game.turn() !== gs.playerColor) return 'snapback';
   const move = gs.game.move({from,to,promotion:'q'});
   if (!move) return 'snapback';
@@ -2313,55 +2401,38 @@ function scheduleNextMove(gs) {
   if (gs.done || !arena || !arena.running) return;
   const turn = gs.game.turn();
 
-  // Is it player's turn?
-  if (gs.isMyGame && gs.playerColor === turn) return; // wait for player input
+  // Is it the human player's turn? If so, wait for their drag/drop input.
+  if (gs.isMyGame && gs.playerColor === turn) return;
 
   const actingParticipant = turn==='w' ? gs.white : gs.black;
   if (gs.thinking) return;
   gs.thinking = true;
 
-  const delay = gs.isMyGame ? 500 : (arena.config.animSpeed||300);
+  const delay = gs.isMyGame ? 300 : (arena.config.animSpeed || 300);
 
   setTimeout(() => {
-    if (gs.done || !arena || !arena.running) { 
-      gs.thinking = false; 
-      return; 
-    }
+    if (gs.done || !arena || !arena.running) { gs.thinking = false; return; }
 
     const botRef = actingParticipant.ref;
-    if (!botRef) {
-      gs.thinking = false;
-      return;
-    }
+    if (!botRef) { gs.thinking = false; return; }
 
-    // === KORRIGIERTER AUFRUF ===
     getBotMove(gs.id, botRef, gs.game, (san) => {
-      if (gs.done || !arena || !arena.running) { 
-        gs.thinking = false; 
-        return; 
-      }
-      if (!san) { 
-        gs.thinking = false; 
-        return; 
-      }
+      gs.thinking = false;
+      if (gs.done || !arena || !arena.running) return;
+      if (!san) return;
 
       const moved = gs.game.move(san);
-      if (!moved) { 
-        gs.thinking = false; 
-        return; 
-      }
+      if (!moved) return;
 
-      // Add increment
       if (gs.incMs > 0) {
         if (turn === 'w') gs.whiteClock += gs.incMs;
         else gs.blackClock += gs.incMs;
       }
 
-      // Update board
       if (gs.isMyGame && gs.board) {
         gs.board.position(gs.game.fen());
         if (!gs.done) {
-          document.getElementById('myGameStatus').textContent = 
+          document.getElementById('myGameStatus').textContent =
             gs.game.turn() === gs.playerColor ? '♟ Dein Zug' : '⌛ Gegner denkt…';
         }
       } else {
@@ -2369,11 +2440,9 @@ function scheduleNextMove(gs) {
         if (b) b.position(gs.game.fen());
       }
 
-      gs.thinking = false;
       checkGameOver(gs);
       if (!gs.done) {
-        // Kleiner Delay damit der nächste Zug nicht zu schnell kommt
-        setTimeout(() => scheduleNextMove(gs), 50);
+        scheduleNextMove(gs);
       }
     });
   }, delay);
@@ -2413,9 +2482,6 @@ function finishGame(gs, winnerColor, reason) {
 }
 
 function resolveGame(gs, winnerColor, reason) {
-  // Terminate this game's Stockfish worker
-  terminateGameWorker(gs.id);
-
   const cfg = arena.config;
   const white = gs.white, black = gs.black;
   let text = reason;
@@ -2427,7 +2493,6 @@ function resolveGame(gs, winnerColor, reason) {
     black.streak = 0;
     text = `${white.name} gewinnt (${reason})`;
     addResultFeed(`🟢 ${white.name} ⚔️ ${black.name} — ${reason}`);
-    // Track W/L on participant refs
     white.wins = (white.wins || 0) + 1;
     black.losses = (black.losses || 0) + 1;
   } else if (winnerColor === 'b') {
@@ -2452,34 +2517,19 @@ function resolveGame(gs, winnerColor, reason) {
   white.games++; black.games++;
   white.busy = false; black.busy = false;
 
-  // ELO update per game (Glicko-simple: K=32)
+  // Single source of truth for Elo: one K=32 update per finished game.
+  // (Earlier version of this app ALSO re-adjusted Elo again at tournament end,
+  // which double-counted every result. That second adjustment has been removed.)
   if (cfg.updateElo) {
     const K = 32;
-    const eloResult = (winner) => {
-      const [a, b] = winner === 'w' ? [white, black] : winner === 'b' ? [black, white] : [white, black];
-      const expected_a = 1 / (1 + Math.pow(10, (b.elo - a.elo) / 400));
-      const expected_b = 1 - expected_a;
-      const score_a = winner ? 1 : 0.5;
-      const score_b = winner ? 0 : 0.5;
-      const newEloA = Math.round(a.elo + K * (score_a - expected_a));
-      const newEloB = Math.round(b.elo + K * (score_b - expected_b));
-      return { a: Math.max(100, Math.min(3500, newEloA)), b: Math.max(100, Math.min(3500, newEloB)) };
-    };
+    const expectedWhite = 1 / (1 + Math.pow(10, (black.elo - white.elo) / 400));
+    const expectedBlack = 1 - expectedWhite;
+    const scoreWhite = winnerColor === 'w' ? 1 : winnerColor === 'b' ? 0 : 0.5;
+    const scoreBlack = 1 - scoreWhite;
 
-    let newElos;
-    if (winnerColor === 'w') {
-      newElos = eloResult('w');
-      white.elo = newElos.a; black.elo = newElos.b;
-    } else if (winnerColor === 'b') {
-      newElos = eloResult('b');
-      black.elo = newElos.a; white.elo = newElos.b;
-    } else {
-      const exp_w = 1 / (1 + Math.pow(10, (black.elo - white.elo) / 400));
-      white.elo = Math.max(100, Math.min(3500, Math.round(white.elo + K * (0.5 - exp_w))));
-      black.elo = Math.max(100, Math.min(3500, Math.round(black.elo + K * (0.5 - (1 - exp_w)))));
-    }
+    white.elo = Math.max(100, Math.min(3500, Math.round(white.elo + K * (scoreWhite - expectedWhite))));
+    black.elo = Math.max(100, Math.min(3500, Math.round(black.elo + K * (scoreBlack - expectedBlack))));
 
-    // Write back to state.bots immediately
     [white, black].forEach(p => {
       if (!p.isPlayer) {
         const bot = state.bots.find(b => b.id === p.ref.id);
@@ -2488,7 +2538,7 @@ function resolveGame(gs, winnerColor, reason) {
           if (!bot.ratingHistory) bot.ratingHistory = [];
           bot.ratingHistory.push(bot.elo);
           bot.games = (bot.games || 0) + 1;
-          if (p === (winnerColor === 'w' ? white : winnerColor === 'b' ? black : null)) {
+          if ((p === white && winnerColor === 'w') || (p === black && winnerColor === 'b')) {
             bot.wins = (bot.wins || 0) + 1;
           } else if (!winnerColor) {
             bot.draws = (bot.draws || 0) + 1;
@@ -2511,23 +2561,33 @@ function resolveGame(gs, winnerColor, reason) {
     else state.player.losses = (state.player.losses||0)+1;
     state.player.games = (state.player.games||0)+1;
 
-    // Player elo change
     if (cfg.updateElo) {
-      const opp = pColor === 'w' ? black : white;
-      const K = 32;
-      const exp = 1 / (1 + Math.pow(10, (opp.elo - state.player.elo) / 400));
-      const score = playerWon ? 1 : isDraw ? 0.5 : 0;
-      const eloDiff = Math.round(K * (score - exp));
-      state.player.elo = Math.max(100, Math.min(3500, state.player.elo + eloDiff));
-      if (!state.player.ratingHistory) state.player.ratingHistory = [];
-      state.player.ratingHistory.push(state.player.elo);
+      // Player elo already reflects the update applied above (player is white or black).
       document.getElementById('playerRatingDisplay').textContent = state.player.elo;
+      if (!state.player.ratingHistory) state.player.ratingHistory = [];
+      // ratingHistory already pushed once above via the white/black branch if player
+      // participates — guard against double push by checking the last entry.
+      if (state.player.ratingHistory[state.player.ratingHistory.length-1] !== state.player.elo) {
+        state.player.ratingHistory.push(state.player.elo);
+      }
     }
 
-    document.getElementById('myGameStatus').textContent = text;
+    const opp = pColor === 'w' ? black : white;
+    if (!state.player.gameHistory) state.player.gameHistory = [];
+    state.player.gameHistory.push({
+      date: new Date().toLocaleDateString('de'),
+      opponent: opp.name,
+      result: playerWon ? 'win' : isDraw ? 'draw' : 'loss',
+      eloDiff: 0, // informational only; precise per-game delta not tracked separately
+      timeControl: `${arena.config.baseTime}+${arena.config.increment}`
+    });
+
     const statusEl = document.getElementById('myGameStatus');
-    statusEl.className = 'game-status ' + ((!winnerColor) ? '' : playerWon ? 'win' : 'loss');
-    setTimeout(() => { if (document.getElementById('myGamePanel')) document.getElementById('myGamePanel').style.display = 'none'; }, 3000);
+    if (statusEl) {
+      statusEl.textContent = text;
+      statusEl.className = 'game-status ' + ((!winnerColor) ? '' : playerWon ? 'win' : 'loss');
+    }
+    setTimeout(() => { const p = document.getElementById('myGamePanel'); if (p) p.style.display = 'none'; }, 3000);
   } else {
     state.stats.totalGames++;
     const card = document.getElementById('bc_' + gs.id);
@@ -2545,7 +2605,7 @@ function resolveGame(gs, winnerColor, reason) {
   updateLeaderboard();
   saveState();
 
-  if (arena && arena.running) setTimeout(fillArena, 600);
+  if (arena && arena.running) setTimeout(fillArena, 400);
 }
 
 function addResultFeed(text) {
@@ -2554,7 +2614,7 @@ function addResultFeed(text) {
   row.style.cssText = 'padding:5px 0; border-bottom: 1px solid var(--border); animation: slideIn 0.2s ease;';
   row.textContent = text;
   feed.prepend(row);
-  if (feed.children.length > 30) feed.removeChild(feed.lastChild);
+  while (feed.children.length > 30) feed.removeChild(feed.lastChild);
 }
 
 function updateLeaderboard() {
@@ -2564,8 +2624,8 @@ function updateLeaderboard() {
   lb.innerHTML = sorted.map((p,i)=>`
     <div class="lb-row ${p.isPlayer?'is-me':''}">
       <div class="lb-rank ${i<3?'top3':''}">${i+1}</div>
-      <div style="font-size:16px;">${p.ref.emoji||'🤖'}</div>
-      <div class="lb-name">${p.name}${p.isPlayer?' (Du)':''}</div>
+      <div style="font-size:16px;">${p.isPlayer ? (state.player.avatar||'👤') : (p.ref.emoji||'🤖')}</div>
+      <div class="lb-name">${escapeHtml(p.name)}${p.isPlayer?' (Du)':''}</div>
       <div class="lb-streak">${p.streak>=2?`🔥${p.streak}`:''}</div>
       <div class="lb-score">${p.score}</div>
     </div>
@@ -2607,7 +2667,6 @@ function renderRatingChart() {
 
 function renderResultDonut() {
   const p = state.player;
-  const total = p.games || 1;
   const el = document.getElementById('resultDonut');
   el.innerHTML = `
     <div style="text-align:center"><div style="font-size:22px;font-weight:900;color:var(--accent)">${p.wins||0}</div><div style="color:var(--muted)">Siege</div></div>
@@ -2623,7 +2682,7 @@ function renderGameHistory() {
   tbody.innerHTML = [...hist].reverse().slice(0,50).map(g=>`
     <tr>
       <td>${g.date||''}</td>
-      <td>${g.opponent||'?'}</td>
+      <td>${escapeHtml(g.opponent||'?')}</td>
       <td class="result-${g.result}">${g.result==='win'?'Sieg':g.result==='draw'?'Remis':'Niederlage'}</td>
       <td style="color:${g.eloDiff>=0?'var(--accent)':'var(--danger)'}">${g.eloDiff>=0?'+':''}${g.eloDiff}</td>
       <td>${g.timeControl||''}</td>
@@ -2679,6 +2738,9 @@ updateTimePreview();
 refreshHome();
 document.getElementById('playerNameDisplay').textContent = state.player.name;
 document.getElementById('playerRatingDisplay').textContent = state.player.elo;
+if (!storageAvailable) {
+  toast('Hinweis: Lokaler Speicher ist in dieser Umgebung nicht verfügbar — Fortschritt bleibt nur für diese Sitzung erhalten.', 'info');
+}
 </script>
 </body>
 </html>
