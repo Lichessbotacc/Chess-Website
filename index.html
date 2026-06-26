@@ -561,21 +561,56 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-
 <script>
 // ══════ STOCKFISH POOL ══════
 const SF_POOL_SIZE=6;const sfPool=[];let sfReady=false;
-function createStockfishInstance(){return new Promise(resolve=>{let sf;try{sf=typeof Stockfish==='function'?Stockfish():null}catch(e){sf=null}if(!sf){try{const b=new Blob([`importScripts('https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js')`],{type:'text/javascript'});sf=new Worker(URL.createObjectURL(b))}catch(e2){resolve(null);return}}const inst={sf,busy:false,pending:null};const handler=ev=>{const l=typeof ev==='string'?ev:(ev.data||'');if(!l)return;if(!inst.initialized){if(l.includes('readyok')||l.includes('uciok')||l.includes('Stockfish')){inst.initialized=true;resolve(inst)}return}if(inst.pending&&l.startsWith('bestmove')){const m=l.split(' ')[1];const cb=inst.pending;inst.pending=null;inst.busy=false;cb(m&&m!=='(none)'?m:null)}};sf.onmessage=handler;const send=cmd=>{try{if(typeof sf.postMessage==='function')sf.postMessage(cmd)}catch(e){}};inst.send=send;send('uci');send('isready');setTimeout(()=>{if(!inst.initialized){inst.initialized=true;resolve(inst)}},3000)})}
+function createStockfishInstance(){return new Promise(resolve=>{let sf;try{sf=typeof Stockfish==='function'?Stockfish():null}catch(e){sf=null}if(!sf){try{const b=new Blob([`importScripts('https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js')`],{type:'text/javascript'});sf=new Worker(URL.createObjectURL(b))}catch(e2){resolve(null);return}}const inst={sf,busy:false,pending:null,pv:{}};const handler=ev=>{const l=typeof ev==='string'?ev:(ev.data||'');if(!l)return;if(!inst.initialized){if(l.includes('readyok')||l.includes('uciok')||l.includes('Stockfish')){inst.initialized=true;resolve(inst)}return}
+  // MultiPV-Kandidatenzüge aus den info-Zeilen mitschneiden (für niedrige Skill-Level
+  // brauchen wir mehr als nur den allerbesten Zug, siehe stockfishGetMove)
+  if(l.startsWith('info')&&l.includes(' pv ')){
+    const mpvM=l.match(/multipv (\d+)/);const cpM=l.match(/score cp (-?\d+)/);const mateM=l.match(/score mate (-?\d+)/);const pvM=l.match(/ pv (\S+)/);
+    if(pvM){const idx=mpvM?parseInt(mpvM[1]):1;const score=mateM?(parseInt(mateM[1])>0?100000:-100000):(cpM?parseInt(cpM[1]):0);inst.pv[idx]={move:pvM[1],score}}
+  }
+  if(inst.pending&&l.startsWith('bestmove')){const m=l.split(' ')[1];const cb=inst.pending;inst.pending=null;inst.busy=false;const candidates=Object.keys(inst.pv).map(Number).sort((a,b)=>a-b).map(k=>inst.pv[k]);inst.pv={};cb(m&&m!=='(none)'?m:null,candidates)}};sf.onmessage=handler;const send=cmd=>{try{if(typeof sf.postMessage==='function')sf.postMessage(cmd)}catch(e){}};inst.send=send;send('uci');send('isready');setTimeout(()=>{if(!inst.initialized){inst.initialized=true;resolve(inst)}},3000)})}
 async function initStockfishPool(){updateEngineStatus('Stockfish lädt…',false);const arr=await Promise.all(Array.from({length:SF_POOL_SIZE},createStockfishInstance));arr.forEach(i=>{if(i)sfPool.push(i)});sfReady=sfPool.length>0;updateEngineStatus(sfReady?`Stockfish bereit (${sfPool.length}x)`:'Engine-Fehler',sfReady)}
 function updateEngineStatus(t,r){document.getElementById('engineStatusText').textContent=t;document.getElementById('engineDot').className='dot'+(r?' ready':'')}
+// Rechnet Skill Level (0-20) auf eine ungefähre UCI_Elo um, damit UCI_LimitStrength
+// die Spielstärke wirklich hart begrenzt (Skill Level allein reicht bei kurzer
+// movetime oft nicht aus, siehe Erklärung im Bot-Editor).
+function skillToElo(sk){
+  const e=[400,500,600,700,800,900,1000,1100,1200,1320,1450,1600,1750,1900,2050,2200,2350,2500,2650,2800,2950];
+  return e[Math.max(0,Math.min(20,sk||0))]
+}
 function stockfishGetMove(fen,sk,mt,is960,cb){
   if(!sfReady||!sfPool.length){fallbackMove(fen,cb);return}
   const inst=sfPool.find(p=>!p.busy);if(!inst){setTimeout(()=>stockfishGetMove(fen,sk,mt,is960,cb),80);return}
-  inst.busy=true;inst.pending=mv=>{inst.busy=false;cb(mv)};
+  inst.busy=true;
   const s=Math.max(0,Math.min(20,sk||10));const m=Math.max(50,Math.min(10000,mt||500));
+  // Niedrige Level: mehrere Kandidatenzüge anfordern (MultiPV) und absichtlich nicht
+  // immer den allerbesten wählen -> macht Stärkeunterschiede spürbar, auch wenn die
+  // Engine selbst (asm.js Build) Skill Level/UCI_Elo nur unvollständig durchsetzt.
+  const multiPv=s<=4?5:s<=9?3:s<=14?2:1;
+  inst.pending=(mv,candidates)=>{
+    inst.busy=false;
+    let chosen=mv;
+    if(candidates&&candidates.length>1){
+      // Je niedriger das Level, desto eher wird NICHT der beste Kandidat genommen
+      const weakenChance=Math.max(0,(10-s)/10); // Level 0 ~1.0, Level 10 ~0.0
+      if(Math.random()<weakenChance){
+        const poolSize=Math.min(candidates.length,multiPv);
+        const pick=1+Math.floor(Math.random()*poolSize); // bewusst auch schwächere PV-Linien
+        if(candidates[pick-1]&&candidates[pick-1].move)chosen=candidates[pick-1].move
+      }
+    }
+    cb(chosen)
+  };
   inst.send('ucinewgame');
   if(is960)inst.send('setoption name UCI_Chess960 value true');
+  inst.send(`setoption name MultiPV value ${multiPv}`);
+  inst.send('setoption name UCI_LimitStrength value true');
+  inst.send(`setoption name UCI_Elo value ${skillToElo(s)}`);
   inst.send(`setoption name Skill Level value ${s}`);
   inst.send(`position fen ${fen}`);
   inst.send(`go movetime ${m}`);
   const timer=setTimeout(()=>{if(inst.pending){inst.pending=null;inst.busy=false;fallbackMove(fen,cb)}},m+3000);
-  const orig=inst.pending;inst.pending=mv=>{clearTimeout(timer);orig(mv)}
+  const orig=inst.pending;inst.pending=(mv,candidates)=>{clearTimeout(timer);orig(mv,candidates)}
 }
 function fallbackMove(fen,cb){try{const g=new Chess(fen);const mv=g.moves();cb(mv.length?mv[Math.floor(Math.random()*mv.length)]:null)}catch(e){cb(null)}}
 
@@ -584,7 +619,10 @@ function fallbackMove(fen,cb){try{const g=new Chess(fen);const mv=g.moves();cb(m
 // nur auf die statische Turnier-Grundzeit. Berücksichtigt außerdem das im Bot-Editor
 // gewählte "Zeitdruck-Verhalten" (pressure: normal | flagging | cautious | panic).
 function levelToMovetime(lv,remainingMs,incMs,pressure){
-  const t=[50,80,120,160,220,300,400,500,620,760,900,1100,1300,1550,1800,2100,2400,2700,3100,3500,4200];
+  // Stärker gespreizt als zuvor: sehr niedrige Level bekommen nur eine minimale
+  // Suchzeit, damit der Stärkeunterschied zu hohen Leveln auch über die Suchtiefe
+  // (nicht nur über UCI_Elo/MultiPV) spürbar wird.
+  const t=[10,15,20,30,45,70,110,170,260,380,550,780,1050,1400,1800,2250,2750,3300,3900,4600,5400];
   const base=t[Math.max(0,Math.min(20,lv||10))];
 
   // Restzeit in Minuten (Fallback: 1 Minute, falls keine Uhr übergeben wurde)
