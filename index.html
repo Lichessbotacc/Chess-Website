@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -238,12 +237,12 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-
       <div class="my-game-panel" id="myGamePanel" style="display:none;margin-bottom:16px">
         <div style="font-size:13px;font-weight:700;color:var(--ac2);margin-bottom:8px">⚔️ Deine Partie</div>
         <div class="board-card my-game" style="padding:0;border:none;background:transparent">
-          <div class="player-row">
+          <div class="player-row" id="myTopRow">
             <div><span class="player-name" id="myOpponentName">Gegner</span><span class="player-elo" id="myOpponentElo"> (1500)</span></div>
             <div class="player-clock" id="myOpponentClock">5:00</div>
           </div>
           <div id="myGameBoard" style="width:100%;margin:6px 0;touch-action:none"></div>
-          <div class="player-row">
+          <div class="player-row" id="myBottomRow">
             <div><span class="player-name" id="myPlayerName">Du</span><span class="player-elo" id="myPlayerElo"> (1500)</span></div>
             <div class="player-clock active" id="myPlayerClock">5:00</div>
           </div>
@@ -581,10 +580,37 @@ function stockfishGetMove(fen,sk,mt,is960,cb){
 function fallbackMove(fen,cb){try{const g=new Chess(fen);const mv=g.moves();cb(mv.length?mv[Math.floor(Math.random()*mv.length)]:null)}catch(e){cb(null)}}
 
 // ══════ MOVETIME ══════
-function levelToMovetime(lv,bm){
+// NEU: reagiert jetzt auf die ECHTE Restzeit des ziehenden Bots (remainingMs) statt
+// nur auf die statische Turnier-Grundzeit. Berücksichtigt außerdem das im Bot-Editor
+// gewählte "Zeitdruck-Verhalten" (pressure: normal | flagging | cautious | panic).
+function levelToMovetime(lv,remainingMs,incMs,pressure){
   const t=[50,80,120,160,220,300,400,500,620,760,900,1100,1300,1550,1800,2100,2400,2700,3100,3500,4200];
   const base=t[Math.max(0,Math.min(20,lv||10))];
-  return Math.min(8000,Math.round(base*Math.sqrt(Math.max(0.25,bm||1))))
+
+  // Restzeit in Minuten (Fallback: 1 Minute, falls keine Uhr übergeben wurde)
+  const remMin=Math.max(0.05,(remainingMs??60000)/60000);
+  let want=Math.round(base*Math.sqrt(remMin));
+
+  const lowTime = remainingMs!=null && remainingMs<15000; // <15s = kritischer Zeitdruck
+
+  switch(pressure){
+    case 'flagging': // zieht bei wenig Zeit sehr schnell, sonst normal
+      if(lowTime) want=Math.min(want,80);
+      break;
+    case 'cautious': // bleibt auch unter Zeitdruck möglichst gründlich
+      want=Math.max(want,Math.round(base*0.6));
+      break;
+    case 'panic': // bei Zeitdruck unberechenbar
+      if(lowTime) want=Math.random()<0.5?30:Math.round(want*1.4);
+      break;
+    default:
+      break; // 'normal': nur die Wurzel-Skalierung nach Restzeit oben
+  }
+
+  // Sicherheitsnetz: nie mehr Bedenkzeit anfordern, als realistisch zur Verfügung steht,
+  // damit der Bot nicht durch die eigene "Denkzeit" die Uhr abreißen lässt.
+  const safetyCap=Math.max(40,(remainingMs??8000)*0.6+(incMs||0)*0.8);
+  return Math.max(30,Math.min(8000,want,safetyCap));
 }
 
 // ══════ CHESS 960 ══════
@@ -716,11 +742,13 @@ class VariantGame{
 }
 
 // Variant-smart bot move
-function getVariantBotMove(vg,botRef,baseTimeMin,cb){
+// NEU: bekommt jetzt remainingMs + incMs (echte Uhr des ziehenden Bots) statt
+// der statischen Turnier-Grundzeit baseTimeMin.
+function getVariantBotMove(vg,botRef,remainingMs,incMs,cb){
   const v=vg.variant;
   if(v==='standard'||v==='chess960'){
     const sk=botRef.sfLevel??10;
-    const mt=levelToMovetime(sk,baseTimeMin);
+    const mt=levelToMovetime(sk,remainingMs,incMs,botRef.timePressure);
     const tv=botRef.timeVariance||10;
     const factor=1+(Math.random()*2-1)*(tv/100);
     stockfishGetMove(vg.fen(),sk,Math.round(mt*factor),v==='chess960',uci=>{
@@ -1137,7 +1165,22 @@ function startGame(pA,pB){
 }
 function startClock(gs){if(gs.clockInterval)clearInterval(gs.clockInterval);gs.clockInterval=setInterval(()=>{if(gs.done||!arena||!arena.running){clearInterval(gs.clockInterval);gs.clockInterval=null;return}const t=gs.vgame.turn();if(t==='w')gs.whiteClock-=100;else gs.blackClock-=100;if(arena.cfg.flagging){if(gs.whiteClock<=0){finishGame(gs,'b','Zeit');return}if(gs.blackClock<=0){finishGame(gs,'w','Zeit');return}}else{gs.whiteClock=Math.max(0,gs.whiteClock);gs.blackClock=Math.max(0,gs.blackClock)}updateClockUI(gs)},100)}
 function fmt(ms){const t=Math.max(0,ms),m=Math.floor(t/60000),s=Math.floor((t%60000)/1000);return`${m}:${s.toString().padStart(2,'0')}`}
-function updateClockUI(gs){if(gs.isMyGame){const pi=gs.playerColor==='w';const pMs=pi?gs.whiteClock:gs.blackClock,oMs=pi?gs.blackClock:gs.whiteClock;const pEl=document.getElementById('myPlayerClock'),oEl=document.getElementById('myOpponentClock');if(pEl){pEl.textContent=fmt(pMs);pEl.className='player-clock'+(gs.vgame.turn()===gs.playerColor?' active':'')+(pMs<30000?' low':'')}if(oEl){oEl.textContent=fmt(oMs);oEl.className='player-clock'+(gs.vgame.turn()!==gs.playerColor?' active':'')+(oMs<30000?' low':'')}}else{const w=document.getElementById('bclk_w_'+gs.id),b=document.getElementById('bclk_b_'+gs.id);if(w){w.textContent=fmt(gs.whiteClock);w.className='player-clock'+(gs.vgame.turn()==='w'?' active':'')+(gs.whiteClock<30000?' low':'')}if(b){b.textContent=fmt(gs.blackClock);b.className='player-clock'+(gs.vgame.turn()==='b'?' active':'')+(gs.blackClock<30000?' low':'')}}}
+// GEÄNDERT: die Uhren-Zeilen ("oben"/"unten") werden jetzt passend zur Brett-Orientierung
+// vertauscht. Spielt der Mensch Schwarz (Brett gedreht), steht die eigene Uhr jetzt auf
+// der Seite, auf der auch die eigenen Figuren stehen (oben), statt immer fix unten.
+function updateClockUI(gs){
+  if(gs.isMyGame){
+    const pi=gs.playerColor==='w';
+    const pMs=pi?gs.whiteClock:gs.blackClock, oMs=pi?gs.blackClock:gs.whiteClock;
+    const pEl=document.getElementById('myPlayerClock'),oEl=document.getElementById('myOpponentClock');
+    if(pEl){pEl.textContent=fmt(pMs);pEl.className='player-clock'+(gs.vgame.turn()===gs.playerColor?' active':'')+(pMs<30000?' low':'')}
+    if(oEl){oEl.textContent=fmt(oMs);oEl.className='player-clock'+(gs.vgame.turn()!==gs.playerColor?' active':'')+(oMs<30000?' low':'')}
+  }else{
+    const w=document.getElementById('bclk_w_'+gs.id),b=document.getElementById('bclk_b_'+gs.id);
+    if(w){w.textContent=fmt(gs.whiteClock);w.className='player-clock'+(gs.vgame.turn()==='w'?' active':'')+(gs.whiteClock<30000?' low':'')}
+    if(b){b.textContent=fmt(gs.blackClock);b.className='player-clock'+(gs.vgame.turn()==='b'?' active':'')+(gs.blackClock<30000?' low':'')}
+  }
+}
 
 function createBotBoardUI(gs){
   const d=document.createElement('div');d.className='board-card';d.id='bc_'+gs.id;
@@ -1153,7 +1196,21 @@ function setupMyGameUI(gs){
   document.getElementById('myPlayerName').textContent=state.player.name;document.getElementById('myPlayerElo').textContent=` (${state.player.elo})`;
   document.getElementById('myGameStatus').textContent=gs.playerColor==='w'?'♟ Dein Zug':'⌛ Gegner denkt…';
   document.getElementById('myGameStatus').className='game-status';
-  const el=document.getElementById('myGameBoard');el.innerHTML='';
+  // GEÄNDERT: Bei Schwarz wird das Brett unten orientiert ("orientation: black"),
+  // daher tauschen wir auch die Reihenfolge der Uhren-Zeilen, damit die eigene Uhr
+  // weiterhin auf der Seite der eigenen Figuren steht (statt immer fix "unten").
+  const topRow=document.getElementById('myTopRow'),bottomRow=document.getElementById('myBottomRow');
+  const boardEl=document.getElementById('myGameBoard');
+  if(gs.playerColor==='b'){
+    // Eigene Zeile nach oben, Gegner-Zeile nach unten (vor das Brett bzw. danach einsortieren)
+    boardEl.parentNode.insertBefore(bottomRow,boardEl);
+    boardEl.parentNode.insertBefore(topRow,boardEl.nextSibling);
+  }else{
+    // Standard: Gegner oben, eigene Zeile unten
+    boardEl.parentNode.insertBefore(topRow,boardEl);
+    boardEl.parentNode.insertBefore(bottomRow,boardEl.nextSibling);
+  }
+  const el=boardEl;el.innerHTML='';
   const board=Chessboard(el,{position:gs.vgame.fen(),pieceTheme:'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',draggable:true,orientation:gs.playerColor==='b'?'black':'white',onDrop:(from,to)=>handlePlayerDrop(gs,from,to),onDragStart:(src,piece)=>{if(gs.done||gs.vgame.turn()!==gs.playerColor)return false;if(gs.playerColor==='w'&&!piece.startsWith('w'))return false;if(gs.playerColor==='b'&&!piece.startsWith('b'))return false}});
   gs.board=board;setupTap(gs)
 }
@@ -1186,7 +1243,11 @@ function scheduleNextMove(gs){
     // Variant-specific skill level
     const varSk=botRef.variantLevels&&botRef.variantLevels[gs.vgame.variant]!=null?botRef.variantLevels[gs.vgame.variant]:botRef.sfLevel??10;
     const fakeRef={...botRef,sfLevel:varSk};
-    getVariantBotMove(gs.vgame,fakeRef,arena.cfg.baseTime,(mv,isUci)=>{
+    // GEÄNDERT: statt der statischen Turnier-Grundzeit (arena.cfg.baseTime) wird jetzt
+    // die tatsächliche Restzeit des ziehenden Bots (seine eigene Uhr) übergeben, damit
+    // er bei wenig Zeit schneller und bei viel Zeit (relativ) langsamer zieht.
+    const myRemainingMs=turn==='w'?gs.whiteClock:gs.blackClock;
+    getVariantBotMove(gs.vgame,fakeRef,myRemainingMs,gs.incMs,(mv,isUci)=>{
       gs.thinking=false;if(gs.done||!arena||!arena.running)return;
       if(!mv){const mvs=gs.vgame.moves();if(mvs.length)gs.vgame.move(mvs[Math.floor(Math.random()*mvs.length)]);else return}
       else if(isUci){
