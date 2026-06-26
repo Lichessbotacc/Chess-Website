@@ -1,317 +1,199 @@
+
 <!DOCTYPE html>
 <html lang="de">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>ChessArena – Lichess-Style Turniere</title>
-
+<title>ChessArena</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js"></script>
-
 <style>
-:root {
-  --bg: #0f1117;
-  --surface: #1a1d27;
-  --surface2: #22263a;
-  --border: #2e3350;
-  --accent: #7fa650;
-  --accent2: #4f9de8;
-  --gold: #e8c84f;
-  --text: #e8e9f0;
-  --muted: #7c8296;
-  --danger: #e85050;
-  --radius: 10px;
-  --radius-lg: 16px;
-}
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { overscroll-behavior: none; }
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  min-height: 100vh;
-  overflow-x: hidden;
-}
-.board-wrap, #myGameBoard, .board-wrap > div {
-  touch-action: none !important;
-  user-select: none;
-}
-/* TAP HIGHLIGHT */
-.tap-selected-sq { background: rgba(79,157,232,0.55) !important; }
-.tap-hint-sq     { background: rgba(127,166,80,0.45) !important; }
-
-.topbar {
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  padding: 0 24px;
-  height: 52px;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  gap: 0;
-}
-.logo {
-  font-size: 20px;
-  font-weight: 800;
-  color: var(--accent);
-  letter-spacing: -0.5px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-right: 32px;
-  cursor: pointer;
-}
-.logo span { color: var(--text); }
-.nav-tabs { display: flex; height: 100%; gap: 2px; }
-.nav-tab {
-  padding: 0 18px;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--muted);
-  border-bottom: 2px solid transparent;
-  transition: all 0.15s;
-  white-space: nowrap;
-}
-.nav-tab:hover { color: var(--text); }
-.nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
-.player-badge {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 5px 14px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--accent2);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.rating-pill {
-  background: var(--accent2);
-  color: #fff;
-  border-radius: 10px;
-  padding: 1px 7px;
-  font-size: 11px;
-  font-weight: 700;
-}
-.page { display: none; padding: 24px; max-width: 1400px; margin: 0 auto; }
-.page.active { display: block; }
-.section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-.section-title { font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
-.section-title .icon { font-size: 22px; }
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 16px; }
-.card-title { font-size: 14px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 16px; }
-.btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  padding: 9px 18px; border-radius: var(--radius); font-size: 14px; font-weight: 600;
-  cursor: pointer; border: none; transition: all 0.15s; white-space: nowrap;
-}
-.btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.btn-primary { background: var(--accent); color: #fff; }
-.btn-primary:hover:not(:disabled) { background: #8dc556; }
-.btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
-.btn-secondary:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
-.btn-danger { background: var(--danger); color: #fff; }
-.btn-danger:hover:not(:disabled) { background: #ff6060; }
-.btn-blue { background: var(--accent2); color: #fff; }
-.btn-blue:hover:not(:disabled) { background: #62aef5; }
-.btn-sm { padding: 6px 12px; font-size: 12px; }
-.btn-lg { padding: 13px 28px; font-size: 16px; }
-.form-group { margin-bottom: 14px; }
-.form-label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 6px; }
-.form-hint { font-size: 11px; color: var(--muted); margin-top: 4px; }
-.form-input, .form-select {
-  width: 100%; background: var(--surface2); border: 1px solid var(--border);
-  border-radius: 8px; padding: 9px 12px; color: var(--text); font-size: 14px;
-  outline: none; transition: border-color 0.15s;
-}
-.form-input:focus, .form-select:focus { border-color: var(--accent); }
-.form-input::placeholder { color: var(--muted); }
-.form-select option { background: var(--surface2); }
-.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.toggle-row {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 0; border-bottom: 1px solid var(--border);
-}
-.toggle-row:last-child { border-bottom: none; }
-.toggle-info { font-size: 13px; }
-.toggle-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
-.toggle { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
-.toggle input { display: none; }
-.toggle-track { position: absolute; inset: 0; background: var(--border); border-radius: 11px; cursor: pointer; transition: background 0.2s; }
-.toggle input:checked ~ .toggle-track { background: var(--accent); }
-.toggle-thumb { position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; background: #fff; border-radius: 50%; transition: transform 0.2s; pointer-events: none; }
-.toggle input:checked ~ .toggle-track .toggle-thumb { transform: translateX(18px); }
-.range-row { display: flex; align-items: center; gap: 12px; }
-.range-row input[type=range] { flex: 1; accent-color: var(--accent); height: 4px; cursor: pointer; }
-.range-val { font-size: 13px; font-weight: 700; color: var(--accent); min-width: 40px; text-align: right; }
-.dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 24px; }
-.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; display: flex; align-items: center; gap: 16px; }
-.stat-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
-.stat-icon.green { background: rgba(127,166,80,0.15); }
-.stat-icon.blue { background: rgba(79,157,232,0.15); }
-.stat-icon.gold { background: rgba(232,200,79,0.15); }
-.stat-icon.red { background: rgba(232,80,80,0.15); }
-.stat-value { font-size: 26px; font-weight: 800; line-height: 1; }
-.stat-label { font-size: 12px; color: var(--muted); margin-top: 4px; }
-.bots-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
-.bot-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; position: relative; transition: border-color 0.15s; }
-.bot-card:hover { border-color: var(--accent2); }
-.bot-card.selected { border-color: var(--accent); background: rgba(127,166,80,0.07); }
-.bot-avatar { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 10px; font-weight: 900; }
-.bot-name-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-.bot-name { font-size: 15px; font-weight: 700; }
-.bot-elo { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 1px 7px; font-size: 12px; font-weight: 700; color: var(--gold); }
-.bot-level-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); background: var(--surface2); border-radius: 6px; padding: 2px 8px; margin-bottom: 10px; }
-.bot-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; font-size: 11px; color: var(--muted); }
-.bot-stat-val { font-size: 14px; font-weight: 700; color: var(--text); }
-.bot-actions { display: flex; gap: 6px; margin-top: 12px; }
-.bot-check { position: absolute; top: 12px; right: 12px; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); display: none; align-items: center; justify-content: center; font-size: 12px; }
-.bot-card.selected .bot-check { display: flex; }
-.tournament-list { display: flex; flex-direction: column; gap: 10px; }
-.tournament-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px 20px; display: flex; align-items: center; gap: 20px; cursor: pointer; transition: border-color 0.15s; }
-.tournament-item:hover { border-color: var(--accent); }
-.t-status { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-.t-status.live { background: var(--danger); animation: pulse 1.5s infinite; }
-.t-status.upcoming { background: var(--gold); }
-.t-status.finished { background: var(--muted); }
-@keyframes pulse {
-  0%,100% { opacity: 1; box-shadow: 0 0 0 0 rgba(232,80,80,0.4); }
-  50% { opacity: 0.8; box-shadow: 0 0 0 6px rgba(232,80,80,0); }
-}
-.t-info { flex: 1; }
-.t-name { font-size: 15px; font-weight: 700; }
-.t-meta { font-size: 12px; color: var(--muted); margin-top: 3px; }
-.t-time { font-size: 22px; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; min-width: 70px; text-align: right; }
-.t-players { font-size: 12px; color: var(--muted); text-align: right; }
-.arena-layout { display: grid; grid-template-columns: 1fr 320px; gap: 16px; align-items: start; }
-@media (max-width: 900px) { .arena-layout { grid-template-columns: 1fr; } }
-.arena-boards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
-.board-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 12px; position: relative; }
-.board-card.my-game { border-color: var(--accent2); box-shadow: 0 0 0 2px rgba(79,157,232,0.2); }
-.board-card .player-row { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; }
-.board-card .player-name { font-size: 13px; font-weight: 600; }
-.board-card .player-elo { font-size: 11px; color: var(--muted); }
-.board-card .player-clock { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text); background: var(--surface2); border-radius: 6px; padding: 2px 8px; }
-.board-card .player-clock.active { color: var(--accent); background: rgba(127,166,80,0.15); }
-.board-card .player-clock.low { color: var(--danger); background: rgba(232,80,80,0.15); }
-.board-wrap { width: 100%; aspect-ratio: 1; margin: 6px 0; touch-action: none; }
-.game-status { text-align: center; font-size: 12px; color: var(--muted); padding: 4px; }
-.game-status.win { color: var(--accent); font-weight: 700; }
-.game-status.loss { color: var(--danger); font-weight: 700; }
-.arena-sidebar { display: flex; flex-direction: column; gap: 12px; }
-.lb-row { display: flex; align-items: center; gap: 10px; padding: 8px 4px; border-bottom: 1px solid var(--border); font-size: 13px; transition: background 0.1s; }
-.lb-row:last-child { border-bottom: none; }
-.lb-row:hover { background: rgba(255,255,255,0.03); border-radius: 6px; }
-.lb-row.is-me { background: rgba(79,157,232,0.1); border-radius: 6px; }
-.lb-rank { font-size: 12px; color: var(--muted); width: 20px; text-align: center; flex-shrink: 0; }
-.lb-rank.top3 { color: var(--gold); font-weight: 800; }
-.lb-name { flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.lb-score { font-weight: 800; color: var(--accent); min-width: 28px; text-align: right; }
-.lb-streak { font-size: 11px; color: var(--gold); min-width: 20px; text-align: right; }
-.arena-header { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
-.arena-title { font-size: 22px; font-weight: 800; }
-.arena-timer { font-size: 28px; font-weight: 900; color: var(--accent); font-variant-numeric: tabular-nums; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 6px 16px; }
-.arena-timer.ending { color: var(--danger); animation: pulse 1s infinite; }
-.my-game-panel { background: var(--surface2); border: 1px solid var(--accent2); border-radius: var(--radius-lg); padding: 16px; }
-.my-game-board { width: 100%; aspect-ratio: 1; touch-action: none; }
-.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 200; backdrop-filter: blur(4px); opacity: 0; pointer-events: none; transition: opacity 0.2s; }
-.modal-overlay.open { opacity: 1; pointer-events: all; }
-.modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px; width: min(600px, 95vw); max-height: 90vh; overflow-y: auto; transform: translateY(10px); transition: transform 0.2s; }
-.modal-overlay.open .modal { transform: translateY(0); }
-.modal-title { font-size: 20px; font-weight: 800; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
-.modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
-.sf-level-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; }
-.sf-level-btn { aspect-ratio: 1; border-radius: 8px; border: 2px solid var(--border); background: var(--surface2); color: var(--text); font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
-.sf-level-btn:hover { border-color: var(--accent); }
-.sf-level-btn.selected { border-color: var(--accent); background: rgba(127,166,80,0.2); color: var(--accent); }
-.sf-level-desc { font-size: 12px; color: var(--muted); margin-top: 8px; text-align: center; }
-.tab-row { display: flex; gap: 2px; margin-bottom: 20px; background: var(--surface2); border-radius: 10px; padding: 4px; }
-.tab-btn { flex: 1; padding: 8px 12px; border-radius: 8px; border: none; background: transparent; color: var(--muted); font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
-.tab-btn.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
-.color-row { display: flex; gap: 8px; flex-wrap: wrap; }
-.color-swatch { width: 32px; height: 32px; border-radius: 8px; border: 2px solid transparent; cursor: pointer; transition: border-color 0.15s; }
-.color-swatch.selected { border-color: #fff; }
-.toast-container { position: fixed; bottom: 24px; right: 24px; display: flex; flex-direction: column; gap: 8px; z-index: 500; }
-.toast { background: var(--surface2); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 10px; padding: 12px 18px; font-size: 14px; font-weight: 500; box-shadow: 0 4px 20px rgba(0,0,0,0.4); animation: slideIn 0.2s ease; max-width: 320px; }
-.toast.error { border-left-color: var(--danger); }
-.toast.info { border-left-color: var(--accent2); }
-@keyframes slideIn { from { transform: translateX(50px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-.empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
-.empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; }
-.empty-state p { font-size: 15px; }
-.divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
-.badge { display: inline-flex; align-items: center; gap: 4px; border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 700; }
-.badge-green { background: rgba(127,166,80,0.2); color: var(--accent); }
-.badge-blue { background: rgba(79,157,232,0.2); color: var(--accent2); }
-.badge-gold { background: rgba(232,200,79,0.2); color: var(--gold); }
-.badge-red { background: rgba(232,80,80,0.2); color: var(--danger); }
-.scrollable { max-height: 400px; overflow-y: auto; padding-right: 4px; }
-.scrollable::-webkit-scrollbar { width: 4px; }
-.scrollable::-webkit-scrollbar-track { background: var(--surface2); }
-.scrollable::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-.history-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.history-table th { text-align: left; padding: 8px 10px; color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
-.history-table td { padding: 10px; border-bottom: 1px solid rgba(46,51,80,0.5); }
-.history-table tr:last-child td { border-bottom: none; }
-.result-win { color: var(--accent); font-weight: 700; }
-.result-loss { color: var(--danger); font-weight: 700; }
-.result-draw { color: var(--muted); font-weight: 700; }
-.profile-header { display: flex; align-items: center; gap: 20px; padding: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); margin-bottom: 20px; }
-.profile-avatar { width: 72px; height: 72px; border-radius: 18px; display: flex; align-items: center; justify-content: center; font-size: 36px; flex-shrink: 0; }
-.profile-name { font-size: 24px; font-weight: 800; }
-.profile-elo { font-size: 32px; font-weight: 900; color: var(--gold); }
-.profile-stats { display: flex; gap: 24px; margin-top: 6px; font-size: 13px; color: var(--muted); }
-.profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.engine-status { position: fixed; bottom: 24px; left: 24px; font-size: 11px; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px; z-index: 400; display: flex; align-items: center; gap: 6px; }
-.engine-status .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); transition: background 0.3s; }
-.engine-status .dot.ready { background: var(--accent); }
-@media (max-width: 700px) {
-  .form-row { grid-template-columns: 1fr; }
-  .profile-grid { grid-template-columns: 1fr; }
-  .topbar { padding: 0 12px; }
-  .nav-tab { padding: 0 10px; font-size: 12px; }
-}
+:root{--bg:#0f1117;--s1:#1a1d27;--s2:#22263a;--bd:#2e3350;--ac:#7fa650;--ac2:#4f9de8;--gold:#e8c84f;--tx:#e8e9f0;--mu:#7c8296;--dn:#e85050;--r:10px;--rl:16px}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}html,body{overscroll-behavior:none}
+body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;overflow-x:hidden}
+.board-wrap,#myGameBoard,.board-wrap>div{touch-action:none!important;user-select:none}
+.tap-sel{background:rgba(79,157,232,.55)!important}.tap-hint{background:rgba(127,166,80,.45)!important}
+.topbar{background:var(--s1);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 24px;height:52px;position:sticky;top:0;z-index:100;gap:0}
+.logo{font-size:20px;font-weight:800;color:var(--ac);letter-spacing:-.5px;display:flex;align-items:center;gap:8px;margin-right:32px;cursor:pointer}
+.logo span{color:var(--tx)}.nav-tabs{display:flex;height:100%;gap:2px}
+.nav-tab{padding:0 18px;height:100%;display:flex;align-items:center;cursor:pointer;font-size:14px;font-weight:500;color:var(--mu);border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap}
+.nav-tab:hover{color:var(--tx)}.nav-tab.active{color:var(--ac);border-bottom-color:var(--ac)}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:12px}
+.player-badge{background:var(--s2);border:1px solid var(--bd);border-radius:20px;padding:5px 14px;font-size:13px;font-weight:600;color:var(--ac2);cursor:pointer;display:flex;align-items:center;gap:6px}
+.rating-pill{background:var(--ac2);color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:700}
+.page{display:none;padding:24px;max-width:1400px;margin:0 auto}.page.active{display:block}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.section-title{font-size:20px;font-weight:700;display:flex;align-items:center;gap:10px}
+.card{background:var(--s1);border:1px solid var(--bd);border-radius:var(--rl);padding:20px;margin-bottom:16px}
+.card-title{font-size:14px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.8px;margin-bottom:16px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 18px;border-radius:var(--r);font-size:14px;font-weight:600;cursor:pointer;border:none;transition:all .15s;white-space:nowrap}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-primary{background:var(--ac);color:#fff}.btn-primary:hover:not(:disabled){background:#8dc556}
+.btn-secondary{background:var(--s2);color:var(--tx);border:1px solid var(--bd)}.btn-secondary:hover:not(:disabled){border-color:var(--ac);color:var(--ac)}
+.btn-danger{background:var(--dn);color:#fff}.btn-danger:hover:not(:disabled){background:#ff6060}
+.btn-blue{background:var(--ac2);color:#fff}.btn-blue:hover:not(:disabled){background:#62aef5}
+.btn-gold{background:var(--gold);color:#222}.btn-gold:hover:not(:disabled){background:#f0d060}
+.btn-sm{padding:6px 12px;font-size:12px}.btn-lg{padding:13px 28px;font-size:16px}
+.form-group{margin-bottom:14px}
+.form-label{display:block;font-size:12px;font-weight:600;color:var(--mu);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+.form-hint{font-size:11px;color:var(--mu);margin-top:4px}
+.form-input,.form-select{width:100%;background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:9px 12px;color:var(--tx);font-size:14px;outline:none;transition:border-color .15s}
+.form-input:focus,.form-select:focus{border-color:var(--ac)}.form-input::placeholder{color:var(--mu)}.form-select option{background:var(--s2)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--bd)}
+.toggle-row:last-child{border-bottom:none}.toggle-info{font-size:13px}.toggle-sub{font-size:11px;color:var(--mu);margin-top:2px}
+.toggle{position:relative;width:40px;height:22px;flex-shrink:0}.toggle input{display:none}
+.toggle-track{position:absolute;inset:0;background:var(--bd);border-radius:11px;cursor:pointer;transition:background .2s}
+.toggle input:checked~.toggle-track{background:var(--ac)}
+.toggle-thumb{position:absolute;top:3px;left:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .2s;pointer-events:none}
+.toggle input:checked~.toggle-track .toggle-thumb{transform:translateX(18px)}
+.range-row{display:flex;align-items:center;gap:12px}.range-row input[type=range]{flex:1;accent-color:var(--ac);height:4px;cursor:pointer}
+.range-val{font-size:13px;font-weight:700;color:var(--ac);min-width:44px;text-align:right}
+.dashboard-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{background:var(--s1);border:1px solid var(--bd);border-radius:var(--rl);padding:20px;display:flex;align-items:center;gap:16px}
+.stat-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.stat-icon.green{background:rgba(127,166,80,.15)}.stat-icon.blue{background:rgba(79,157,232,.15)}
+.stat-icon.gold{background:rgba(232,200,79,.15)}.stat-icon.red{background:rgba(232,80,80,.15)}
+.stat-value{font-size:26px;font-weight:800;line-height:1}.stat-label{font-size:12px;color:var(--mu);margin-top:4px}
+.bots-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.bot-card{background:var(--s1);border:1px solid var(--bd);border-radius:var(--rl);padding:16px;position:relative;transition:border-color .15s}
+.bot-card:hover{border-color:var(--ac2)}.bot-card.selected{border-color:var(--ac);background:rgba(127,166,80,.07)}
+.bot-avatar{width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:10px;font-weight:900}
+.bot-name-row{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.bot-name{font-size:15px;font-weight:700}
+.bot-elo{background:var(--s2);border:1px solid var(--bd);border-radius:6px;padding:1px 7px;font-size:12px;font-weight:700;color:var(--gold)}
+.bot-level-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--mu);background:var(--s2);border-radius:6px;padding:2px 8px;margin-bottom:10px}
+.bot-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:11px;color:var(--mu)}
+.bot-stat-val{font-size:14px;font-weight:700;color:var(--tx)}
+.bot-actions{display:flex;gap:6px;margin-top:12px}
+.bot-check{position:absolute;top:12px;right:12px;width:22px;height:22px;border-radius:50%;background:var(--ac);display:none;align-items:center;justify-content:center;font-size:12px}
+.bot-card.selected .bot-check{display:flex}
+.tournament-list{display:flex;flex-direction:column;gap:10px}
+.tournament-item{background:var(--s1);border:1px solid var(--bd);border-radius:var(--rl);padding:16px 20px;display:flex;align-items:center;gap:20px;transition:border-color .15s}
+.tournament-item:hover{border-color:var(--ac)}
+.t-status{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.t-status.live{background:var(--dn);animation:pulse 1.5s infinite}
+.t-status.finished{background:var(--mu)}
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(232,80,80,.4)}50%{opacity:.8;box-shadow:0 0 0 6px rgba(232,80,80,0)}}
+.t-info{flex:1}.t-name{font-size:15px;font-weight:700}.t-meta{font-size:12px;color:var(--mu);margin-top:3px}
+.arena-layout{display:grid;grid-template-columns:1fr 320px;gap:16px;align-items:start}
+@media(max-width:900px){.arena-layout{grid-template-columns:1fr}}
+.arena-boards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.board-card{background:var(--s1);border:1px solid var(--bd);border-radius:var(--rl);padding:12px;position:relative}
+.board-card.my-game{border-color:var(--ac2);box-shadow:0 0 0 2px rgba(79,157,232,.2)}
+.board-card .player-row{display:flex;align-items:center;justify-content:space-between;padding:5px 0}
+.board-card .player-name{font-size:13px;font-weight:600}.board-card .player-elo{font-size:11px;color:var(--mu)}
+.board-card .player-clock{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--tx);background:var(--s2);border-radius:6px;padding:2px 8px}
+.board-card .player-clock.active{color:var(--ac);background:rgba(127,166,80,.15)}
+.board-card .player-clock.low{color:var(--dn);background:rgba(232,80,80,.15)}
+.board-wrap{width:100%;aspect-ratio:1;margin:6px 0;touch-action:none}
+.game-status{text-align:center;font-size:12px;color:var(--mu);padding:4px}
+.game-status.win{color:var(--ac);font-weight:700}.game-status.loss{color:var(--dn);font-weight:700}
+.arena-sidebar{display:flex;flex-direction:column;gap:12px}
+.lb-row{display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--bd);font-size:13px;transition:background .1s}
+.lb-row:last-child{border-bottom:none}.lb-row:hover{background:rgba(255,255,255,.03);border-radius:6px}
+.lb-row.is-me{background:rgba(79,157,232,.1);border-radius:6px}
+.lb-rank{font-size:12px;color:var(--mu);width:20px;text-align:center;flex-shrink:0}
+.lb-rank.top3{color:var(--gold);font-weight:800}
+.lb-name{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lb-score{font-weight:800;color:var(--ac);min-width:28px;text-align:right}
+.lb-streak{font-size:11px;color:var(--gold);min-width:20px;text-align:right}
+.arena-header{display:flex;align-items:center;gap:16px;margin-bottom:16px;flex-wrap:wrap}
+.arena-title{font-size:22px;font-weight:800}
+.arena-timer{font-size:28px;font-weight:900;color:var(--ac);font-variant-numeric:tabular-nums;background:var(--s1);border:1px solid var(--bd);border-radius:10px;padding:6px 16px}
+.arena-timer.ending{color:var(--dn);animation:pulse 1s infinite}
+.my-game-panel{background:var(--s2);border:1px solid var(--ac2);border-radius:var(--rl);padding:16px}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:200;backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--s1);border:1px solid var(--bd);border-radius:var(--rl);padding:28px;width:min(640px,95vw);max-height:90vh;overflow-y:auto;transform:translateY(10px);transition:transform .2s}
+.modal-overlay.open .modal{transform:translateY(0)}
+.modal-title{font-size:20px;font-weight:800;margin-bottom:20px;display:flex;align-items:center;gap:10px}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:24px}
+.sf-level-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}
+.sf-level-btn{aspect-ratio:1;border-radius:8px;border:2px solid var(--bd);background:var(--s2);color:var(--tx);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.sf-level-btn:hover{border-color:var(--ac)}.sf-level-btn.selected{border-color:var(--ac);background:rgba(127,166,80,.2);color:var(--ac)}
+.sf-level-desc{font-size:12px;color:var(--mu);margin-top:8px;text-align:center}
+.tab-row{display:flex;gap:2px;margin-bottom:20px;background:var(--s2);border-radius:10px;padding:4px;overflow-x:auto}
+.tab-btn{flex:1;padding:8px 10px;border-radius:8px;border:none;background:transparent;color:var(--mu);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;min-width:fit-content}
+.tab-btn.active{background:var(--s1);color:var(--tx);box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.color-row{display:flex;gap:8px;flex-wrap:wrap}
+.color-swatch{width:32px;height:32px;border-radius:8px;border:2px solid transparent;cursor:pointer;transition:border-color .15s}
+.color-swatch.selected{border-color:#fff}
+.toast-container{position:fixed;bottom:24px;right:24px;display:flex;flex-direction:column;gap:8px;z-index:500}
+.toast{background:var(--s2);border:1px solid var(--bd);border-left:3px solid var(--ac);border-radius:10px;padding:12px 18px;font-size:14px;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,.4);animation:slideIn .2s ease;max-width:320px}
+.toast.error{border-left-color:var(--dn)}.toast.info{border-left-color:var(--ac2)}
+@keyframes slideIn{from{transform:translateX(50px);opacity:0}to{transform:translateX(0);opacity:1}}
+.empty-state{text-align:center;padding:60px 20px;color:var(--mu)}.empty-state .empty-icon{font-size:48px;margin-bottom:12px}.empty-state p{font-size:15px}
+.badge{display:inline-flex;align-items:center;gap:4px;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700}
+.badge-green{background:rgba(127,166,80,.2);color:var(--ac)}.badge-blue{background:rgba(79,157,232,.2);color:var(--ac2)}
+.badge-gold{background:rgba(232,200,79,.2);color:var(--gold)}.badge-red{background:rgba(232,80,80,.2);color:var(--dn)}
+.scrollable{max-height:400px;overflow-y:auto;padding-right:4px}
+.scrollable::-webkit-scrollbar{width:4px}.scrollable::-webkit-scrollbar-track{background:var(--s2)}.scrollable::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px}
+.history-table{width:100%;border-collapse:collapse;font-size:13px}
+.history-table th{text-align:left;padding:8px 10px;color:var(--mu);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--bd)}
+.history-table td{padding:10px;border-bottom:1px solid rgba(46,51,80,.5)}.history-table tr:last-child td{border-bottom:none}
+.result-win{color:var(--ac);font-weight:700}.result-loss{color:var(--dn);font-weight:700}.result-draw{color:var(--mu);font-weight:700}
+.profile-header{display:flex;align-items:center;gap:20px;padding:24px;background:var(--s1);border:1px solid var(--bd);border-radius:var(--rl);margin-bottom:20px}
+.profile-avatar{width:72px;height:72px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:36px;flex-shrink:0}
+.profile-name{font-size:24px;font-weight:800}.profile-elo{font-size:32px;font-weight:900;color:var(--gold)}
+.profile-stats{display:flex;gap:24px;margin-top:6px;font-size:13px;color:var(--mu);flex-wrap:wrap}
+.profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.engine-status{position:fixed;bottom:24px;left:24px;font-size:11px;color:var(--mu);background:var(--s1);border:1px solid var(--bd);border-radius:8px;padding:5px 10px;z-index:400;display:flex;align-items:center;gap:6px}
+.engine-status .dot{width:6px;height:6px;border-radius:50%;background:var(--mu);transition:background .3s}
+.engine-status .dot.ready{background:var(--ac)}
+/* Variant badges */
+.variant-pill{display:inline-flex;align-items:center;gap:4px;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;background:rgba(79,157,232,.15);color:var(--ac2)}
+/* Bot profile modal specifics */
+.bp-header{display:flex;align-items:center;gap:20px;margin-bottom:24px;padding:20px;background:var(--s2);border-radius:var(--rl)}
+.bp-avatar{width:80px;height:80px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:40px;flex-shrink:0}
+.bp-name{font-size:22px;font-weight:800}.bp-elo{font-size:28px;font-weight:900;color:var(--gold);line-height:1.1}
+.bp-meta{font-size:13px;color:var(--mu);margin-top:4px}
+.bp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
+.bp-stat{background:var(--s2);border-radius:10px;padding:14px;text-align:center}
+.bp-stat-val{font-size:22px;font-weight:800}.bp-stat-label{font-size:11px;color:var(--mu);margin-top:3px}
+.bp-perf-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd);font-size:13px}
+.bp-perf-row:last-child{border-bottom:none}
+.bp-perf-name{min-width:110px;font-weight:600;font-size:12px}
+.bp-bar-wrap{flex:1;height:8px;background:var(--bd);border-radius:4px;overflow:hidden;display:flex}
+.bp-bar-win{background:var(--ac);height:100%}.bp-bar-draw{background:var(--mu);height:100%}.bp-bar-loss{background:var(--dn);height:100%}
+.bp-elo-sm{font-size:12px;color:var(--gold);font-weight:700;min-width:40px;text-align:right}
+/* Rating chart mini */
+.mini-chart{display:flex;align-items:flex-end;gap:2px;height:60px;padding-top:6px}
+.mini-chart-bar{flex:1;background:var(--ac);opacity:.7;border-radius:2px 2px 0 0;min-width:3px}
+/* Streak */
+.streak-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(232,200,79,.15);border:1px solid rgba(232,200,79,.3);border-radius:8px;padding:4px 10px;font-size:13px;font-weight:700;color:var(--gold)}
+@media(max-width:700px){.form-row,.form-row3{grid-template-columns:1fr}.profile-grid{grid-template-columns:1fr}.topbar{padding:0 12px}.nav-tab{padding:0 10px;font-size:12px}.bp-grid{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
-
 <div class="topbar">
   <div class="logo" onclick="showPage('home')">♛<span>ChessArena</span></div>
   <div class="nav-tabs">
-    <div class="nav-tab active" onclick="showPage('home'); setActive(this)">🏠 Home</div>
-    <div class="nav-tab" onclick="showPage('bots'); setActive(this)">🤖 Bots</div>
-    <div class="nav-tab" onclick="showPage('tournaments'); setActive(this)">🏆 Turniere</div>
-    <div class="nav-tab" onclick="showPage('arena'); setActive(this)" id="navArena">⚔️ Arena</div>
-    <div class="nav-tab" onclick="showPage('profile'); setActive(this)">👤 Profil</div>
+    <div class="nav-tab active" onclick="showPage('home');setActive(this)">🏠 Home</div>
+    <div class="nav-tab" onclick="showPage('bots');setActive(this)">🤖 Bots</div>
+    <div class="nav-tab" onclick="showPage('tournaments');setActive(this)">🏆 Turniere</div>
+    <div class="nav-tab" onclick="showPage('arena');setActive(this)">⚔️ Arena</div>
+    <div class="nav-tab" onclick="showPage('profile');setActive(this)">👤 Profil</div>
   </div>
   <div class="topbar-right">
-    <div class="player-badge" onclick="showPage('profile'); setActive(document.querySelectorAll('.nav-tab')[4])">
-      👤 <span id="playerNameDisplay">Spieler</span>
-      <span class="rating-pill" id="playerRatingDisplay">1500</span>
+    <div class="player-badge" onclick="showPage('profile');setActive(document.querySelectorAll('.nav-tab')[4])">
+      👤 <span id="playerNameDisplay">Spieler</span><span class="rating-pill" id="playerRatingDisplay">1500</span>
     </div>
   </div>
 </div>
 
-<!-- HOME PAGE -->
+<!-- HOME -->
 <div class="page active" id="page-home">
-  <div style="text-align:center; padding: 40px 20px 20px;">
-    <div style="font-size: 72px; margin-bottom: 16px;">♛</div>
-    <h1 style="font-size: 36px; font-weight: 900; margin-bottom: 8px;">ChessArena</h1>
-    <p style="color: var(--muted); font-size: 16px; margin-bottom: 32px;">Erstelle Bots, starte Turniere, spiele Arena Chess</p>
-    <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
-      <button class="btn btn-primary btn-lg" onclick="showPage('bots'); setActive(document.querySelectorAll('.nav-tab')[1])">🤖 Bot erstellen</button>
+  <div style="text-align:center;padding:40px 20px 20px">
+    <div style="font-size:72px;margin-bottom:16px">♛</div>
+    <h1 style="font-size:36px;font-weight:900;margin-bottom:8px">ChessArena</h1>
+    <p style="color:var(--mu);font-size:16px;margin-bottom:32px">Erstelle Bots, starte Turniere, spiele Arena Chess</p>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+      <button class="btn btn-primary btn-lg" onclick="showPage('bots');setActive(document.querySelectorAll('.nav-tab')[1])">🤖 Bot erstellen</button>
       <button class="btn btn-blue btn-lg" onclick="openCreateTournament()">🏆 Turnier starten</button>
     </div>
   </div>
@@ -321,56 +203,46 @@ body {
     <div class="stat-card"><div class="stat-icon gold">⚡</div><div><div class="stat-value" id="statGames">0</div><div class="stat-label">Partien gesamt</div></div></div>
     <div class="stat-card"><div class="stat-icon red">🎯</div><div><div class="stat-value" id="statWins">0</div><div class="stat-label">Siege (Spieler)</div></div></div>
   </div>
-  <div class="card">
-    <div class="card-title">Letzte Turniere</div>
-    <div id="recentTournaments"><div class="empty-state"><div class="empty-icon">🏆</div><p>Noch keine Turniere</p></div></div>
-  </div>
+  <div class="card"><div class="card-title">Letzte Turniere</div><div id="recentTournaments"><div class="empty-state"><div class="empty-icon">🏆</div><p>Noch keine Turniere</p></div></div></div>
 </div>
 
-<!-- BOT MANAGER PAGE -->
+<!-- BOTS -->
 <div class="page" id="page-bots">
   <div class="section-header">
-    <div class="section-title"><span class="icon">🤖</span> Bot Manager</div>
+    <div class="section-title"><span>🤖</span> Bot Manager</div>
     <button class="btn btn-primary" onclick="openBotModal()">➕ Neuer Bot</button>
   </div>
-  <div id="botGrid" class="bots-grid">
-    <div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🤖</div><p>Noch keine Bots. Erstelle deinen ersten Bot!</p></div>
-  </div>
+  <div id="botGrid" class="bots-grid"><div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🤖</div><p>Noch keine Bots!</p></div></div>
 </div>
 
-<!-- TOURNAMENTS PAGE -->
+<!-- TOURNAMENTS -->
 <div class="page" id="page-tournaments">
   <div class="section-header">
-    <div class="section-title"><span class="icon">🏆</span> Turniere</div>
+    <div class="section-title"><span>🏆</span> Turniere</div>
     <button class="btn btn-primary" onclick="openCreateTournament()">➕ Turnier erstellen</button>
   </div>
-  <div id="tournamentList" class="tournament-list">
-    <div class="empty-state"><div class="empty-icon">🏆</div><p>Noch keine Turniere</p></div>
-  </div>
+  <div id="tournamentList" class="tournament-list"><div class="empty-state"><div class="empty-icon">🏆</div><p>Noch keine Turniere</p></div></div>
 </div>
 
-<!-- ARENA PAGE -->
+<!-- ARENA -->
 <div class="page" id="page-arena">
   <div class="arena-header">
-    <div>
-      <div class="arena-title" id="arenaTitle">Kein Turnier aktiv</div>
-      <div id="arenaSubtitle" style="font-size:13px; color:var(--muted);"></div>
-    </div>
+    <div><div class="arena-title" id="arenaTitle">Kein Turnier aktiv</div><div id="arenaSubtitle" style="font-size:13px;color:var(--mu)"></div></div>
     <div class="arena-timer" id="arenaTimer">--:--</div>
-    <div style="margin-left: auto; display: flex; gap: 8px;">
+    <div style="margin-left:auto;display:flex;gap:8px">
       <button class="btn btn-danger btn-sm" id="btnAbortArena" onclick="abortArena()" style="display:none">⏹ Abbrechen</button>
     </div>
   </div>
   <div class="arena-layout">
     <div>
-      <div class="my-game-panel" id="myGamePanel" style="display:none; margin-bottom: 16px;">
-        <div style="font-size:13px; font-weight:700; color: var(--accent2); margin-bottom:8px;">⚔️ Deine Partie</div>
-        <div class="board-card my-game" style="padding:0; border:none; background:transparent;">
+      <div class="my-game-panel" id="myGamePanel" style="display:none;margin-bottom:16px">
+        <div style="font-size:13px;font-weight:700;color:var(--ac2);margin-bottom:8px">⚔️ Deine Partie</div>
+        <div class="board-card my-game" style="padding:0;border:none;background:transparent">
           <div class="player-row">
             <div><span class="player-name" id="myOpponentName">Gegner</span><span class="player-elo" id="myOpponentElo"> (1500)</span></div>
             <div class="player-clock" id="myOpponentClock">5:00</div>
           </div>
-          <div id="myGameBoard" style="width:280px; max-width:100%; margin:6px auto; touch-action:none;"></div>
+          <div id="myGameBoard" style="width:100%;margin:6px 0;touch-action:none"></div>
           <div class="player-row">
             <div><span class="player-name" id="myPlayerName">Du</span><span class="player-elo" id="myPlayerElo"> (1500)</span></div>
             <div class="player-clock active" id="myPlayerClock">5:00</div>
@@ -381,172 +253,195 @@ body {
       <div id="arenaBoards" class="arena-boards"></div>
     </div>
     <div class="arena-sidebar">
-      <div class="card">
-        <div class="card-title">🏆 Rangliste</div>
-        <div id="leaderboard" class="leaderboard scrollable"></div>
-      </div>
-      <div class="card">
-        <div class="card-title">📋 Letzte Ergebnisse</div>
-        <div id="resultsFeed" style="font-size:12px; color:var(--muted); max-height:200px; overflow-y:auto;"></div>
-      </div>
+      <div class="card"><div class="card-title">🏆 Rangliste</div><div id="leaderboard" class="scrollable"></div></div>
+      <div class="card"><div class="card-title">📋 Letzte Ergebnisse</div><div id="resultsFeed" style="font-size:12px;color:var(--mu);max-height:200px;overflow-y:auto"></div></div>
     </div>
   </div>
 </div>
 
-<!-- PROFILE PAGE -->
+<!-- PROFIL -->
 <div class="page" id="page-profile">
   <div class="profile-header">
-    <div class="profile-avatar" id="profileAvatar" style="background: rgba(127,166,80,0.2);">👤</div>
+    <div class="profile-avatar" id="profileAvatar" style="background:rgba(127,166,80,.2)">👤</div>
     <div>
       <div class="profile-name" id="profileName">Spieler</div>
       <div class="profile-elo" id="profileElo">1500</div>
       <div class="profile-stats">
-        <span id="profileGames">0 Partien</span>
-        <span id="profileWins">0 Siege</span>
-        <span id="profileDraws">0 Remis</span>
-        <span id="profileLosses">0 Niederlagen</span>
+        <span id="profileGames">0 Partien</span><span id="profileWins">0 Siege</span>
+        <span id="profileDraws">0 Remis</span><span id="profileLosses">0 Niederlagen</span>
       </div>
     </div>
-    <div style="margin-left:auto;"><button class="btn btn-secondary" onclick="openProfileSettings()">⚙️ Einstellungen</button></div>
+    <div style="margin-left:auto"><button class="btn btn-secondary" onclick="openProfileSettings()">⚙️ Einstellungen</button></div>
   </div>
   <div class="profile-grid">
-    <div class="card"><div class="card-title">📈 Rating Verlauf</div><div id="ratingChart" style="height:120px; display:flex; align-items:flex-end; gap:3px; padding-top:10px;"></div></div>
-    <div class="card"><div class="card-title">🎯 Ergebnis Verteilung</div><div id="resultDonut" style="display:flex; align-items:center; justify-content:center; height:120px; gap:20px; font-size:13px;"></div></div>
-    <div class="card" style="grid-column: 1 / -1">
+    <div class="card"><div class="card-title">📈 Rating Verlauf</div><div id="ratingChart" style="height:120px;display:flex;align-items:flex-end;gap:3px;padding-top:10px"></div></div>
+    <div class="card"><div class="card-title">🎯 Ergebnisse</div><div id="resultDonut" style="display:flex;align-items:center;justify-content:center;height:120px;gap:20px;font-size:13px"></div></div>
+    <div class="card" style="grid-column:1/-1">
       <div class="card-title">📋 Partien-Verlauf</div>
-      <div class="scrollable" style="max-height:300px;">
-        <table class="history-table">
-          <thead><tr><th>Datum</th><th>Gegner</th><th>Ergebnis</th><th>Elo-Änderung</th><th>Bedenkzeit</th></tr></thead>
-          <tbody id="gameHistoryTable"></tbody>
-        </table>
+      <div class="scrollable" style="max-height:300px">
+        <table class="history-table"><thead><tr><th>Datum</th><th>Gegner</th><th>Variante</th><th>Ergebnis</th><th>Elo±</th><th>Bedenkzeit</th></tr></thead><tbody id="gameHistoryTable"></tbody></table>
       </div>
     </div>
   </div>
 </div>
 
-<!-- BOT CREATION MODAL -->
+<!-- ===== MODALS ===== -->
+
+<!-- BOT CREATION/EDIT MODAL -->
 <div class="modal-overlay" id="botModal">
-  <div class="modal">
+  <div class="modal" style="width:min(700px,95vw)">
     <div class="modal-title">🤖 Bot erstellen / bearbeiten</div>
     <div class="tab-row">
-      <button class="tab-btn active" onclick="switchBotTab('basic',this)">Grundlagen</button>
-      <button class="tab-btn" onclick="switchBotTab('ai',this)">KI & Stärke</button>
-      <button class="tab-btn" onclick="switchBotTab('style',this)">Spielstil</button>
-      <button class="tab-btn" onclick="switchBotTab('appearance',this)">Aussehen</button>
+      <button class="tab-btn active" onclick="switchBotTab('profil',this)">👤 Profil</button>
+      <button class="tab-btn" onclick="switchBotTab('engine',this)">🧠 Engine</button>
+      <button class="tab-btn" onclick="switchBotTab('opening',this)">📖 Eröffnung</button>
+      <button class="tab-btn" onclick="switchBotTab('char',this)">🎭 Charakter</button>
+      <button class="tab-btn" onclick="switchBotTab('variants',this)">♟ Varianten</button>
+      <button class="tab-btn" onclick="switchBotTab('look',this)">🎨 Aussehen</button>
     </div>
-    <div id="botTab-basic">
-      <div class="form-group">
-        <label class="form-label">Bot-Name</label>
-        <input class="form-input" id="botName" placeholder="z.B. DeepKnight, AlphaPawn...">
+    <!-- TAB: Profil -->
+    <div id="botTab-profil">
+      <div class="form-group"><label class="form-label">Bot-Name</label><input class="form-input" id="botName" placeholder="z.B. DeepKnight, AlphaPawn..."></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Start-Elo</label><input class="form-input" type="number" id="botStartElo" value="1500" min="100" max="3200"></div>
+        <div class="form-group"><label class="form-label">Titel</label><select class="form-select" id="botTitle"><option value="">Kein Titel</option><option value="CM">CM</option><option value="FM">FM</option><option value="IM">IM</option><option value="GM">GM</option><option value="WFM">WFM</option><option value="WIM">WIM</option><option value="WGM">WGM</option><option value="BOT">BOT</option></select></div>
       </div>
       <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Start-Elo (manuell)</label>
-          <input class="form-input" type="number" id="botStartElo" value="1500" min="100" max="3200">
-          <div class="form-hint">Wird durch Turnierergebnisse angepasst</div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Land / Region</label>
-          <select class="form-select" id="botCountry">
-            <option>🌍 International</option>
-            <option>🇩🇪 Deutschland</option>
-            <option>🇦🇹 Österreich</option>
-            <option>🇨🇭 Schweiz</option>
-            <option>🇷🇺 Russland</option>
-            <option>🇺🇸 USA</option>
-            <option>🇬🇧 England</option>
-            <option>🇳🇴 Norwegen</option>
-          </select>
-        </div>
+        <div class="form-group"><label class="form-label">Land</label><select class="form-select" id="botCountry"><option>🌍 International</option><option>🇩🇪 Deutschland</option><option>🇦🇹 Österreich</option><option>🇨🇭 Schweiz</option><option>🇷🇺 Russland</option><option>🇺🇸 USA</option><option>🇬🇧 England</option><option>🇳🇴 Norwegen</option><option>🇮🇳 Indien</option><option>🇨🇳 China</option><option>🇫🇷 Frankreich</option><option>🇪🇸 Spanien</option></select></div>
+        <div class="form-group"><label class="form-label">Lieblingsfarbe</label><select class="form-select" id="botPrefColor"><option value="random">Zufällig</option><option value="w">Weiß</option><option value="b">Schwarz</option></select></div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Titel</label>
-        <select class="form-select" id="botTitle">
-          <option value="">Kein Titel</option>
-          <option value="CM">CM – Kandidatenmeister</option>
-          <option value="FM">FM – FIDE-Meister</option>
-          <option value="IM">IM – Internationaler Meister</option>
-          <option value="GM">GM – Großmeister</option>
-          <option value="BOT">BOT</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Beschreibung / Biografie</label>
-        <textarea class="form-input" id="botBio" rows="2" placeholder="Kurze Bot-Beschreibung..."></textarea>
-      </div>
+      <div class="form-group"><label class="form-label">Biografie</label><textarea class="form-input" id="botBio" rows="2" placeholder="Kurze Bot-Beschreibung..."></textarea></div>
     </div>
-    <div id="botTab-ai" style="display:none;">
+    <!-- TAB: Engine -->
+    <div id="botTab-engine" style="display:none">
       <div class="form-group">
         <label class="form-label">Engine</label>
         <select class="form-select" id="botEngine">
-          <option value="stockfish">♟ Stockfish (original, Level 0–20)</option>
+          <option value="stockfish">♟ Stockfish (Level 0–20)</option>
           <option value="random">🎲 Zufalls-Bot</option>
         </select>
-        <div class="form-hint" id="engineHint">Echter Stockfish UCI-Engine – Skill Level 0–20 steuert die Spielstärke direkt.</div>
       </div>
-      <div id="sfLevelSection" class="form-group">
-        <label class="form-label">Stockfish Skill Level (0–20)</label>
-        <div class="sf-level-grid" id="sfLevelGrid"></div>
-        <div class="sf-level-desc" id="sfLevelDesc"></div>
+      <div id="sfSection">
+        <div class="form-group"><label class="form-label">Skill Level (0–20)</label><div class="sf-level-grid" id="sfLevelGrid"></div><div class="sf-level-desc" id="sfLevelDesc"></div></div>
+        <div class="form-group"><label class="form-label">Contempt (-100 bis +100) — positiv = Remis vermeiden</label>
+          <div class="range-row"><input type="range" id="botContempt" min="-100" max="100" value="0" oninput="document.getElementById('contemptLabel').textContent=this.value"><span class="range-val" id="contemptLabel">0</span></div>
+        </div>
+        <div class="form-group"><label class="form-label">Denkzeit-Varianz (±%)</label>
+          <div class="range-row"><input type="range" id="botTimeVariance" min="0" max="60" value="10" oninput="document.getElementById('timeVarLabel').textContent=this.value+'%'"><span class="range-val" id="timeVarLabel">10%</span></div>
+          <div class="form-hint">Wie unregelmäßig der Bot denkt – mehr Varianz = menschlicher</div>
+        </div>
       </div>
       <div class="toggle-row">
-        <div>
-          <div class="toggle-info">Fehler / Zufallszug (Blunder)</div>
-          <div class="toggle-sub">Bot macht gelegentlich absichtlich schlechte Züge</div>
-        </div>
-        <label class="toggle">
-          <input type="checkbox" id="botRandomize">
-          <div class="toggle-track"><div class="toggle-thumb"></div></div>
-        </label>
+        <div><div class="toggle-info">Absichtliche Fehler (Blunders)</div><div class="toggle-sub">Bot macht gelegentlich schlechte Züge</div></div>
+        <label class="toggle"><input type="checkbox" id="botRandomize"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
       </div>
-      <div class="form-group" style="margin-top:14px;" id="randomPctGroup">
+      <div class="form-group" style="margin-top:14px">
         <label class="form-label">Blunder-Rate (%)</label>
-        <div class="range-row">
-          <input type="range" id="botRandomPct" min="0" max="80" value="10" oninput="document.getElementById('randomPctLabel').textContent=this.value+'%'">
-          <span class="range-val" id="randomPctLabel">10%</span>
-        </div>
+        <div class="range-row"><input type="range" id="botRandomPct" min="0" max="80" value="10" oninput="document.getElementById('randomPctLabel').textContent=this.value+'%'"><span class="range-val" id="randomPctLabel">10%</span></div>
       </div>
     </div>
-    <div id="botTab-style" style="display:none;">
-      <div class="form-group">
-        <label class="form-label">Spielstil (informativ)</label>
-        <select class="form-select" id="botPlayStyle">
-          <option value="balanced">Ausgewogen</option>
-          <option value="aggressive">Aggressiv</option>
-          <option value="defensive">Defensiv</option>
-          <option value="positional">Positionell</option>
-          <option value="tactical">Taktisch</option>
-          <option value="endgame">Endspiel-Spezialist</option>
+    <!-- TAB: Eröffnung -->
+    <div id="botTab-opening" style="display:none">
+      <div class="form-group"><label class="form-label">Eröffnungsbuch</label>
+        <select class="form-select" id="botOpeningBook">
+          <option value="random">🎲 Zufällig (alle Züge)</option>
+          <option value="e4">e4 – Offene Spiele</option>
+          <option value="d4">d4 – Geschlossene Spiele</option>
+          <option value="Nf3">Nf3 – Reti / Englisch</option>
+          <option value="c4">c4 – Englische Eröffnung</option>
+          <option value="f4">f4 – Vogel-Gambit</option>
+          <option value="b3">b3 – Nimzo-Larsen</option>
+          <option value="none">Kein Buch (reines SF)</option>
         </select>
+        <div class="form-hint">Der Bot beginnt mit diesem Zug, wenn er Weiß hat</div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Elo-Klasse (Anzeige)</label>
-        <select class="form-select" id="botEloClass">
-          <option value="beginner">Anfänger (&lt;1200)</option>
-          <option value="intermediate" selected>Fortgeschritten (1200-1800)</option>
-          <option value="advanced">Fortgeschritten (1800-2200)</option>
-          <option value="expert">Experte (2200-2500)</option>
-          <option value="master">Meister (2500+)</option>
+      <div class="form-group"><label class="form-label">Eröffnungsvielfalt (1 = immer gleich, 5 = sehr variabel)</label>
+        <div class="range-row"><input type="range" id="botOpeningVariety" min="1" max="5" value="3" oninput="document.getElementById('openVarLabel').textContent=this.value"><span class="range-val" id="openVarLabel">3</span></div>
+      </div>
+      <div class="form-group"><label class="form-label">Gambit-Neigung</label>
+        <select class="form-select" id="botGambitStyle">
+          <option value="neutral">Neutral</option>
+          <option value="gambit">Gambit-spieler (risikoreich)</option>
+          <option value="solid">Solide (kein Gambit)</option>
+          <option value="antiGambit">Anti-Gambit (Gammit ablehnen)</option>
         </select>
       </div>
       <div class="toggle-row">
-        <div>
-          <div class="toggle-info">Remis akzeptieren</div>
-          <div class="toggle-sub">Bot kann Remis anbieten / annehmen</div>
-        </div>
-        <label class="toggle">
-          <input type="checkbox" id="botAcceptDraw" checked>
-          <div class="toggle-track"><div class="toggle-thumb"></div></div>
-        </label>
+        <div><div class="toggle-info">Sizilianische Verteidigung bevorzugen</div><div class="toggle-sub">Als Schwarz gegen e4 oft Sizilianisch</div></div>
+        <label class="toggle"><input type="checkbox" id="botPreferSicilian"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-info">Indische Verteidigung bevorzugen</div><div class="toggle-sub">Als Schwarz gegen d4 oft Indisch</div></div>
+        <label class="toggle"><input type="checkbox" id="botPreferIndian"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
       </div>
     </div>
-    <div id="botTab-appearance" style="display:none;">
-      <div class="form-group">
-        <label class="form-label">Bot-Emoji / Avatar</label>
-        <div class="color-row" style="flex-wrap:wrap; gap:6px;" id="emojiPicker"></div>
+    <!-- TAB: Charakter -->
+    <div id="botTab-char" style="display:none">
+      <div class="form-group"><label class="form-label">Spielstil</label>
+        <select class="form-select" id="botPlayStyle">
+          <option value="balanced">Ausgewogen</option><option value="aggressive">Aggressiv</option>
+          <option value="defensive">Defensiv</option><option value="positional">Positionell</option>
+          <option value="tactical">Taktisch</option><option value="endgame">Endspiel-Spezialist</option>
+          <option value="gambler">Zocker</option><option value="solid">Solide / Klassisch</option>
+        </select>
       </div>
-      <div class="form-group">
-        <label class="form-label">Karten-Farbe</label>
+      <div class="form-group"><label class="form-label">Aggressivität (0 = defensiv, 100 = extrem aggressiv)</label>
+        <div class="range-row"><input type="range" id="botAggressiveness" min="0" max="100" value="50" oninput="document.getElementById('aggrLabel').textContent=this.value"><span class="range-val" id="aggrLabel">50</span></div>
+      </div>
+      <div class="form-group"><label class="form-label">Zeitdruck-Verhalten</label>
+        <select class="form-select" id="botTimePressure">
+          <option value="normal">Normal</option>
+          <option value="flagging">Flagging (sehr schnell bei wenig Zeit)</option>
+          <option value="cautious">Vorsichtig (immer gründlich)</option>
+          <option value="panic">Panik (zufällig bei Zeitdruck)</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Aufgeben bei Bewertung ≤ (Centipawns)</label>
+        <select class="form-select" id="botResignThreshold">
+          <option value="0">Niemals aufgeben</option>
+          <option value="-300">-3 Bauern (locker)</option>
+          <option value="-500" selected>-5 Bauern (normal)</option>
+          <option value="-800">-8 Bauern (kämpferisch)</option>
+          <option value="-1200">-12 Bauern (sehr kämpferisch)</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Remis-Verhalten</label>
+        <select class="form-select" id="botDrawBehavior">
+          <option value="balanced">Ausgewogen</option>
+          <option value="accept">Remis immer akzeptieren</option>
+          <option value="refuse">Remis ablehnen wenn möglich</option>
+          <option value="offer">Remis aktiv anbieten wenn schlechter</option>
+        </select>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-info">Figurenopfer mögen</div><div class="toggle-sub">Bot opfert gerne Material für Initiative</div></div>
+        <label class="toggle"><input type="checkbox" id="botLoveSacrifice"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-info">Läuferpaar-Experte</div><div class="toggle-sub">Bot bewertet das Läuferpaar sehr hoch</div></div>
+        <label class="toggle"><input type="checkbox" id="botBishopPair"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-info">Bauernstruktur-Fokus</div><div class="toggle-sub">Bot achtet stark auf Bauernstruktur</div></div>
+        <label class="toggle"><input type="checkbox" id="botPawnFocus"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
+      </div>
+    </div>
+    <!-- TAB: Varianten -->
+    <div id="botTab-variants" style="display:none">
+      <div class="form-group"><label class="form-label">Bevorzugte Variante</label>
+        <select class="form-select" id="botPrefVariant">
+          <option value="standard">Standard</option><option value="chess960">Chess960</option>
+          <option value="kingofthehill">König der Mitte</option><option value="threecheck">Drei-Schach</option>
+          <option value="atomic">Atomares Schach</option><option value="antichess">Räuberschach</option>
+        </select>
+      </div>
+      <div style="font-size:12px;color:var(--mu);margin-bottom:12px">Skill Level pro Variante (0–20) – unabhängig vom Haupt-Level</div>
+      <div id="variantLevelSliders"></div>
+    </div>
+    <!-- TAB: Aussehen -->
+    <div id="botTab-look" style="display:none">
+      <div class="form-group"><label class="form-label">Avatar-Emoji</label><div id="emojiPicker" style="display:flex;flex-wrap:wrap;gap:6px"></div></div>
+      <div class="form-group"><label class="form-label">Karten-Akzentfarbe</label>
         <div class="color-row" id="colorPicker">
           <div class="color-swatch selected" style="background:#7fa650" data-color="#7fa650" onclick="selectColor(this)"></div>
           <div class="color-swatch" style="background:#4f9de8" data-color="#4f9de8" onclick="selectColor(this)"></div>
@@ -556,7 +451,15 @@ body {
           <div class="color-swatch" style="background:#ff8c42" data-color="#ff8c42" onclick="selectColor(this)"></div>
           <div class="color-swatch" style="background:#00bcd4" data-color="#00bcd4" onclick="selectColor(this)"></div>
           <div class="color-swatch" style="background:#e8408a" data-color="#e8408a" onclick="selectColor(this)"></div>
+          <div class="color-swatch" style="background:#20c997" data-color="#20c997" onclick="selectColor(this)"></div>
+          <div class="color-swatch" style="background:#fd7e14" data-color="#fd7e14" onclick="selectColor(this)"></div>
         </div>
+      </div>
+      <div class="form-group"><label class="form-label">Elo-Klasse (Anzeige)</label>
+        <select class="form-select" id="botEloClass">
+          <option value="beginner">Anfänger (&lt;1200)</option><option value="intermediate" selected>Fortgeschritten (1200-1800)</option>
+          <option value="advanced">Stark (1800-2200)</option><option value="expert">Experte (2200-2500)</option><option value="master">Meister (2500+)</option>
+        </select>
       </div>
     </div>
     <div class="modal-actions">
@@ -566,138 +469,79 @@ body {
   </div>
 </div>
 
-<!-- TOURNAMENT CREATION MODAL -->
+<!-- BOT PROFILE MODAL -->
+<div class="modal-overlay" id="botProfileModal">
+  <div class="modal" style="width:min(700px,95vw)">
+    <div id="botProfileContent"></div>
+    <div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal('botProfileModal')">Schließen</button><button class="btn btn-primary" onclick="editBotFromProfile()">✏️ Bearbeiten</button></div>
+  </div>
+</div>
+
+<!-- TOURNAMENT MODAL -->
 <div class="modal-overlay" id="tournamentModal">
-  <div class="modal" style="width:min(700px,95vw);">
+  <div class="modal" style="width:min(700px,95vw)">
     <div class="modal-title">🏆 Turnier erstellen</div>
     <div class="tab-row">
       <button class="tab-btn active" onclick="switchTTab('tbasic',this)">Grundlagen</button>
       <button class="tab-btn" onclick="switchTTab('ttime',this)">Bedenkzeit</button>
-      <button class="tab-btn" onclick="switchTTab('tbots',this)">Bots wählen</button>
+      <button class="tab-btn" onclick="switchTTab('tvariant',this)">Variante</button>
+      <button class="tab-btn" onclick="switchTTab('tbots',this)">Bots</button>
       <button class="tab-btn" onclick="switchTTab('trules',this)">Regeln</button>
     </div>
     <div id="tTab-tbasic">
-      <div class="form-group">
-        <label class="form-label">Turnier-Name</label>
-        <input class="form-input" id="tName" placeholder="z.B. Sonntagsarena, Blitz-Meisterschaft...">
-      </div>
+      <div class="form-group"><label class="form-label">Turnier-Name</label><input class="form-input" id="tName" placeholder="z.B. Sonntagsarena..."></div>
       <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Turnier-Dauer (Minuten)</label>
-          <select class="form-select" id="tDuration">
-            <option value="5">5 Minuten</option>
-            <option value="10" selected>10 Minuten</option>
-            <option value="15">15 Minuten</option>
-            <option value="20">20 Minuten</option>
-            <option value="30">30 Minuten</option>
-            <option value="45">45 Minuten</option>
-            <option value="60">1 Stunde</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Turnier-Typ</label>
-          <select class="form-select" id="tType">
-            <option value="arena">Arena (Lichess-Stil)</option>
-            <option value="swiss">Schweizer System</option>
-            <option value="roundrobin">Round Robin</option>
-          </select>
-        </div>
+        <div class="form-group"><label class="form-label">Turnier-Dauer</label><select class="form-select" id="tDuration"><option value="5">5 Min</option><option value="10" selected>10 Min</option><option value="15">15 Min</option><option value="20">20 Min</option><option value="30">30 Min</option><option value="45">45 Min</option><option value="60">1 Stunde</option></select></div>
+        <div class="form-group"><label class="form-label">Turnier-Typ</label><select class="form-select" id="tType"><option value="arena">Arena (Lichess-Stil)</option><option value="swiss">Schweizer System</option><option value="roundrobin">Round Robin</option></select></div>
       </div>
-      <div class="toggle-row">
-        <div><div class="toggle-info">Spieler nimmt teil</div><div class="toggle-sub">Du spielst selbst im Turnier mit</div></div>
-        <label class="toggle"><input type="checkbox" id="tPlayerJoins" checked><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
-      </div>
-      <div class="toggle-row">
-        <div><div class="toggle-info">Elo sichtbar</div><div class="toggle-sub">Bot-Ratings werden angezeigt</div></div>
-        <label class="toggle"><input type="checkbox" id="tShowElo" checked><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
-      </div>
+      <div class="toggle-row"><div><div class="toggle-info">Spieler nimmt teil</div></div><label class="toggle"><input type="checkbox" id="tPlayerJoins" checked><div class="toggle-track"><div class="toggle-thumb"></div></div></label></div>
+      <div class="toggle-row"><div><div class="toggle-info">Elo sichtbar</div></div><label class="toggle"><input type="checkbox" id="tShowElo" checked><div class="toggle-track"><div class="toggle-thumb"></div></div></label></div>
     </div>
-    <div id="tTab-ttime" style="display:none;">
+    <div id="tTab-ttime" style="display:none">
       <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Grundzeit (Minuten)</label>
-          <select class="form-select" id="tBaseTime">
-            <option value="0.25">15 Sekunden (Ultrabullet)</option>
-            <option value="0.5">30 Sekunden</option>
-            <option value="1" selected>1 Minute (Bullet)</option>
-            <option value="2">2 Minuten</option>
-            <option value="3">3 Minuten (Blitz)</option>
-            <option value="5">5 Minuten</option>
-            <option value="10">10 Minuten (Rapid)</option>
-            <option value="15">15 Minuten</option>
-            <option value="30">30 Minuten (Classical)</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Inkrement (Sekunden)</label>
-          <select class="form-select" id="tIncrement">
-            <option value="0">Kein Inkrement</option>
-            <option value="1" selected>+1 Sekunde</option>
-            <option value="2">+2 Sekunden</option>
-            <option value="3">+3 Sekunden</option>
-            <option value="5">+5 Sekunden</option>
-            <option value="10">+10 Sekunden</option>
-          </select>
-        </div>
+        <div class="form-group"><label class="form-label">Grundzeit</label><select class="form-select" id="tBaseTime"><option value="0.25">15s Ultrabullet</option><option value="0.5">30s</option><option value="1" selected>1 min Bullet</option><option value="2">2 min</option><option value="3">3 min Blitz</option><option value="5">5 min</option><option value="10">10 min Rapid</option><option value="15">15 min</option><option value="30">30 min Classical</option></select></div>
+        <div class="form-group"><label class="form-label">Inkrement</label><select class="form-select" id="tIncrement"><option value="0">Kein</option><option value="1" selected>+1s</option><option value="2">+2s</option><option value="3">+3s</option><option value="5">+5s</option><option value="10">+10s</option></select></div>
       </div>
-      <div class="card" style="background:var(--surface2);">
-        <div style="text-align:center; font-size:28px; font-weight:900; color:var(--accent);" id="timeControlPreview">1+1</div>
-        <div style="text-align:center; font-size:13px; color:var(--muted); margin-top:4px;" id="timeControlType">Bullet</div>
-      </div>
-      <div class="toggle-row" style="margin-top:16px;">
-        <div><div class="toggle-info">Flaggen bei Zeitablauf</div><div class="toggle-sub">Wer keine Zeit mehr hat, verliert</div></div>
-        <label class="toggle"><input type="checkbox" id="tFlagging" checked><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
-      </div>
+      <div class="card" style="background:var(--s2)"><div style="text-align:center;font-size:28px;font-weight:900;color:var(--ac)" id="timeControlPreview">1+1</div><div style="text-align:center;font-size:13px;color:var(--mu);margin-top:4px" id="timeControlType">Bullet</div></div>
+      <div class="toggle-row"><div><div class="toggle-info">Flaggen bei Zeitablauf</div></div><label class="toggle"><input type="checkbox" id="tFlagging" checked><div class="toggle-track"><div class="toggle-thumb"></div></div></label></div>
     </div>
-    <div id="tTab-tbots" style="display:none;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-        <div style="font-size:13px; color:var(--muted);">Wähle die Bots für dieses Turnier</div>
-        <div style="display:flex; gap:6px;">
-          <button class="btn btn-secondary btn-sm" onclick="selectAllBots()">Alle</button>
-          <button class="btn btn-secondary btn-sm" onclick="deselectAllBots()">Keine</button>
-        </div>
+    <div id="tTab-tvariant" style="display:none">
+      <div class="form-group"><label class="form-label">Schach-Variante</label>
+        <select class="form-select" id="tVariant">
+          <option value="standard">♟ Standard</option>
+          <option value="chess960">🎲 Chess960 (Fischer Random)</option>
+          <option value="kingofthehill">👑 König der Mitte</option>
+          <option value="threecheck">3️⃣ Drei-Schach</option>
+          <option value="atomic">💥 Atomares Schach</option>
+          <option value="antichess">🔄 Räuberschach (Antichess)</option>
+        </select>
       </div>
-      <div class="scrollable" style="max-height:320px;">
-        <div id="tBotGrid" class="bots-grid" style="grid-template-columns: repeat(auto-fill, minmax(200px,1fr));"></div>
-        <div id="tBotEmpty" class="empty-state" style="display:none;"><div class="empty-icon">🤖</div><p>Erstelle zuerst Bots im Bot Manager</p></div>
-      </div>
-      <div style="margin-top:10px; font-size:13px; color: var(--muted);">Ausgewählt: <span id="selectedBotCount" style="color:var(--accent); font-weight:700;">0</span> Bots</div>
+      <div id="variantDescription" class="card" style="background:var(--s2);margin-top:0"></div>
     </div>
-    <div id="tTab-trules" style="display:none;">
+    <div id="tTab-tbots" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="font-size:13px;color:var(--mu)">Wähle die Bots</div>
+        <div style="display:flex;gap:6px"><button class="btn btn-secondary btn-sm" onclick="selectAllBots()">Alle</button><button class="btn btn-secondary btn-sm" onclick="deselectAllBots()">Keine</button></div>
+      </div>
+      <div class="scrollable" style="max-height:320px"><div id="tBotGrid" class="bots-grid" style="grid-template-columns:repeat(auto-fill,minmax(200px,1fr))"></div><div id="tBotEmpty" class="empty-state" style="display:none"><div class="empty-icon">🤖</div><p>Erstelle zuerst Bots</p></div></div>
+      <div style="margin-top:10px;font-size:13px;color:var(--mu)">Ausgewählt: <span id="selectedBotCount" style="color:var(--ac);font-weight:700">0</span></div>
+    </div>
+    <div id="tTab-trules" style="display:none">
       <div class="form-row">
         <div class="form-group"><label class="form-label">Punkte: Sieg</label><input class="form-input" type="number" id="tPointsWin" value="2" min="1" max="10"></div>
         <div class="form-group"><label class="form-label">Punkte: Remis</label><input class="form-input" type="number" id="tPointsDraw" value="1" min="0" max="5"></div>
       </div>
       <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Streak-Bonus (2+ Siege in Folge)</label>
-          <input class="form-input" type="number" id="tStreakBonus" value="1" min="0" max="5">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Animations-Delay (ms)</label>
-          <div class="range-row">
-            <input type="range" id="tAnimSpeed" min="100" max="2000" step="100" value="500" oninput="document.getElementById('animSpeedLabel').textContent=this.value+'ms'">
-            <span class="range-val" id="animSpeedLabel">500ms</span>
-          </div>
+        <div class="form-group"><label class="form-label">Streak-Bonus</label><input class="form-input" type="number" id="tStreakBonus" value="1" min="0" max="5"></div>
+        <div class="form-group"><label class="form-label">Animations-Delay (ms)</label>
+          <div class="range-row"><input type="range" id="tAnimSpeed" min="100" max="2000" step="100" value="500" oninput="document.getElementById('animSpeedLabel').textContent=this.value+'ms'"><span class="range-val" id="animSpeedLabel">500ms</span></div>
         </div>
       </div>
-      <div class="toggle-row">
-        <div><div class="toggle-info">Gleiche Paarungen vermeiden</div><div class="toggle-sub">Bots spielen selten zweimal gegeneinander</div></div>
-        <label class="toggle"><input type="checkbox" id="tAvoidRematches" checked><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
-      </div>
-      <div class="toggle-row">
-        <div><div class="toggle-info">Ähnliches Elo bevorzugen</div><div class="toggle-sub">Bots mit ähnlichem Rating werden gepaart</div></div>
-        <label class="toggle"><input type="checkbox" id="tEloMatch" checked><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
-      </div>
-      <div class="toggle-row">
-        <div><div class="toggle-info">Elo-Rating aktualisieren</div><div class="toggle-sub">Ratings werden nach jeder Partie angepasst</div></div>
-        <label class="toggle"><input type="checkbox" id="tUpdateElo" checked><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
-      </div>
+      <div class="toggle-row"><div><div class="toggle-info">Gleiche Paarungen vermeiden</div></div><label class="toggle"><input type="checkbox" id="tAvoidRematches" checked><div class="toggle-track"><div class="toggle-thumb"></div></div></label></div>
+      <div class="toggle-row"><div><div class="toggle-info">Ähnliches Elo bevorzugen</div></div><label class="toggle"><input type="checkbox" id="tEloMatch" checked><div class="toggle-track"><div class="toggle-thumb"></div></div></label></div>
+      <div class="toggle-row"><div><div class="toggle-info">Elo-Rating aktualisieren</div></div><label class="toggle"><input type="checkbox" id="tUpdateElo" checked><div class="toggle-track"><div class="toggle-thumb"></div></div></label></div>
     </div>
-    <div class="modal-actions">
-      <button class="btn btn-secondary" onclick="closeTournamentModal()">Abbrechen</button>
-      <button class="btn btn-primary btn-lg" onclick="startTournament()">🚀 Starten</button>
-    </div>
+    <div class="modal-actions"><button class="btn btn-secondary" onclick="closeTournamentModal()">Abbrechen</button><button class="btn btn-primary btn-lg" onclick="startTournament()">🚀 Starten</button></div>
   </div>
 </div>
 
@@ -706,1151 +550,762 @@ body {
   <div class="modal">
     <div class="modal-title">⚙️ Profil-Einstellungen</div>
     <div class="form-group"><label class="form-label">Spielername</label><input class="form-input" id="settingPlayerName" placeholder="Dein Name"></div>
-    <div class="form-group"><label class="form-label">Start-Elo</label><input class="form-input" type="number" id="settingPlayerElo" value="1500" min="100" max="3000"><div class="form-hint">Achtung: Setzt dein Rating zurück</div></div>
+    <div class="form-group"><label class="form-label">Start-Elo</label><input class="form-input" type="number" id="settingPlayerElo" value="1500"><div class="form-hint">Setzt dein Rating zurück</div></div>
     <div class="form-group"><label class="form-label">Avatar-Emoji</label><input class="form-input" id="settingAvatar" placeholder="🧠" maxlength="4"></div>
-    <div class="modal-actions">
-      <button class="btn btn-secondary" onclick="closeModal('profileModal')">Abbrechen</button>
-      <button class="btn btn-primary" onclick="saveProfileSettings()">Speichern</button>
-    </div>
+    <div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal('profileModal')">Abbrechen</button><button class="btn btn-primary" onclick="saveProfileSettings()">Speichern</button></div>
   </div>
 </div>
 
 <div class="toast-container" id="toastContainer"></div>
-<div class="engine-status" id="engineStatus">
-  <div class="dot" id="engineDot"></div>
-  <span id="engineStatusText">Stockfish lädt…</span>
-</div>
+<div class="engine-status" id="engineStatus"><div class="dot" id="engineDot"></div><span id="engineStatusText">Stockfish lädt…</span></div>
 
 <script>
-// ══════════════════════════════════════════════════════════
-//  STOCKFISH POOL
-// ══════════════════════════════════════════════════════════
-const SF_POOL_SIZE = 6;
-const sfPool = [];
-let sfReady = false;
-
-function createStockfishInstance() {
-  return new Promise((resolve) => {
-    let sf;
-    try { sf = typeof Stockfish === 'function' ? Stockfish() : null; } catch(e) { sf = null; }
-    if (!sf) {
-      try {
-        const blob = new Blob([`importScripts('https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js')`], {type:'text/javascript'});
-        sf = new Worker(URL.createObjectURL(blob));
-      } catch(e2) { resolve(null); return; }
-    }
-    const instance = { sf, busy: false, pending: null };
-    const handler = (event) => {
-      const line = typeof event === 'string' ? event : (event.data || '');
-      if (!line) return;
-      if (!instance.initialized) {
-        if (line.includes('readyok') || line.includes('uciok') || line.includes('Stockfish')) {
-          instance.initialized = true; resolve(instance);
-        }
-        return;
-      }
-      if (instance.pending && line.startsWith('bestmove')) {
-        const parts = line.split(' ');
-        const move = parts[1];
-        const cb = instance.pending;
-        instance.pending = null;
-        instance.busy = false;
-        cb(move && move !== '(none)' ? move : null);
-      }
-    };
-    sf.onmessage = handler;
-    const send = (cmd) => { try { if (typeof sf.postMessage === 'function') sf.postMessage(cmd); } catch(e) {} };
-    instance.send = send;
-    send('uci'); send('isready');
-    setTimeout(() => { if (!instance.initialized) { instance.initialized = true; resolve(instance); } }, 3000);
-  });
-}
-
-async function initStockfishPool() {
-  updateEngineStatus('Stockfish lädt…', false);
-  const promises = [];
-  for (let i = 0; i < SF_POOL_SIZE; i++) promises.push(createStockfishInstance());
-  const instances = await Promise.all(promises);
-  instances.forEach(inst => { if (inst) sfPool.push(inst); });
-  sfReady = sfPool.length > 0;
-  updateEngineStatus(sfReady ? `Stockfish bereit (${sfPool.length}x)` : 'Engine-Fehler', sfReady);
-  if (!sfReady) toast('Stockfish konnte nicht geladen werden – Fallback aktiv', 'error');
-}
-
-function updateEngineStatus(text, ready) {
-  document.getElementById('engineStatusText').textContent = text;
-  document.getElementById('engineDot').className = 'dot' + (ready ? ' ready' : '');
-}
-
-function stockfishGetMove(fen, skillLevel, movetime, callback) {
-  if (!sfReady || sfPool.length === 0) { fallbackMove(fen, callback); return; }
-  const inst = sfPool.find(p => !p.busy);
-  if (!inst) { setTimeout(() => stockfishGetMove(fen, skillLevel, movetime, callback), 80); return; }
-  inst.busy = true;
-  inst.pending = (move) => { inst.busy = false; callback(move); };
-  const sk = Math.max(0, Math.min(20, skillLevel || 10));
-  const mt = Math.max(50, Math.min(10000, movetime || 500));
+// ══════ STOCKFISH POOL ══════
+const SF_POOL_SIZE=6;const sfPool=[];let sfReady=false;
+function createStockfishInstance(){return new Promise(resolve=>{let sf;try{sf=typeof Stockfish==='function'?Stockfish():null}catch(e){sf=null}if(!sf){try{const b=new Blob([`importScripts('https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js')`],{type:'text/javascript'});sf=new Worker(URL.createObjectURL(b))}catch(e2){resolve(null);return}}const inst={sf,busy:false,pending:null};const handler=ev=>{const l=typeof ev==='string'?ev:(ev.data||'');if(!l)return;if(!inst.initialized){if(l.includes('readyok')||l.includes('uciok')||l.includes('Stockfish')){inst.initialized=true;resolve(inst)}return}if(inst.pending&&l.startsWith('bestmove')){const m=l.split(' ')[1];const cb=inst.pending;inst.pending=null;inst.busy=false;cb(m&&m!=='(none)'?m:null)}};sf.onmessage=handler;const send=cmd=>{try{if(typeof sf.postMessage==='function')sf.postMessage(cmd)}catch(e){}};inst.send=send;send('uci');send('isready');setTimeout(()=>{if(!inst.initialized){inst.initialized=true;resolve(inst)}},3000)})}
+async function initStockfishPool(){updateEngineStatus('Stockfish lädt…',false);const arr=await Promise.all(Array.from({length:SF_POOL_SIZE},createStockfishInstance));arr.forEach(i=>{if(i)sfPool.push(i)});sfReady=sfPool.length>0;updateEngineStatus(sfReady?`Stockfish bereit (${sfPool.length}x)`:'Engine-Fehler',sfReady)}
+function updateEngineStatus(t,r){document.getElementById('engineStatusText').textContent=t;document.getElementById('engineDot').className='dot'+(r?' ready':'')}
+function stockfishGetMove(fen,sk,mt,is960,cb){
+  if(!sfReady||!sfPool.length){fallbackMove(fen,cb);return}
+  const inst=sfPool.find(p=>!p.busy);if(!inst){setTimeout(()=>stockfishGetMove(fen,sk,mt,is960,cb),80);return}
+  inst.busy=true;inst.pending=mv=>{inst.busy=false;cb(mv)};
+  const s=Math.max(0,Math.min(20,sk||10));const m=Math.max(50,Math.min(10000,mt||500));
   inst.send('ucinewgame');
-  inst.send(`setoption name Skill Level value ${sk}`);
+  if(is960)inst.send('setoption name UCI_Chess960 value true');
+  inst.send(`setoption name Skill Level value ${s}`);
   inst.send(`position fen ${fen}`);
-  inst.send(`go movetime ${mt}`);
-  const timeoutMs = mt + 3000;
-  const safetyTimer = setTimeout(() => {
-    if (inst.pending) { console.warn('SF Timeout'); inst.pending = null; inst.busy = false; fallbackMove(fen, callback); }
-  }, timeoutMs);
-  const origPending = inst.pending;
-  inst.pending = (move) => { clearTimeout(safetyTimer); origPending(move); };
+  inst.send(`go movetime ${m}`);
+  const timer=setTimeout(()=>{if(inst.pending){inst.pending=null;inst.busy=false;fallbackMove(fen,cb)}},m+3000);
+  const orig=inst.pending;inst.pending=mv=>{clearTimeout(timer);orig(mv)}
+}
+function fallbackMove(fen,cb){try{const g=new Chess(fen);const mv=g.moves();cb(mv.length?mv[Math.floor(Math.random()*mv.length)]:null)}catch(e){cb(null)}}
+
+// ══════ MOVETIME ══════
+function levelToMovetime(lv,bm){
+  const t=[50,80,120,160,220,300,400,500,620,760,900,1100,1300,1550,1800,2100,2400,2700,3100,3500,4200];
+  const base=t[Math.max(0,Math.min(20,lv||10))];
+  return Math.min(8000,Math.round(base*Math.sqrt(Math.max(0.25,bm||1))))
 }
 
-function fallbackMove(fen, callback) {
-  try { const g = new Chess(fen); const moves = g.moves(); callback(moves.length ? moves[Math.floor(Math.random()*moves.length)] : null); }
-  catch(e) { callback(null); }
+// ══════ CHESS 960 ══════
+function genChess960FEN(){
+  const r=Array(8).fill(null);
+  r[[1,3,5,7][Math.floor(Math.random()*4)]]='b';
+  r[[0,2,4,6][Math.floor(Math.random()*4)]]='b';
+  let e=r.map((v,i)=>v==null?i:-1).filter(i=>i>=0);
+  r[e.splice(Math.floor(Math.random()*e.length),1)[0]]='q';
+  e=r.map((v,i)=>v==null?i:-1).filter(i=>i>=0);
+  r[e.splice(Math.floor(Math.random()*e.length),1)[0]]='n';
+  e=r.map((v,i)=>v==null?i:-1).filter(i=>i>=0);
+  r[e.splice(Math.floor(Math.random()*e.length),1)[0]]='n';
+  e=r.map((v,i)=>v==null?i:-1).filter(i=>i>=0).sort((a,b)=>a-b);
+  r[e[0]]='r';r[e[1]]='k';r[e[2]]='r';
+  const wh=r.map(p=>p.toUpperCase()).join('');
+  const bl=r.join('');
+  return `${bl}/pppppppp/8/8/8/8/PPPPPPPP/${wh} w - - 0 1`
 }
 
-// ══════════════════════════════════════════════════════════
-//  MOVETIME BERECHNUNG – skaliert mit Grundzeit
-//  Skill Level bestimmt die Stärke (SF-Parameter).
-//  Movetime skaliert proportional zur Grundzeit der Partie,
-//  damit Bots in Blitz länger denken als in Bullet.
-// ══════════════════════════════════════════════════════════
-function levelToMovetime(level, baseTimeMinutes) {
-  // Basis-Zeiten für 1-Minuten-Partie (in ms)
-  const baseTimes = [
-    50,   // 0
-    80,   // 1
-    120,  // 2
-    160,  // 3
-    220,  // 4
-    300,  // 5
-    400,  // 6
-    500,  // 7
-    620,  // 8
-    760,  // 9
-    900,  // 10
-    1100, // 11
-    1300, // 12
-    1550, // 13
-    1800, // 14
-    2100, // 15
-    2400, // 16
-    2700, // 17
-    3100, // 18
-    3500, // 19
-    4200, // 20
-  ];
-  const base = baseTimes[Math.max(0, Math.min(20, level || 10))];
-  // Skalierung: sqrt(baseTime / 1) – bei 1min = 1.0x, 4min = 2x, 9min = 3x
-  // Gedeckelt auf maximal 8 Sekunden pro Zug
-  const bm = Math.max(0.25, baseTimeMinutes || 1);
-  const scale = Math.sqrt(bm / 1.0);
-  return Math.min(8000, Math.round(base * scale));
-}
-
-// ══════════════════════════════════════════════════════════
-//  STATE & PERSISTENZ
-// ══════════════════════════════════════════════════════════
-let memoryFallbackStore = {};
-let storageAvailable = true;
-(function testStorage() {
-  try { const k='__ca__'; localStorage.setItem(k,'1'); localStorage.removeItem(k); }
-  catch(e) { storageAvailable = false; }
-})();
-
-function saveState() {
-  try {
-    const s = JSON.stringify(state);
-    if (storageAvailable) localStorage.setItem('chessArenaState_v2', s);
-    else memoryFallbackStore['chessArenaState_v2'] = s;
-  } catch(e) {}
-}
-function loadState() {
-  try {
-    const s = storageAvailable ? localStorage.getItem('chessArenaState_v2') : memoryFallbackStore['chessArenaState_v2'];
-    return s ? JSON.parse(s) : null;
-  } catch(e) { return null; }
-}
-
-// Beim Schließen des Tabs immer speichern
-window.addEventListener('beforeunload', saveState);
-
-let state = loadState() || {
-  player: { name:'Spieler', elo:1500, avatar:'👤', games:0, wins:0, draws:0, losses:0, ratingHistory:[1500], gameHistory:[] },
-  bots: [],
-  tournaments: [],
-  stats: { totalGames:0, totalTournaments:0, totalWins:0 }
+// ══════ VARIANT GAME ══════
+const VARIANTS={
+  standard:{name:'Standard',icon:'♟',desc:'Klassisches Schach nach FIDE-Regeln.'},
+  chess960:{name:'Chess960',icon:'🎲',desc:'Fischer Random – die Startaufstellung der Figuren auf der Grundreihe wird zufällig bestimmt.'},
+  kingofthehill:{name:'König der Mitte',icon:'👑',desc:'Wer seinen König auf d4, d5, e4 oder e5 zieht, gewinnt sofort!'},
+  threecheck:{name:'Drei-Schach',icon:'3️⃣',desc:'Wer den Gegner dreimal schachbietet, gewinnt! Schachanzahl wird angezeigt.'},
+  atomic:{name:'Atomares Schach',icon:'💥',desc:'Jede Figur die schlägt, explodiert und zerstört alle Nachbarfelder (außer Bauern). Ziel: Königsexplosion!'},
+  antichess:{name:'Räuberschach',icon:'🔄',desc:'Schlagen ist Pflicht! Wer zuerst alle Figuren verliert (oder pattgesetzt wird), gewinnt!'}
 };
-// Fehlende Felder ergänzen (Migration alter Saves)
-if (!state.player.ratingHistory) state.player.ratingHistory = [state.player.elo];
-if (!state.player.gameHistory) state.player.gameHistory = [];
-if (!state.stats) state.stats = { totalGames:0, totalTournaments:0, totalWins:0 };
 
-let arena = null;
-let selectedBotColor = '#7fa650';
-let selectedEmoji = '🤖';
-let editingBotId = null;
-let sfLevelSelected = 10;
-const BOT_EMOJIS = ['🤖','🦾','🧠','👾','🤯','🎯','🦁','🐉','👑','⚡','🌟','🔥','💀','🎩','🤺','🦊','🐺','🦅','🐍','🐻'];
-
-// Touch/Drag Scroll-Blockierung
-document.addEventListener('mousedown', (e) => {
-  if (e.target.closest('.board-wrap, #myGameBoard, .board-wrap > *, #myGameBoard > *')) {
-    document.body.style.overflow = 'hidden'; document.body.style.touchAction = 'none';
+class VariantGame{
+  constructor(variant){
+    this.variant=variant||'standard';
+    this.checksGiven={w:0,b:0};
+    this._atomicKingDead=null;
+    this._antichessWinner=null;
+    if(variant==='chess960'){this._c=new Chess(genChess960FEN())}
+    else{this._c=new Chess()}
   }
-});
-document.addEventListener('mouseup', () => { document.body.style.overflow = ''; document.body.style.touchAction = ''; });
-document.addEventListener('touchstart', (e) => {
-  if (e.target.closest('.board-wrap, #myGameBoard, .board-wrap > *, #myGameBoard > *')) {
-    document.body.style.overflow = 'hidden'; document.body.style.touchAction = 'none';
+  fen(){return this._c.fen()}
+  turn(){return this._c.turn()}
+  get(sq){return this._c.get(sq)}
+  history(o){return this._c.history(o)}
+  in_check(){return this._c.in_check()}
+  in_threefold_repetition(){return this._c.in_threefold_repetition()}
+  insufficient_material(){return this._c.insufficient_material()}
+  board(){return this._c.board()}
+  moves(opts={}){
+    if(this.variant==='antichess'){
+      const all=this._c.moves({verbose:true,square:opts.square});
+      const cap=all.filter(m=>m.captured);
+      const pool=cap.length?cap:all;
+      return opts.verbose?pool:pool.map(m=>m.san)
+    }
+    if(this.variant==='atomic'){
+      const all=this._c.moves({verbose:true,square:opts.square});
+      const filtered=all.filter(m=>!(m.captured&&m.piece==='k'));
+      return opts.verbose?filtered:filtered.map(m=>m.san)
+    }
+    return this._c.moves(opts)
   }
-}, { passive: false });
-document.addEventListener('touchend', () => { document.body.style.overflow = ''; document.body.style.touchAction = ''; });
-document.addEventListener('touchmove', (e) => {
-  if (e.target.closest('.board-wrap, #myGameBoard, .board-wrap > *, #myGameBoard > *')) e.preventDefault();
-}, { passive: false });
-
-// ══════════════════════════════════════════════════════════
-//  TAP-TO-MOVE (Antippen zum Auswählen & Ziehen)
-// ══════════════════════════════════════════════════════════
-let tapState = { selected: null, gs: null };
-
-function getSquareFromEl(el) {
-  // Sucht das nächste Element mit data-square Attribut
-  const sq = el.closest('[data-square]');
-  if (sq) return sq.getAttribute('data-square');
-  // Alternativ via CSS-Klasse: square-e2
-  const cls = [...(el.classList||[])].find(c => /^square-[a-h][1-8]$/.test(c));
-  if (cls) return cls.replace('square-', '');
-  const parent = el.parentElement && el.parentElement.closest('[data-square]');
-  if (parent) return parent.getAttribute('data-square');
-  return null;
+  move(obj){
+    if(this.variant==='antichess'){
+      const all=this._c.moves({verbose:true});
+      const cap=all.filter(m=>m.captured);
+      if(cap.length){
+        const isOk=all.find(m=>typeof obj==='string'?m.san===obj:(m.from===obj.from&&m.to===obj.to));
+        if(!isOk||!isOk.captured)return null
+      }
+    }
+    if(this.variant==='atomic'){
+      const all=this._c.moves({verbose:true});
+      const mv=all.find(m=>typeof obj==='string'?m.san===obj:(m.from===obj.from&&m.to===obj.to));
+      if(mv&&mv.captured&&mv.piece==='k')return null
+    }
+    const res=this._c.move(typeof obj==='string'?obj:{...obj,promotion:obj.promotion||'q'});
+    if(!res)return null;
+    if(this.variant==='threecheck'&&this._c.in_check()){
+      this.checksGiven[res.color]++
+    }
+    if(this.variant==='atomic'&&res.captured){
+      this._explode(res.to)
+    }
+    if(this.variant==='antichess'){
+      if(this._countPieces(res.color)===0)this._antichessWinner=res.color
+    }
+    return res
+  }
+  _countPieces(col){
+    let n=0;
+    for(let f=0;f<8;f++)for(let r=1;r<=8;r++){const p=this._c.get(String.fromCharCode(97+f)+r);if(p&&p.color===col)n++}
+    return n
+  }
+  _explode(sq){
+    const fi=sq.charCodeAt(0)-97,ri=parseInt(sq[1])-1;
+    const toRemove=[sq];
+    for(let df=-1;df<=1;df++)for(let dr=-1;dr<=1;dr++){if(!df&&!dr)continue;const nf=fi+df,nr=ri+dr;if(nf<0||nf>7||nr<0||nr>7)continue;const ns=String.fromCharCode(97+nf)+(nr+1);const p=this._c.get(ns);if(p&&p.type!=='p'){if(p.type==='k')this._atomicKingDead=p.color;toRemove.push(ns)}}
+    toRemove.forEach(s=>{try{this._c.remove(s)}catch(e){}});
+    // remove the capturing piece too (it exploded)
+    try{this._c.remove(sq)}catch(e){}
+  }
+  game_over(){
+    if(this._atomicKingDead)return true;
+    if(this._antichessWinner)return true;
+    if(this.variant==='threecheck'&&(this.checksGiven.w>=3||this.checksGiven.b>=3))return true;
+    if(this.variant==='kingofthehill'){for(const s of['d4','d5','e4','e5']){const p=this._c.get(s);if(p&&p.type==='k')return true}}
+    if(this.variant==='antichess'&&this._c.in_stalemate())return true;
+    return this._c.game_over()
+  }
+  getResult(){
+    if(this._atomicKingDead)return{winner:this._atomicKingDead==='w'?'b':'w',reason:'Explosion'}
+    if(this._antichessWinner)return{winner:this._antichessWinner,reason:'Alle Figuren verloren'}
+    if(this.variant==='antichess'&&this._c.in_stalemate())return{winner:this._c.turn(),reason:'Patt (Sieg)'}
+    if(this.variant==='threecheck'){if(this.checksGiven.w>=3)return{winner:'w',reason:'3 Schachs'};if(this.checksGiven.b>=3)return{winner:'b',reason:'3 Schachs'}}
+    if(this.variant==='kingofthehill'){for(const s of['d4','d5','e4','e5']){const p=this._c.get(s);if(p&&p.type==='k')return{winner:p.color,reason:'König in der Mitte'}}}
+    if(this._c.in_checkmate())return{winner:this._c.turn()==='w'?'b':'w',reason:'Matt'}
+    if(this._c.in_stalemate())return{winner:null,reason:'Patt'}
+    if(this._c.in_threefold_repetition())return{winner:null,reason:'3-fach Wiederholung'}
+    if(this._c.insufficient_material())return{winner:null,reason:'Material'}
+    if(this._c.in_draw())return{winner:null,reason:'Remis'}
+    return null
+  }
+  in_checkmate(){
+    if(this.variant==='threecheck'){if(this.checksGiven.w>=3||this.checksGiven.b>=3)return false}
+    return this._c.in_checkmate()
+  }
+  in_stalemate(){return this.variant==='antichess'?false:this._c.in_stalemate()}
+  in_draw(){return this._c.in_draw()}
 }
 
-function clearTapHighlights() {
-  document.querySelectorAll('.tap-selected-sq, .tap-hint-sq').forEach(el => {
-    el.classList.remove('tap-selected-sq', 'tap-hint-sq');
+// Variant-smart bot move
+function getVariantBotMove(vg,botRef,baseTimeMin,cb){
+  const v=vg.variant;
+  if(v==='standard'||v==='chess960'){
+    const sk=botRef.sfLevel??10;
+    const mt=levelToMovetime(sk,baseTimeMin);
+    const tv=botRef.timeVariance||10;
+    const factor=1+(Math.random()*2-1)*(tv/100);
+    stockfishGetMove(vg.fen(),sk,Math.round(mt*factor),v==='chess960',uci=>{
+      if(!uci){variantSmartMove(vg,botRef,cb);return}
+      cb(uci,true) // true = is UCI move
+    });return
+  }
+  variantSmartMove(vg,botRef,cb)
+}
+function variantSmartMove(vg,botRef,cb){
+  const moves=vg.moves({verbose:true});
+  if(!moves.length){cb(null);return}
+  const lv=botRef.sfLevel??10;
+  let scored=moves.map(m=>({m,s:0}));
+  const v=vg.variant;
+  scored.forEach(x=>{
+    if(x.m.san&&x.m.san.includes('+'))x.s+=v==='threecheck'?30:5;
+    if(x.m.captured){
+      x.s+=5;
+      if(v==='atomic')x.s+=10;
+      if(v==='antichess'){const vals={q:9,r:5,b:3,n:3,p:1};x.s+=(vals[x.m.captured]||1)*2}
+    }
+    if(v==='kingofthehill'&&x.m.piece==='k'){
+      const CENTER=['d4','d5','e4','e5'];const NEAR=['c3','c4','c5','c6','d3','d6','e3','e6','f3','f4','f5','f6'];
+      if(CENTER.includes(x.m.to))x.s+=50;else if(NEAR.includes(x.m.to))x.s+=20
+    }
   });
+  const noise=Math.max(0,20-lv)*1.5;
+  scored.forEach(x=>x.s+=Math.random()*noise);
+  scored.sort((a,b)=>b.s-a.s);
+  const topN=Math.max(1,Math.ceil((21-lv)/4));
+  const pick=scored[Math.floor(Math.random()*Math.min(topN,scored.length))];
+  setTimeout(()=>cb(pick.m.san,false),50)
 }
 
-function highlightTapSquare(sq, type) {
-  const boardEl = document.getElementById('myGameBoard');
-  if (!boardEl) return;
-  const el = boardEl.querySelector(`[data-square="${sq}"]`);
-  if (el) el.classList.add(type === 'selected' ? 'tap-selected-sq' : 'tap-hint-sq');
+// Opening book first move
+function getOpeningMove(botRef,game){
+  const hist=game.history();
+  if(hist.length>0&&game.turn()==='b'&&hist.length===1&&botRef.openingBook&&botRef.openingBook!=='random'&&botRef.openingBook!=='none'){
+    // simple response: prefer e5 against e4, d5/Nf6 against d4
+    if(botRef.preferSicilian&&hist[0]==='e4')return'c5';
+    if(botRef.preferIndian&&hist[0]==='d4')return'Nf6';
+    return null
+  }
+  if(game.turn()==='w'&&hist.length===0&&botRef.openingBook&&botRef.openingBook!=='random'&&botRef.openingBook!=='none'){
+    return botRef.openingBook
+  }
+  return null
 }
 
-function showTapHints(gs, fromSq) {
-  // Zeige mögliche Züge als Hinweise
-  const moves = gs.game.moves({ square: fromSq, verbose: true });
-  moves.forEach(m => highlightTapSquare(m.to, 'hint'));
+// ══════ STATE ══════
+let memFS={};let storageOk=true;
+(function(){try{localStorage.setItem('__t','1');localStorage.removeItem('__t')}catch(e){storageOk=false}})();
+function saveState(){try{const s=JSON.stringify(state);storageOk?localStorage.setItem('chessArena_v3',s):memFS['ca']=s}catch(e){}}
+function loadState(){try{const s=storageOk?localStorage.getItem('chessArena_v3'):memFS['ca'];return s?JSON.parse(s):null}catch(e){return null}}
+window.addEventListener('beforeunload',saveState);
+
+function defaultBotStats(){
+  return{variantStats:{standard:{games:0,wins:0,draws:0,losses:0,elo:1500,ratingHistory:[1500]},chess960:{games:0,wins:0,draws:0,losses:0,elo:1500,ratingHistory:[1500]},kingofthehill:{games:0,wins:0,draws:0,losses:0,elo:1500,ratingHistory:[1500]},threecheck:{games:0,wins:0,draws:0,losses:0,elo:1500,ratingHistory:[1500]},atomic:{games:0,wins:0,draws:0,losses:0,elo:1500,ratingHistory:[1500]},antichess:{games:0,wins:0,draws:0,losses:0,elo:1500,ratingHistory:[1500]}},tcStats:{bullet:{games:0,wins:0,draws:0,losses:0},blitz:{games:0,wins:0,draws:0,losses:0},rapid:{games:0,wins:0,draws:0,losses:0},classical:{games:0,wins:0,draws:0,losses:0}},recentGames:[],streak:{current:0,best:0,type:'win'},bestWinElo:0}
 }
+function getTC(bm){return bm<2?'bullet':bm<8?'blitz':bm<20?'rapid':'classical'}
+function ensureBotStats(bot){if(!bot.variantStats)Object.assign(bot,defaultBotStats())}
 
-function setupTapToMove(gs) {
-  const boardEl = document.getElementById('myGameBoard');
-  if (!boardEl) return;
-  // Entferne alten Listener
-  boardEl.removeEventListener('click', boardEl._tapHandler);
-  boardEl._tapHandler = function(e) {
-    if (gs.done || gs.game.turn() !== gs.playerColor) return;
-    const sq = getSquareFromEl(e.target);
-    if (!sq) return;
+let state=loadState()||{player:{name:'Spieler',elo:1500,avatar:'👤',games:0,wins:0,draws:0,losses:0,ratingHistory:[1500],gameHistory:[]},bots:[],tournaments:[],stats:{totalGames:0,totalTournaments:0,totalWins:0}};
+if(!state.player.ratingHistory)state.player.ratingHistory=[state.player.elo];
+if(!state.player.gameHistory)state.player.gameHistory=[];
+if(!state.stats)state.stats={totalGames:0,totalTournaments:0,totalWins:0};
+state.bots.forEach(ensureBotStats);
 
-    if (!tapState.selected) {
-      // Kein Feld gewählt → Figur auswählen
-      const piece = gs.game.get(sq);
-      if (!piece || piece.color !== gs.playerColor) return;
-      tapState.selected = sq;
-      tapState.gs = gs;
-      clearTapHighlights();
-      highlightTapSquare(sq, 'selected');
-      showTapHints(gs, sq);
-    } else {
-      const from = tapState.selected;
-      const to = sq;
-      tapState.selected = null;
-      clearTapHighlights();
+let arena=null,selectedBotColor='#7fa650',selectedEmoji='🤖',editingBotId=null,sfLevelSelected=10,viewingBotId=null;
+const BOT_EMOJIS=['🤖','🦾','🧠','👾','🤯','🎯','🦁','🐉','👑','⚡','🌟','🔥','💀','🎩','🤺','🦊','🐺','🦅','🐍','🐻','🦄','🐯','🦖','👻','🎭'];
+const VARIANT_SL_NAMES=['standard','chess960','kingofthehill','threecheck','atomic','antichess'];
 
-      // Eigene Figur angeklickt → Auswahl wechseln
-      const piece = gs.game.get(sq);
-      if (piece && piece.color === gs.playerColor && from !== sq) {
-        tapState.selected = sq;
-        highlightTapSquare(sq, 'selected');
-        showTapHints(gs, sq);
-        return;
-      }
+// scroll block
+document.addEventListener('mousedown',e=>{if(e.target.closest('.board-wrap,#myGameBoard')){document.body.style.overflow='hidden';document.body.style.touchAction='none'}});
+document.addEventListener('mouseup',()=>{document.body.style.overflow='';document.body.style.touchAction=''});
+document.addEventListener('touchstart',e=>{if(e.target.closest('.board-wrap,#myGameBoard')){document.body.style.overflow='hidden';document.body.style.touchAction='none'}},{passive:false});
+document.addEventListener('touchend',()=>{document.body.style.overflow='';document.body.style.touchAction=''});
+document.addEventListener('touchmove',e=>{if(e.target.closest('.board-wrap,#myGameBoard'))e.preventDefault()},{passive:false});
 
-      if (from === sq) return; // Gleiches Feld → Abwählen
-
-      // Zug versuchen
-      const move = gs.game.move({ from, to, promotion: 'q' });
-      if (!move) return;
-
-      gs.board.position(gs.game.fen());
-      if (gs.incMs > 0) {
-        if (gs.playerColor === 'w') gs.whiteClock += gs.incMs;
-        else gs.blackClock += gs.incMs;
-      }
-      const statusEl = document.getElementById('myGameStatus');
-      if (statusEl) statusEl.textContent = '⌛ Gegner denkt…';
-      checkGameOver(gs);
-      if (!gs.done) scheduleNextMove(gs);
+// ══════ TAP TO MOVE ══════
+let tapState={sel:null,gs:null};
+function getSquare(el){const a=el.closest('[data-square]');if(a)return a.getAttribute('data-square');const p=el.parentElement?.closest('[data-square]');if(p)return p.getAttribute('data-square');return null}
+function clearTapHL(){document.querySelectorAll('.tap-sel,.tap-hint').forEach(e=>{e.classList.remove('tap-sel','tap-hint')})}
+function hlSq(sq,type){const b=document.getElementById('myGameBoard');if(!b)return;const e=b.querySelector(`[data-square="${sq}"]`);if(e)e.classList.add(type==='sel'?'tap-sel':'tap-hint')}
+function showHints(gs,from){gs.vgame.moves({square:from,verbose:true}).forEach(m=>hlSq(m.to,'hint'))}
+function setupTap(gs){
+  const el=document.getElementById('myGameBoard');if(!el)return;
+  el.removeEventListener('click',el._th);
+  el._th=function(e){
+    if(gs.done||gs.vgame.turn()!==gs.playerColor)return;
+    const sq=getSquare(e.target);if(!sq)return;
+    if(!tapState.sel){
+      const p=gs.vgame.get(sq);if(!p||p.color!==gs.playerColor)return;
+      tapState.sel=sq;clearTapHL();hlSq(sq,'sel');showHints(gs,sq)
+    }else{
+      const from=tapState.sel,to=sq;tapState.sel=null;clearTapHL();
+      const p=gs.vgame.get(sq);if(p&&p.color===gs.playerColor&&from!==sq){tapState.sel=sq;hlSq(sq,'sel');showHints(gs,sq);return}
+      if(from===sq)return;
+      const mv=gs.vgame.move({from,to,promotion:'q'});if(!mv)return;
+      gs.board.position(gs.vgame.fen());
+      if(gs.incMs>0){if(gs.playerColor==='w')gs.whiteClock+=gs.incMs;else gs.blackClock+=gs.incMs}
+      const st=document.getElementById('myGameStatus');if(st)st.textContent='⌛ Gegner denkt…';
+      checkGameOver(gs);if(!gs.done)scheduleNextMove(gs)
     }
   };
-  boardEl.addEventListener('click', boardEl._tapHandler);
+  el.addEventListener('click',el._th)
 }
 
-// ══════════════════════════════════════════════════════════
-//  NAVIGATION
-// ══════════════════════════════════════════════════════════
-function showPage(id) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.getElementById('page-' + id).classList.add('active');
-  if (id === 'home') refreshHome();
-  if (id === 'bots') renderBotGrid();
-  if (id === 'tournaments') renderTournamentList();
-  if (id === 'profile') renderProfile();
-}
-function setActive(el) {
-  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
+// ══════ NAVIGATION ══════
+function showPage(id){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById('page-'+id).classList.add('active');if(id==='home')refreshHome();if(id==='bots')renderBotGrid();if(id==='tournaments')renderTournamentList();if(id==='profile')renderProfile()}
+function setActive(el){document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active')}
+
+function escapeHtml(s){if(s==null)return'';return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+
+// ══════ HOME ══════
+function refreshHome(){
+  document.getElementById('statBots').textContent=state.bots.length;
+  document.getElementById('statTournaments').textContent=state.stats.totalTournaments;
+  document.getElementById('statGames').textContent=state.stats.totalGames;
+  document.getElementById('statWins').textContent=state.stats.totalWins;
+  document.getElementById('playerNameDisplay').textContent=state.player.name;
+  document.getElementById('playerRatingDisplay').textContent=state.player.elo;
+  const el=document.getElementById('recentTournaments');
+  const rec=[...state.tournaments].reverse().slice(0,5);
+  if(!rec.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">🏆</div><p>Noch keine Turniere</p></div>';return}
+  el.innerHTML=rec.map(t=>`<div class="lb-row"><span style="font-size:18px">🏆</span><div style="flex:1"><div style="font-weight:600">${escapeHtml(t.name)}</div><div style="font-size:11px;color:var(--mu)">${escapeHtml(t.variant||'standard')} · ${t.baseTime}+${t.increment} · ${t.participantCount} Teiln.</div></div><div style="text-align:right;font-size:12px;color:var(--mu)">${t.finishedAt||''}</div></div>`).join('')
 }
 
-// ══════════════════════════════════════════════════════════
-//  HOME
-// ══════════════════════════════════════════════════════════
-function refreshHome() {
-  document.getElementById('statBots').textContent = state.bots.length;
-  document.getElementById('statTournaments').textContent = state.stats.totalTournaments;
-  document.getElementById('statGames').textContent = state.stats.totalGames;
-  document.getElementById('statWins').textContent = state.stats.totalWins;
-  document.getElementById('playerNameDisplay').textContent = state.player.name;
-  document.getElementById('playerRatingDisplay').textContent = state.player.elo;
-  const el = document.getElementById('recentTournaments');
-  const recent = [...state.tournaments].reverse().slice(0,5);
-  if (!recent.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">🏆</div><p>Noch keine Turniere</p></div>'; return; }
-  el.innerHTML = recent.map(t=>`
-    <div class="lb-row">
-      <span style="font-size:18px;">🏆</span>
-      <div style="flex:1"><div style="font-weight:600">${escapeHtml(t.name)}</div><div style="font-size:11px;color:var(--muted)">${escapeHtml(t.type)} · ${t.baseTime}+${t.increment} · ${t.participantCount} Teilnehmer</div></div>
-      <div style="text-align:right;font-size:12px;color:var(--muted)">${t.finishedAt||''}</div>
-    </div>
-  `).join('');
+// ══════ SF LEVEL GRID ══════
+const sfDescs=['Level 0 ~800 Elo','Level 1 ~900','Level 2 ~1000','Level 3 ~1100','Level 4 ~1200','Level 5 ~1350','Level 6 ~1500','Level 7 ~1600','Level 8 ~1700','Level 9 ~1800','Level 10 ~1900','Level 11 ~2000','Level 12 ~2100','Level 13 ~2200','Level 14 ~2300','Level 15 ~2400','Level 16 ~2450','Level 17 ~2500','Level 18 ~2550','Level 19 ~2600','Level 20 ~2700+'];
+function buildSFGrid(){const g=document.getElementById('sfLevelGrid');g.innerHTML=Array.from({length:21},(_,i)=>`<div class="sf-level-btn ${i===sfLevelSelected?'selected':''}" onclick="selectSFLevel(${i})">${i}</div>`).join('');document.getElementById('sfLevelDesc').textContent=sfDescs[sfLevelSelected]}
+function selectSFLevel(lv){sfLevelSelected=lv;document.querySelectorAll('.sf-level-btn').forEach((b,i)=>b.classList.toggle('selected',i===lv));document.getElementById('sfLevelDesc').textContent=sfDescs[lv]}
+
+function buildVariantSliders(bot){
+  const c=document.getElementById('variantLevelSliders');
+  c.innerHTML=VARIANT_SL_NAMES.map(v=>{
+    const vl=(bot&&bot.variantLevels&&bot.variantLevels[v]!=null)?bot.variantLevels[v]:(sfLevelSelected);
+    const vi=VARIANTS[v];
+    return`<div class="form-group"><label class="form-label">${vi.icon} ${vi.name}</label><div class="range-row"><input type="range" id="vsl_${v}" min="0" max="20" value="${vl}" oninput="document.getElementById('vsl_l_${v}').textContent=this.value"><span class="range-val" id="vsl_l_${v}">${vl}</span></div></div>`
+  }).join('')
 }
 
-function escapeHtml(str) {
-  if (str==null) return '';
-  return String(str).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function buildEmojiPicker(){
+  document.getElementById('emojiPicker').innerHTML=BOT_EMOJIS.map(e=>`<div onclick="selectEmoji('${e}')" style="width:38px;height:38px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;border:2px solid ${e===selectedEmoji?'var(--ac)':'var(--bd)'};background:var(--s2)" data-emoji="${e}">${e}</div>`).join('')
 }
+function selectEmoji(e){selectedEmoji=e;document.querySelectorAll('#emojiPicker>div').forEach(el=>el.style.borderColor=el.dataset.emoji===e?'var(--ac)':'var(--bd)')}
+function selectColor(el){selectedBotColor=el.dataset.color;document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('selected'));el.classList.add('selected')}
+function switchBotTab(tab,btn){['profil','engine','opening','char','variants','look'].forEach(t=>document.getElementById('botTab-'+t).style.display=t===tab?'':'none');document.querySelectorAll('#botModal .tab-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active')}
 
-// ══════════════════════════════════════════════════════════
-//  BOT MODAL
-// ══════════════════════════════════════════════════════════
-const sfDescs = [
-  'Level 0 – Zufällige Fehler, ca. ~800 Elo','Level 1 – Sehr schwach, ca. ~900 Elo',
-  'Level 2 – Schwach, ca. ~1000 Elo','Level 3 – Anfänger, ca. ~1100 Elo',
-  'Level 4 – Anfänger+, ca. ~1200 Elo','Level 5 – Mittelklasse, ca. ~1350 Elo',
-  'Level 6 – Mittel, ca. ~1500 Elo','Level 7 – Mittel+, ca. ~1600 Elo',
-  'Level 8 – Fortgeschritten, ca. ~1700 Elo','Level 9 – Fortgeschritten+, ca. ~1800 Elo',
-  'Level 10 – Stark, ca. ~1900 Elo','Level 11 – Stark+, ca. ~2000 Elo',
-  'Level 12 – Experte, ca. ~2100 Elo','Level 13 – Experte+, ca. ~2200 Elo',
-  'Level 14 – Meister, ca. ~2300 Elo','Level 15 – Meister+, ca. ~2400 Elo',
-  'Level 16 – Sehr stark, ca. ~2450 Elo','Level 17 – Sehr stark+, ca. ~2500 Elo',
-  'Level 18 – Meister-Niveau, ca. ~2550 Elo','Level 19 – Großmeister-Klasse, ca. ~2600 Elo',
-  'Level 20 – Volle Stärke, ca. ~2700+ Elo',
-];
-
-function buildSFLevelGrid() {
-  const grid = document.getElementById('sfLevelGrid');
-  grid.innerHTML = Array.from({length:21},(_,i)=>`<div class="sf-level-btn ${i===sfLevelSelected?'selected':''}" onclick="selectSFLevel(${i})">${i}</div>`).join('');
-  updateSFDesc();
-}
-function selectSFLevel(lv) {
-  sfLevelSelected = lv;
-  document.querySelectorAll('.sf-level-btn').forEach((b,i)=>b.classList.toggle('selected',i===lv));
-  updateSFDesc();
-}
-function updateSFDesc() { document.getElementById('sfLevelDesc').textContent = sfDescs[sfLevelSelected] || ''; }
-
-function buildEmojiPicker() {
-  document.getElementById('emojiPicker').innerHTML = BOT_EMOJIS.map(e=>`
-    <div onclick="selectEmoji('${e}')" style="width:38px;height:38px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;border:2px solid ${e===selectedEmoji?'var(--accent)':'var(--border)'};background:var(--surface2);" data-emoji="${e}">${e}</div>
-  `).join('');
-}
-function selectEmoji(e) {
-  selectedEmoji = e;
-  document.querySelectorAll('#emojiPicker > div').forEach(el=>el.style.borderColor=el.dataset.emoji===e?'var(--accent)':'var(--border)');
-}
-function selectColor(el) {
-  selectedBotColor = el.dataset.color;
-  document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('selected'));
-  el.classList.add('selected');
-}
-function switchBotTab(tab, btn) {
-  ['basic','ai','style','appearance'].forEach(t=>document.getElementById('botTab-'+t).style.display=t===tab?'':'none');
-  document.querySelectorAll('#botModal .tab-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-}
-document.addEventListener('change', e => {
-  if (e.target.id === 'tBaseTime' || e.target.id === 'tIncrement') updateTimePreview();
-  if (e.target.id === 'botEngine') {
-    document.getElementById('sfLevelSection').style.display = e.target.value==='stockfish'?'':'none';
-  }
+document.addEventListener('change',e=>{
+  if(e.target.id==='tBaseTime'||e.target.id==='tIncrement')updateTimePreview();
+  if(e.target.id==='botEngine'){document.getElementById('sfSection').style.display=e.target.value==='stockfish'?'':'none'}
+  if(e.target.id==='tVariant')updateVariantDesc()
 });
-function updateTimePreview() {
-  const base = parseFloat(document.getElementById('tBaseTime').value);
-  const inc = parseInt(document.getElementById('tIncrement').value);
-  document.getElementById('timeControlPreview').textContent = `${base}+${inc}`;
-  const total = base*60 + inc*40;
-  let type = total<30?'Ultrabullet':total<179?'Bullet':total<479?'Blitz':total<1499?'Rapid':'Classical';
-  document.getElementById('timeControlType').textContent = type;
-}
+function updateTimePreview(){const b=parseFloat(document.getElementById('tBaseTime').value),i=parseInt(document.getElementById('tIncrement').value);document.getElementById('timeControlPreview').textContent=`${b}+${i}`;const t=b*60+i*40;document.getElementById('timeControlType').textContent=t<30?'Ultrabullet':t<179?'Bullet':t<479?'Blitz':t<1499?'Rapid':'Classical'}
+function updateVariantDesc(){const v=document.getElementById('tVariant').value;const vd=VARIANTS[v];document.getElementById('variantDescription').innerHTML=`<div style="font-size:22px;margin-bottom:8px">${vd.icon} ${vd.name}</div><div style="font-size:13px;color:var(--mu)">${vd.desc}</div>`}
 
-function openBotModal(id=null) {
-  editingBotId = id; sfLevelSelected = 10; selectedEmoji = '🤖'; selectedBotColor = '#7fa650';
-  if (id) {
-    const bot = state.bots.find(b=>b.id===id);
-    if (bot) {
-      document.getElementById('botName').value = bot.name;
-      document.getElementById('botStartElo').value = bot.elo;
-      document.getElementById('botCountry').value = bot.country||'🌍 International';
-      document.getElementById('botTitle').value = bot.title||'';
-      document.getElementById('botBio').value = bot.bio||'';
-      document.getElementById('botEngine').value = bot.engine||'stockfish';
-      sfLevelSelected = bot.sfLevel ?? 10;
-      document.getElementById('botRandomize').checked = bot.randomize||false;
-      document.getElementById('botRandomPct').value = bot.randomPct||10;
-      document.getElementById('randomPctLabel').textContent = (bot.randomPct||10)+'%';
-      document.getElementById('botPlayStyle').value = bot.playStyle||'balanced';
-      document.getElementById('botAcceptDraw').checked = bot.acceptDraw!==false;
-      document.getElementById('botEloClass').value = bot.eloClass||'intermediate';
-      selectedEmoji = bot.emoji||'🤖'; selectedBotColor = bot.color||'#7fa650';
-      document.getElementById('sfLevelSection').style.display = bot.engine==='stockfish'?'':'none';
-    }
-  } else {
-    document.getElementById('botName').value = '';
-    document.getElementById('botStartElo').value = 1500;
-    document.getElementById('botBio').value = '';
-    document.getElementById('botEngine').value = 'stockfish';
-    document.getElementById('botRandomize').checked = false;
-    document.getElementById('botRandomPct').value = 10;
-    document.getElementById('randomPctLabel').textContent = '10%';
-    document.getElementById('botPlayStyle').value = 'balanced';
-    document.getElementById('botAcceptDraw').checked = true;
-    document.getElementById('botEloClass').value = 'intermediate';
-    document.getElementById('sfLevelSection').style.display = '';
+function openBotModal(id=null){
+  editingBotId=id;sfLevelSelected=10;selectedEmoji='🤖';selectedBotColor='#7fa650';
+  const bot=id?state.bots.find(b=>b.id===id):null;
+  if(bot){
+    document.getElementById('botName').value=bot.name;
+    document.getElementById('botStartElo').value=bot.elo;
+    document.getElementById('botTitle').value=bot.title||'';
+    document.getElementById('botCountry').value=bot.country||'🌍 International';
+    document.getElementById('botBio').value=bot.bio||'';
+    document.getElementById('botPrefColor').value=bot.prefColor||'random';
+    document.getElementById('botEngine').value=bot.engine||'stockfish';
+    sfLevelSelected=bot.sfLevel??10;
+    document.getElementById('botContempt').value=bot.contempt||0;document.getElementById('contemptLabel').textContent=bot.contempt||0;
+    document.getElementById('botTimeVariance').value=bot.timeVariance||10;document.getElementById('timeVarLabel').textContent=(bot.timeVariance||10)+'%';
+    document.getElementById('botRandomize').checked=bot.randomize||false;
+    document.getElementById('botRandomPct').value=bot.randomPct||10;document.getElementById('randomPctLabel').textContent=(bot.randomPct||10)+'%';
+    document.getElementById('botOpeningBook').value=bot.openingBook||'random';
+    document.getElementById('botOpeningVariety').value=bot.openingVariety||3;document.getElementById('openVarLabel').textContent=bot.openingVariety||3;
+    document.getElementById('botGambitStyle').value=bot.gambitStyle||'neutral';
+    document.getElementById('botPreferSicilian').checked=bot.preferSicilian||false;
+    document.getElementById('botPreferIndian').checked=bot.preferIndian||false;
+    document.getElementById('botPlayStyle').value=bot.playStyle||'balanced';
+    document.getElementById('botAggressiveness').value=bot.aggressiveness||50;document.getElementById('aggrLabel').textContent=bot.aggressiveness||50;
+    document.getElementById('botTimePressure').value=bot.timePressure||'normal';
+    document.getElementById('botResignThreshold').value=bot.resignThreshold!=null?bot.resignThreshold:'-500';
+    document.getElementById('botDrawBehavior').value=bot.drawBehavior||'balanced';
+    document.getElementById('botLoveSacrifice').checked=bot.loveSacrifice||false;
+    document.getElementById('botBishopPair').checked=bot.bishopPair||false;
+    document.getElementById('botPawnFocus').checked=bot.pawnFocus||false;
+    document.getElementById('botPrefVariant').value=bot.prefVariant||'standard';
+    document.getElementById('botEloClass').value=bot.eloClass||'intermediate';
+    selectedEmoji=bot.emoji||'🤖';selectedBotColor=bot.color||'#7fa650';
+    document.getElementById('sfSection').style.display=bot.engine==='stockfish'?'':'none';
+    buildVariantSliders(bot)
+  }else{
+    document.getElementById('botName').value='';document.getElementById('botStartElo').value=1500;document.getElementById('botBio').value='';
+    document.getElementById('botEngine').value='stockfish';document.getElementById('sfSection').style.display='';
+    document.getElementById('botContempt').value=0;document.getElementById('contemptLabel').textContent=0;
+    document.getElementById('botTimeVariance').value=10;document.getElementById('timeVarLabel').textContent='10%';
+    document.getElementById('botRandomize').checked=false;document.getElementById('botRandomPct').value=10;document.getElementById('randomPctLabel').textContent='10%';
+    document.getElementById('botOpeningBook').value='random';document.getElementById('botOpeningVariety').value=3;document.getElementById('openVarLabel').textContent=3;
+    document.getElementById('botGambitStyle').value='neutral';document.getElementById('botPreferSicilian').checked=false;document.getElementById('botPreferIndian').checked=false;
+    document.getElementById('botPlayStyle').value='balanced';document.getElementById('botAggressiveness').value=50;document.getElementById('aggrLabel').textContent=50;
+    document.getElementById('botTimePressure').value='normal';document.getElementById('botResignThreshold').value='-500';document.getElementById('botDrawBehavior').value='balanced';
+    document.getElementById('botLoveSacrifice').checked=false;document.getElementById('botBishopPair').checked=false;document.getElementById('botPawnFocus').checked=false;
+    document.getElementById('botPrefVariant').value='standard';document.getElementById('botTitle').value='';document.getElementById('botPrefColor').value='random';document.getElementById('botEloClass').value='intermediate';
+    buildVariantSliders(null)
   }
-  buildSFLevelGrid(); buildEmojiPicker();
-  document.getElementById('colorPicker').querySelectorAll('.color-swatch').forEach(s=>s.classList.toggle('selected',s.dataset.color===selectedBotColor));
-  switchBotTab('basic', document.querySelector('#botModal .tab-btn'));
-  openModal('botModal');
+  buildSFGrid();buildEmojiPicker();
+  document.querySelectorAll('.color-swatch').forEach(s=>s.classList.toggle('selected',s.dataset.color===selectedBotColor));
+  switchBotTab('profil',document.querySelector('#botModal .tab-btn'));
+  openModal('botModal')
 }
-function closeBotModal() { closeModal('botModal'); }
+function closeBotModal(){closeModal('botModal')}
 
-function saveBot() {
-  const name = document.getElementById('botName').value.trim();
-  if (!name) { toast('Bitte einen Bot-Namen eingeben','error'); return; }
-  const elo = parseInt(document.getElementById('botStartElo').value)||1500;
-  const bot = {
-    id: editingBotId || 'bot_'+Date.now(),
-    name, elo,
-    country: document.getElementById('botCountry').value,
-    title: document.getElementById('botTitle').value,
-    bio: document.getElementById('botBio').value,
-    engine: document.getElementById('botEngine').value,
-    sfLevel: sfLevelSelected,
-    randomize: document.getElementById('botRandomize').checked,
-    randomPct: parseInt(document.getElementById('botRandomPct').value),
-    playStyle: document.getElementById('botPlayStyle').value,
-    acceptDraw: document.getElementById('botAcceptDraw').checked,
-    eloClass: document.getElementById('botEloClass').value,
-    emoji: selectedEmoji, color: selectedBotColor,
-    games:0, wins:0, draws:0, losses:0, ratingHistory:[elo]
+function saveBot(){
+  const name=document.getElementById('botName').value.trim();if(!name){toast('Bitte Namen eingeben','error');return}
+  const elo=parseInt(document.getElementById('botStartElo').value)||1500;
+  const variantLevels={};VARIANT_SL_NAMES.forEach(v=>{const el=document.getElementById('vsl_'+v);variantLevels[v]=el?parseInt(el.value):sfLevelSelected});
+  const bot={
+    id:editingBotId||'bot_'+Date.now(),name,elo,
+    title:document.getElementById('botTitle').value,
+    country:document.getElementById('botCountry').value,
+    bio:document.getElementById('botBio').value,
+    prefColor:document.getElementById('botPrefColor').value,
+    engine:document.getElementById('botEngine').value,
+    sfLevel:sfLevelSelected,
+    contempt:parseInt(document.getElementById('botContempt').value)||0,
+    timeVariance:parseInt(document.getElementById('botTimeVariance').value)||10,
+    randomize:document.getElementById('botRandomize').checked,
+    randomPct:parseInt(document.getElementById('botRandomPct').value)||10,
+    openingBook:document.getElementById('botOpeningBook').value,
+    openingVariety:parseInt(document.getElementById('botOpeningVariety').value)||3,
+    gambitStyle:document.getElementById('botGambitStyle').value,
+    preferSicilian:document.getElementById('botPreferSicilian').checked,
+    preferIndian:document.getElementById('botPreferIndian').checked,
+    playStyle:document.getElementById('botPlayStyle').value,
+    aggressiveness:parseInt(document.getElementById('botAggressiveness').value)||50,
+    timePressure:document.getElementById('botTimePressure').value,
+    resignThreshold:parseInt(document.getElementById('botResignThreshold').value),
+    drawBehavior:document.getElementById('botDrawBehavior').value,
+    loveSacrifice:document.getElementById('botLoveSacrifice').checked,
+    bishopPair:document.getElementById('botBishopPair').checked,
+    pawnFocus:document.getElementById('botPawnFocus').checked,
+    prefVariant:document.getElementById('botPrefVariant').value,
+    eloClass:document.getElementById('botEloClass').value,
+    variantLevels,
+    emoji:selectedEmoji,color:selectedBotColor,
+    games:0,wins:0,draws:0,losses:0,ratingHistory:[elo],
+    ...defaultBotStats()
   };
-  if (editingBotId) {
-    const idx = state.bots.findIndex(b=>b.id===editingBotId);
-    if (idx>=0) {
-      const old = state.bots[idx];
-      bot.games=old.games; bot.wins=old.wins; bot.draws=old.draws; bot.losses=old.losses;
-      bot.ratingHistory=old.ratingHistory; bot.elo=old.elo;
-      state.bots[idx] = bot;
-    }
-  } else { state.bots.push(bot); }
-  saveState(); closeBotModal(); renderBotGrid();
-  toast(`Bot "${name}" ${editingBotId?'aktualisiert':'erstellt'}!`);
-  refreshHome();
+  bot.variantStats.standard.elo=elo;bot.variantStats.standard.ratingHistory=[elo];
+  VARIANT_SL_NAMES.forEach(v=>{if(!bot.variantStats[v]){bot.variantStats[v]={games:0,wins:0,draws:0,losses:0,elo,ratingHistory:[elo]}}});
+  if(editingBotId){
+    const idx=state.bots.findIndex(b=>b.id===editingBotId);
+    if(idx>=0){const old=state.bots[idx];bot.games=old.games;bot.wins=old.wins;bot.draws=old.draws;bot.losses=old.losses;bot.ratingHistory=old.ratingHistory;bot.elo=old.elo;bot.variantStats=old.variantStats||bot.variantStats;bot.tcStats=old.tcStats||bot.tcStats;bot.recentGames=old.recentGames||[];bot.streak=old.streak||{current:0,best:0,type:'win'};bot.bestWinElo=old.bestWinElo||0;state.bots[idx]=bot}
+  }else{state.bots.push(bot)}
+  saveState();closeBotModal();renderBotGrid();toast(`Bot "${name}" ${editingBotId?'aktualisiert':'erstellt'}!`);refreshHome()
 }
 
-function deleteBot(id) {
-  if (!confirm('Bot wirklich löschen?')) return;
-  state.bots = state.bots.filter(b=>b.id!==id);
-  saveState(); renderBotGrid(); toast('Bot gelöscht','info');
-}
+function deleteBot(id){if(!confirm('Bot wirklich löschen?'))return;state.bots=state.bots.filter(b=>b.id!==id);saveState();renderBotGrid();toast('Bot gelöscht','info')}
 
-function renderBotGrid() {
-  const grid = document.getElementById('botGrid');
-  if (!state.bots.length) {
-    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🤖</div><p>Noch keine Bots. Erstelle deinen ersten Bot!</p></div>'; return;
-  }
-  grid.innerHTML = state.bots.map(bot=>`
-    <div class="bot-card" id="bc_${bot.id}">
-      <div class="bot-check">✓</div>
-      <div class="bot-avatar" style="background:${bot.color}22; border:1px solid ${bot.color}44;">${bot.emoji}</div>
-      <div class="bot-name-row">
-        ${bot.title?`<span class="badge badge-gold">${escapeHtml(bot.title)}</span>`:''}
-        <span class="bot-name">${escapeHtml(bot.name)}</span>
-        <span class="bot-elo">${bot.elo}</span>
+function openBotProfile(id){
+  viewingBotId=id;
+  const bot=state.bots.find(b=>b.id===id);if(!bot)return;
+  ensureBotStats(bot);
+  const wr=bot.games?Math.round(bot.wins/bot.games*100):0;
+  const v=VARIANTS;
+  const varRows=VARIANT_SL_NAMES.map(vk=>{
+    const vs=bot.variantStats[vk]||{games:0,wins:0,draws:0,losses:0,elo:1500};
+    if(!vs.games)return'';
+    const tw=vs.wins+vs.draws+vs.losses||1;
+    const wp=Math.round(vs.wins/tw*100),dp=Math.round(vs.draws/tw*100),lp=100-wp-dp;
+    return`<div class="bp-perf-row"><div class="bp-perf-name">${v[vk].icon} ${v[vk].name}</div><div class="bp-bar-wrap"><div class="bp-bar-win" style="width:${wp}%"></div><div class="bp-bar-draw" style="width:${dp}%"></div><div class="bp-bar-loss" style="width:${lp}%"></div></div><div class="bp-elo-sm">${vs.elo}</div><div style="font-size:11px;color:var(--mu);min-width:60px;text-align:right">${vs.games}P ${wp}%</div></div>`
+  }).join('');
+  const tcRows=Object.entries(bot.tcStats||{}).map(([tc,ts])=>{
+    if(!ts.games)return'';const wp=Math.round(ts.wins/ts.games*100);
+    return`<div class="bp-perf-row"><div class="bp-perf-name" style="min-width:80px">${tc.charAt(0).toUpperCase()+tc.slice(1)}</div><div class="bp-bar-wrap"><div class="bp-bar-win" style="width:${wp}%"></div><div class="bp-bar-loss" style="width:${100-wp}%"></div></div><div style="font-size:11px;color:var(--mu);margin-left:8px">${ts.games} Partien</div></div>`
+  }).join('');
+  const hist=bot.variantStats.standard.ratingHistory||[bot.elo];
+  const max=Math.max(...hist),min=Math.min(...hist),range=max-min||1;
+  const chart=hist.slice(-30).map(r=>`<div class="mini-chart-bar" style="height:${Math.max(4,((r-min)/range)*55)}px" title="${r}"></div>`).join('');
+  const recent=(bot.recentGames||[]).slice(-10).reverse();
+  const recRows=recent.length?recent.map(g=>`<tr><td>${g.date||''}</td><td>${escapeHtml(g.opponent||'?')}</td><td><span class="badge badge-blue">${VARIANTS[g.variant||'standard']?.icon||'♟'}</span></td><td class="result-${g.result}">${g.result==='win'?'Sieg':g.result==='draw'?'Remis':'Niederlage'}</td><td style="color:${(g.eloDiff||0)>=0?'var(--ac)':'var(--dn)'}">${(g.eloDiff||0)>=0?'+':''}${g.eloDiff||0}</td></tr>`).join(''):`<tr><td colspan="5" style="text-align:center;color:var(--mu)">Noch keine Partien</td></tr>`;
+  const streak=bot.streak||{current:0,best:0,type:'win'};
+  document.getElementById('botProfileContent').innerHTML=`
+    <div class="bp-header">
+      <div class="bp-avatar" style="background:${bot.color}22;border:2px solid ${bot.color}44">${bot.emoji}</div>
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          ${bot.title?`<span class="badge badge-gold">${escapeHtml(bot.title)}</span>`:''}
+          <div class="bp-name">${escapeHtml(bot.name)}</div>
+          <div class="variant-pill">${VARIANTS[bot.prefVariant||'standard'].icon} ${bot.prefVariant||'standard'}</div>
+        </div>
+        <div class="bp-elo">${bot.elo}</div>
+        <div class="bp-meta">${bot.country||'🌍'} · SF Level ${bot.sfLevel||0} · ${escapeHtml(bot.playStyle||'balanced')}</div>
+        ${bot.bio?`<div style="font-size:12px;color:var(--mu);margin-top:6px">${escapeHtml(bot.bio)}</div>`:''}
       </div>
-      <div class="bot-level-badge">${bot.engine==='stockfish'?`♟ SF Level ${bot.sfLevel}`:'🎲 Random'} · ${bot.country||'🌍'}</div>
+      ${streak.current>=2?`<div class="streak-badge">🔥 ${streak.current} Serie</div>`:''}
+    </div>
+    <div class="bp-grid">
+      <div class="bp-stat"><div class="bp-stat-val">${bot.games||0}</div><div class="bp-stat-label">Partien</div></div>
+      <div class="bp-stat"><div class="bp-stat-val" style="color:var(--ac)">${bot.wins||0}</div><div class="bp-stat-label">Siege</div></div>
+      <div class="bp-stat"><div class="bp-stat-val" style="color:var(--mu)">${bot.draws||0}</div><div class="bp-stat-label">Remis</div></div>
+      <div class="bp-stat"><div class="bp-stat-val" style="color:var(--dn)">${bot.losses||0}</div><div class="bp-stat-label">Niederlagen</div></div>
+      <div class="bp-stat"><div class="bp-stat-val" style="color:var(--gold)">${wr}%</div><div class="bp-stat-label">Gewinnrate</div></div>
+      <div class="bp-stat"><div class="bp-stat-val" style="color:var(--gold)">${bot.bestWinElo||0}</div><div class="bp-stat-label">Stärkster Gegner besiegt</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div class="card" style="margin:0"><div class="card-title">📈 Rating (Standard)</div><div class="mini-chart">${chart}</div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--mu);margin-top:4px"><span>Min: ${min}</span><span>Jetzt: ${bot.elo}</span><span>Max: ${max}</span></div></div>
+      <div class="card" style="margin:0"><div class="card-title">⏱ Beste Serie</div><div style="font-size:24px;font-weight:900;color:var(--gold);text-align:center;padding:12px">${streak.best}🔥</div><div style="text-align:center;font-size:12px;color:var(--mu)">Aktuell: ${streak.current}</div></div>
+    </div>
+    ${varRows?`<div class="card"><div class="card-title">♟ Performance nach Variante</div>${varRows}</div>`:''}
+    ${tcRows?`<div class="card"><div class="card-title">⏱ Performance nach Bedenkzeit</div>${tcRows}</div>`:''}
+    <div class="card"><div class="card-title">📋 Letzte Partien</div><div class="scrollable"><table class="history-table"><thead><tr><th>Datum</th><th>Gegner</th><th>Var.</th><th>Ergebnis</th><th>Elo±</th></tr></thead><tbody>${recRows}</tbody></table></div></div>
+  `;
+  openModal('botProfileModal')
+}
+let _editBotFromProfile_id=null;
+function editBotFromProfile(){closeModal('botProfileModal');openBotModal(viewingBotId)}
+
+function renderBotGrid(){
+  const g=document.getElementById('botGrid');
+  if(!state.bots.length){g.innerHTML='<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🤖</div><p>Noch keine Bots!</p></div>';return}
+  g.innerHTML=state.bots.map(bot=>`
+    <div class="bot-card">
+      <div class="bot-avatar" style="background:${bot.color}22;border:1px solid ${bot.color}44">${bot.emoji}</div>
+      <div class="bot-name-row">${bot.title?`<span class="badge badge-gold">${escapeHtml(bot.title)}</span>`:''}<span class="bot-name">${escapeHtml(bot.name)}</span><span class="bot-elo">${bot.elo}</span></div>
+      <div class="bot-level-badge">${bot.engine==='stockfish'?`♟ SF ${bot.sfLevel}`:'🎲 Random'} · ${VARIANTS[bot.prefVariant||'standard']?.icon||'♟'} · ${bot.country||'🌍'}</div>
       <div class="bot-stats">
         <div><div class="bot-stat-val">${bot.wins||0}</div>Siege</div>
         <div><div class="bot-stat-val">${bot.draws||0}</div>Remis</div>
         <div><div class="bot-stat-val">${bot.losses||0}</div>Niederl.</div>
       </div>
       <div class="bot-actions">
+        <button class="btn btn-gold btn-sm" onclick="openBotProfile('${bot.id}')">📊 Profil</button>
         <button class="btn btn-secondary btn-sm" onclick="openBotModal('${bot.id}')">✏️</button>
         <button class="btn btn-danger btn-sm" onclick="deleteBot('${bot.id}')">🗑️</button>
       </div>
-    </div>
-  `).join('');
+    </div>`).join('')
 }
 
-// ══════════════════════════════════════════════════════════
-//  TOURNAMENT MODAL
-// ══════════════════════════════════════════════════════════
-function switchTTab(tab, btn) {
-  ['tbasic','ttime','tbots','trules'].forEach(t=>document.getElementById('tTab-'+t).style.display=t===tab?'':'none');
-  document.querySelectorAll('#tournamentModal .tab-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  if (tab==='tbots') renderTBotGrid();
+// ══════ TOURNAMENT MODAL ══════
+function switchTTab(tab,btn){['tbasic','ttime','tvariant','tbots','trules'].forEach(t=>document.getElementById('tTab-'+t).style.display=t===tab?'':'none');document.querySelectorAll('#tournamentModal .tab-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');if(tab==='tbots')renderTBotGrid();if(tab==='tvariant')updateVariantDesc()}
+let selectedTBots=new Set();
+function renderTBotGrid(){const g=document.getElementById('tBotGrid'),em=document.getElementById('tBotEmpty');if(!state.bots.length){g.style.display='none';em.style.display='';return}g.style.display='';em.style.display='none';g.innerHTML=state.bots.map(b=>`<div class="bot-card ${selectedTBots.has(b.id)?'selected':''}" onclick="toggleTBot('${b.id}')" style="cursor:pointer"><div class="bot-check">✓</div><div style="display:flex;align-items:center;gap:8px"><div style="font-size:22px">${b.emoji}</div><div><div style="font-weight:700;font-size:13px">${escapeHtml(b.name)}</div><div style="font-size:11px;color:var(--mu)">SF ${b.sfLevel||10} · ${b.elo} Elo</div></div></div></div>`).join('');document.getElementById('selectedBotCount').textContent=selectedTBots.size}
+function toggleTBot(id){if(selectedTBots.has(id))selectedTBots.delete(id);else selectedTBots.add(id);renderTBotGrid()}
+function selectAllBots(){state.bots.forEach(b=>selectedTBots.add(b.id));renderTBotGrid()}
+function deselectAllBots(){selectedTBots.clear();renderTBotGrid()}
+function openCreateTournament(){selectedTBots=new Set(state.bots.map(b=>b.id));switchTTab('tbasic',document.querySelector('#tournamentModal .tab-btn'));updateTimePreview();openModal('tournamentModal')}
+function closeTournamentModal(){closeModal('tournamentModal')}
+function startTournament(){
+  const name=(document.getElementById('tName').value.trim())||'Arena '+new Date().toLocaleDateString('de');
+  const botIds=[...selectedTBots];
+  if(!botIds.length){toast('Mindestens 1 Bot nötig','error');return}
+  const cfg={id:'T_'+Date.now(),name,type:document.getElementById('tType').value,duration:parseInt(document.getElementById('tDuration').value),baseTime:parseFloat(document.getElementById('tBaseTime').value),increment:parseInt(document.getElementById('tIncrement').value),playerJoins:document.getElementById('tPlayerJoins').checked,showElo:document.getElementById('tShowElo').checked,flagging:document.getElementById('tFlagging').checked,pointsWin:parseInt(document.getElementById('tPointsWin').value)||2,pointsDraw:parseInt(document.getElementById('tPointsDraw').value)||1,streakBonus:parseInt(document.getElementById('tStreakBonus').value)||1,avoidRematches:document.getElementById('tAvoidRematches').checked,eloMatch:document.getElementById('tEloMatch').checked,updateElo:document.getElementById('tUpdateElo').checked,animSpeed:parseInt(document.getElementById('tAnimSpeed').value)||500,botIds,variant:document.getElementById('tVariant').value||'standard',participantCount:botIds.length+(document.getElementById('tPlayerJoins').checked?1:0)};
+  closeTournamentModal();launchArena(cfg)
 }
-let selectedTBots = new Set();
-function renderTBotGrid() {
-  const grid = document.getElementById('tBotGrid');
-  const empty = document.getElementById('tBotEmpty');
-  if (!state.bots.length) { grid.style.display='none'; empty.style.display=''; return; }
-  grid.style.display=''; empty.style.display='none';
-  grid.innerHTML = state.bots.map(bot=>`
-    <div class="bot-card ${selectedTBots.has(bot.id)?'selected':''}" onclick="toggleTBot('${bot.id}')" style="cursor:pointer;">
-      <div class="bot-check">✓</div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <div style="font-size:22px;">${bot.emoji}</div>
-        <div>
-          <div style="font-weight:700;font-size:13px;">${escapeHtml(bot.name)}</div>
-          <div style="font-size:11px;color:var(--muted);">SF ${bot.sfLevel||10} · ${bot.elo} Elo</div>
-        </div>
-      </div>
-    </div>
-  `).join('');
-  document.getElementById('selectedBotCount').textContent = selectedTBots.size;
+function renderTournamentList(){const el=document.getElementById('tournamentList');if(!state.tournaments.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">🏆</div><p>Noch keine Turniere</p></div>';return}el.innerHTML=[...state.tournaments].reverse().map(t=>`<div class="tournament-item"><div class="t-status finished"></div><div class="t-info"><div class="t-name">${escapeHtml(t.name)}</div><div class="t-meta">${VARIANTS[t.variant||'standard']?.icon||'♟'} ${escapeHtml(t.variant||'standard')} · ${t.baseTime}+${t.increment} · ${t.participantCount} Teiln.</div></div><div><div class="t-time">${t.duration}min</div><div style="font-size:12px;color:var(--mu)">${t.finishedAt||''}</div></div></div>`).join('')}
+
+// ══════ ARENA ══════
+function launchArena(cfg){
+  showPage('arena');document.querySelectorAll('.nav-tab').forEach((t,i)=>t.classList.toggle('active',i===3));
+  arena={cfg,participants:[],activeGames:[],endTime:Date.now()+cfg.duration*60000,running:true};
+  cfg.botIds.forEach(id=>{const b=state.bots.find(b=>b.id===id);if(b){ensureBotStats(b);arena.participants.push({ref:b,isPlayer:false,score:0,streak:0,games:0,busy:false,name:b.name,elo:b.elo,uid:b.id,lastOpponentUid:null})}});
+  if(cfg.playerJoins)arena.participants.push({ref:state.player,isPlayer:true,score:0,streak:0,games:0,busy:false,name:state.player.name,elo:state.player.elo,uid:'PLAYER',lastOpponentUid:null});
+  const vi=VARIANTS[cfg.variant||'standard'];
+  document.getElementById('arenaTitle').textContent=cfg.name;
+  document.getElementById('arenaSubtitle').textContent=`${vi.icon} ${vi.name} · ${cfg.baseTime}+${cfg.increment} · ${cfg.duration} Min.`;
+  document.getElementById('arenaBoards').innerHTML='';document.getElementById('leaderboard').innerHTML='';document.getElementById('resultsFeed').innerHTML='';
+  document.getElementById('myGamePanel').style.display='none';document.getElementById('btnAbortArena').style.display='';
+  updateLeaderboard();startArenaTimer();fillArena();
+  toast(`${vi.icon} "${cfg.name}" gestartet!`,'info')
 }
-function toggleTBot(id) { if (selectedTBots.has(id)) selectedTBots.delete(id); else selectedTBots.add(id); renderTBotGrid(); }
-function selectAllBots() { state.bots.forEach(b=>selectedTBots.add(b.id)); renderTBotGrid(); }
-function deselectAllBots() { selectedTBots.clear(); renderTBotGrid(); }
-function openCreateTournament() {
-  selectedTBots = new Set(state.bots.map(b=>b.id));
-  switchTTab('tbasic', document.querySelector('#tournamentModal .tab-btn'));
-  updateTimePreview(); openModal('tournamentModal');
-}
-function closeTournamentModal() { closeModal('tournamentModal'); }
-function startTournament() {
-  const name = (document.getElementById('tName').value.trim()) || 'Arena '+new Date().toLocaleDateString('de');
-  const botIds = [...selectedTBots];
-  if (botIds.length < 1) { toast('Mindestens 1 Bot nötig','error'); return; }
-  if (!document.getElementById('tPlayerJoins').checked && botIds.length < 2) { toast('Mindestens 2 Bots oder aktiviere "Spieler nimmt teil"','error'); return; }
-  const config = {
-    id: 'T_'+Date.now(), name,
-    type: document.getElementById('tType').value,
-    duration: parseInt(document.getElementById('tDuration').value),
-    baseTime: parseFloat(document.getElementById('tBaseTime').value),
-    increment: parseInt(document.getElementById('tIncrement').value),
-    playerJoins: document.getElementById('tPlayerJoins').checked,
-    showElo: document.getElementById('tShowElo').checked,
-    flagging: document.getElementById('tFlagging').checked,
-    pointsWin: parseInt(document.getElementById('tPointsWin').value)||2,
-    pointsDraw: parseInt(document.getElementById('tPointsDraw').value)||1,
-    streakBonus: parseInt(document.getElementById('tStreakBonus').value)||1,
-    avoidRematches: document.getElementById('tAvoidRematches').checked,
-    eloMatch: document.getElementById('tEloMatch').checked,
-    updateElo: document.getElementById('tUpdateElo').checked,
-    animSpeed: parseInt(document.getElementById('tAnimSpeed').value)||500,
-    botIds,
-    participantCount: botIds.length + (document.getElementById('tPlayerJoins').checked?1:0)
-  };
-  closeTournamentModal(); launchArena(config);
-}
-function renderTournamentList() {
-  const el = document.getElementById('tournamentList');
-  if (!state.tournaments.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">🏆</div><p>Noch keine Turniere</p></div>'; return; }
-  el.innerHTML = [...state.tournaments].reverse().map(t=>`
-    <div class="tournament-item">
-      <div class="t-status finished"></div>
-      <div class="t-info"><div class="t-name">${escapeHtml(t.name)}</div><div class="t-meta">${escapeHtml(t.type)} · ${t.baseTime}+${t.increment} · ${t.participantCount} Teilnehmer</div></div>
-      <div><div class="t-time">${t.duration}min</div><div class="t-players">${t.finishedAt||''}</div></div>
-    </div>
-  `).join('');
+function startArenaTimer(){if(!arena)return;const u=()=>{if(!arena||!arena.running)return;const r=arena.endTime-Date.now();if(r<=0){endArena();return}const m=Math.floor(r/60000),s=Math.floor((r%60000)/1000);const el=document.getElementById('arenaTimer');el.textContent=`${m}:${s.toString().padStart(2,'0')}`;el.className='arena-timer'+(r<60000?' ending':'');setTimeout(u,500)};u()}
+function abortArena(){if(!arena||!confirm('Turnier abbrechen?'))return;endArena(true)}
+function endArena(aborted=false){
+  if(!arena)return;arena.running=false;
+  arena.activeGames.forEach(g=>{if(g.clockInterval){clearInterval(g.clockInterval);g.clockInterval=null}});
+  const sorted=[...arena.participants].sort((a,b)=>b.score-a.score);
+  state.tournaments.push({...arena.cfg,finishedAt:new Date().toLocaleString('de'),results:sorted.map((p,i)=>({rank:i+1,name:p.name,score:p.score}))});
+  state.stats.totalTournaments++;saveState();
+  document.getElementById('arenaTimer').textContent='🏁';document.getElementById('arenaTimer').className='arena-timer';
+  document.getElementById('btnAbortArena').style.display='none';document.getElementById('myGamePanel').style.display='none';
+  if(!aborted&&sorted.length)toast(`🏆 ${sorted[0].name} gewinnt mit ${sorted[0].score} Punkten!`,'info');
+  updateLeaderboard();refreshHome();arena=null
 }
 
-// ══════════════════════════════════════════════════════════
-//  ARENA LAUNCH
-// ══════════════════════════════════════════════════════════
-function launchArena(config) {
-  showPage('arena');
-  document.querySelectorAll('.nav-tab').forEach((t,i)=>t.classList.toggle('active',i===3));
-  arena = {
-    config,
-    participants: [],
-    activeGames: [],
-    endTime: Date.now() + config.duration * 60000,
-    running: true,
-  };
-  config.botIds.forEach(id => {
-    const bot = state.bots.find(b=>b.id===id);
-    if (bot) arena.participants.push({
-      ref: bot, isPlayer: false, score: 0, streak: 0, games: 0, busy: false,
-      name: bot.name, elo: bot.elo,
-      uid: bot.id,          // stabiler unique key
-      lastOpponentUid: null // FIX: Letzte Paarung – nie direkt wiederholen
-    });
-  });
-  if (config.playerJoins) {
-    arena.participants.push({
-      ref: state.player, isPlayer: true, score: 0, streak: 0, games: 0, busy: false,
-      name: state.player.name, elo: state.player.elo,
-      uid: 'PLAYER',
-      lastOpponentUid: null
-    });
-  }
-  document.getElementById('arenaTitle').textContent = config.name;
-  document.getElementById('arenaSubtitle').textContent = `${config.baseTime}+${config.increment} · ${config.type} · ${config.duration} Min.`;
-  document.getElementById('arenaBoards').innerHTML = '';
-  document.getElementById('leaderboard').innerHTML = '';
-  document.getElementById('resultsFeed').innerHTML = '';
-  document.getElementById('myGamePanel').style.display = 'none';
-  document.getElementById('btnAbortArena').style.display = '';
-  updateLeaderboard(); startArenaTimer(); fillArena();
-  toast(`Turnier "${config.name}" gestartet!`, 'info');
+// ══════ PAIRING ══════
+function fillArena(){if(!arena||!arena.running)return;let ch=true;while(ch){ch=false;const av=arena.participants.filter(p=>!p.busy);if(av.length<2)break;const pair=pickPair(av);if(pair){startGame(pair[0],pair[1]);ch=true}else break}}
+function pickPair(av){
+  const cfg=arena.cfg;
+  const sorted=[...av].sort((a,b)=>b.score-a.score||Math.random()-.5);
+  for(let i=0;i<sorted.length;i++){for(let j=i+1;j<sorted.length;j++){
+    const a=sorted[i],b=sorted[j];
+    if(a.lastOpponentUid===b.uid&&b.lastOpponentUid===a.uid&&av.length>2)continue;
+    if(cfg.eloMatch&&Math.abs(a.elo-b.elo)>500&&av.length>3)continue;
+    a.busy=true;b.busy=true;return[a,b]
+  }}
+  if(sorted.length>=2){sorted[0].busy=true;sorted[1].busy=true;return[sorted[0],sorted[1]]}
+  return null
 }
 
-function startArenaTimer() {
-  if (!arena) return;
-  const update = () => {
-    if (!arena || !arena.running) return;
-    const remaining = arena.endTime - Date.now();
-    if (remaining <= 0) { endArena(); return; }
-    const m = Math.floor(remaining/60000);
-    const s = Math.floor((remaining%60000)/1000);
-    const el = document.getElementById('arenaTimer');
-    el.textContent = `${m}:${s.toString().padStart(2,'0')}`;
-    el.className = 'arena-timer'+(remaining<60000?' ending':'');
-    setTimeout(update, 500);
-  };
-  update();
-}
-
-function abortArena() {
-  if (!arena) return;
-  if (!confirm('Turnier wirklich abbrechen?')) return;
-  endArena(true);
-}
-
-function endArena(aborted=false) {
-  if (!arena) return;
-  arena.running = false;
-  arena.activeGames.forEach(gs=>{ if (gs.clockInterval) { clearInterval(gs.clockInterval); gs.clockInterval=null; } });
-  const sorted = [...arena.participants].sort((a,b)=>b.score-a.score);
-  const rec = { ...arena.config, finishedAt:new Date().toLocaleString('de'), results:sorted.map((p,i)=>({rank:i+1,name:p.name,score:p.score,games:p.games})) };
-  state.tournaments.push(rec);
-  state.stats.totalTournaments++;
-  saveState();
-  document.getElementById('arenaTimer').textContent = '🏁';
-  document.getElementById('arenaTimer').className = 'arena-timer';
-  document.getElementById('btnAbortArena').style.display = 'none';
-  document.getElementById('myGamePanel').style.display = 'none';
-  if (!aborted && sorted.length) toast(`🏆 ${sorted[0].name} gewinnt "${arena.config.name}" mit ${sorted[0].score} Punkten!`,'info');
-  updateLeaderboard(); refreshHome();
-  arena = null;
-}
-
-// ══════════════════════════════════════════════════════════
-//  PAIRING – robust, kein Consecutive-Repeat
-// ══════════════════════════════════════════════════════════
-function fillArena() {
-  if (!arena || !arena.running) return;
-  let changed = true;
-  while (changed) {
-    changed = false;
-    const avail = arena.participants.filter(p => !p.busy);
-    if (avail.length < 2) break;
-    const pair = pickPair(avail);
-    if (pair) { startGame(pair[0], pair[1]); changed = true; }
-    else break;
-  }
-}
-
-function pickPair(avail) {
-  const cfg = arena.config;
-  // Sortiere nach Score (höchste zuerst) für bessere Paarungsqualität
-  const sorted = [...avail].sort((a,b) => b.score - a.score || Math.random()-0.5);
-
-  // Suche bestes Paar (kein direkter Wiederhol-Gegner)
-  for (let i = 0; i < sorted.length; i++) {
-    for (let j = i+1; j < sorted.length; j++) {
-      const a = sorted[i], b = sorted[j];
-      const aUid = a.uid, bUid = b.uid;
-
-      // HAUPTREGEL: Niemals direkt hintereinander dasselbe Paar
-      // (erst wenn einer von beiden jemand anderen gespielt hat, ist es wieder OK)
-      const justPlayed = (a.lastOpponentUid === bUid && b.lastOpponentUid === aUid);
-      if (justPlayed && avail.length > 2) continue;
-
-      // Elo-Differenz optional beschränken (nur wenn genug Kandidaten)
-      if (cfg.eloMatch && Math.abs(a.elo - b.elo) > 500 && avail.length > 3) continue;
-
-      a.busy = true; b.busy = true;
-      return [a, b];
-    }
-  }
-
-  // Absoluter Fallback: Alle Restriktionen aufheben (nur 2 Teilnehmer übrig)
-  if (sorted.length >= 2) {
-    sorted[0].busy = true; sorted[1].busy = true;
-    return [sorted[0], sorted[1]];
-  }
-  return null;
-}
-
-// ══════════════════════════════════════════════════════════
-//  GAME ENGINE
-// ══════════════════════════════════════════════════════════
-let gameBoards = {};
-
-function startGame(pA, pB) {
-  const game = new Chess();
-  const gameId = 'g_'+Date.now()+'_'+Math.random().toString(36).slice(2,5);
-  const isMyGame = pA.isPlayer || pB.isPlayer;
-  const white = pA, black = pB;
-  const baseMs = arena.config.baseTime * 60 * 1000;
-  const incMs  = arena.config.increment * 1000;
-  const gs = {
-    id: gameId, game, white, black,
-    whiteClock: baseMs, blackClock: baseMs,
-    incMs, clockInterval: null,
-    thinking: false, done: false, isMyGame,
-    playerColor: isMyGame ? (pA.isPlayer ? 'w' : 'b') : null
-  };
-  if (isMyGame) setupMyGameUI(gs);
-  else createBotBoardUI(gs);
+// ══════ GAME ENGINE ══════
+let gameBoards={};
+function startGame(pA,pB){
+  const vgame=new VariantGame(arena.cfg.variant||'standard');
+  const gid='g_'+Date.now()+'_'+Math.random().toString(36).slice(2,5);
+  const isMyGame=pA.isPlayer||pB.isPlayer;
+  const white=pA,black=pB;
+  const baseMs=arena.cfg.baseTime*60*1000,incMs=arena.cfg.increment*1000;
+  const gs={id:gid,vgame,white,black,whiteClock:baseMs,blackClock:baseMs,incMs,clockInterval:null,thinking:false,done:false,isMyGame,playerColor:isMyGame?(pA.isPlayer?'w':'b'):null};
+  if(isMyGame)setupMyGameUI(gs);else createBotBoardUI(gs);
   arena.activeGames.push(gs);
-  requestAnimationFrame(() => {
-    if (!arena || !arena.running || gs.done) return;
-    startClock(gs); updateClockUI(gs); scheduleNextMove(gs);
-  });
+  requestAnimationFrame(()=>{if(!arena||!arena.running||gs.done)return;startClock(gs);updateClockUI(gs);scheduleNextMove(gs)})
 }
+function startClock(gs){if(gs.clockInterval)clearInterval(gs.clockInterval);gs.clockInterval=setInterval(()=>{if(gs.done||!arena||!arena.running){clearInterval(gs.clockInterval);gs.clockInterval=null;return}const t=gs.vgame.turn();if(t==='w')gs.whiteClock-=100;else gs.blackClock-=100;if(arena.cfg.flagging){if(gs.whiteClock<=0){finishGame(gs,'b','Zeit');return}if(gs.blackClock<=0){finishGame(gs,'w','Zeit');return}}else{gs.whiteClock=Math.max(0,gs.whiteClock);gs.blackClock=Math.max(0,gs.blackClock)}updateClockUI(gs)},100)}
+function fmt(ms){const t=Math.max(0,ms),m=Math.floor(t/60000),s=Math.floor((t%60000)/1000);return`${m}:${s.toString().padStart(2,'0')}`}
+function updateClockUI(gs){if(gs.isMyGame){const pi=gs.playerColor==='w';const pMs=pi?gs.whiteClock:gs.blackClock,oMs=pi?gs.blackClock:gs.whiteClock;const pEl=document.getElementById('myPlayerClock'),oEl=document.getElementById('myOpponentClock');if(pEl){pEl.textContent=fmt(pMs);pEl.className='player-clock'+(gs.vgame.turn()===gs.playerColor?' active':'')+(pMs<30000?' low':'')}if(oEl){oEl.textContent=fmt(oMs);oEl.className='player-clock'+(gs.vgame.turn()!==gs.playerColor?' active':'')+(oMs<30000?' low':'')}}else{const w=document.getElementById('bclk_w_'+gs.id),b=document.getElementById('bclk_b_'+gs.id);if(w){w.textContent=fmt(gs.whiteClock);w.className='player-clock'+(gs.vgame.turn()==='w'?' active':'')+(gs.whiteClock<30000?' low':'')}if(b){b.textContent=fmt(gs.blackClock);b.className='player-clock'+(gs.vgame.turn()==='b'?' active':'')+(gs.blackClock<30000?' low':'')}}}
 
-function startClock(gs) {
-  if (gs.clockInterval) clearInterval(gs.clockInterval);
-  gs.clockInterval = setInterval(() => {
-    if (gs.done || !arena || !arena.running) { clearInterval(gs.clockInterval); gs.clockInterval=null; return; }
-    const turn = gs.game.turn();
-    if (turn==='w') gs.whiteClock-=100; else gs.blackClock-=100;
-    if (arena.config.flagging) {
-      if (gs.whiteClock<=0) { finishGame(gs,'b','Zeit'); return; }
-      if (gs.blackClock<=0) { finishGame(gs,'w','Zeit'); return; }
-    } else {
-      gs.whiteClock=Math.max(0,gs.whiteClock);
-      gs.blackClock=Math.max(0,gs.blackClock);
-    }
-    updateClockUI(gs);
-  }, 100);
+function createBotBoardUI(gs){
+  const d=document.createElement('div');d.className='board-card';d.id='bc_'+gs.id;
+  d.innerHTML=`<div class="player-row"><div><span class="player-name">${escapeHtml(gs.white.name)}</span> <span class="player-elo">(${gs.white.elo})</span></div><span class="player-clock active" id="bclk_w_${gs.id}">${fmt(gs.whiteClock)}</span></div><div class="board-wrap" id="bw_${gs.id}"></div><div class="player-row"><div><span class="player-name">${escapeHtml(gs.black.name)}</span> <span class="player-elo">(${gs.black.elo})</span></div><span class="player-clock" id="bclk_b_${gs.id}">${fmt(gs.blackClock)}</span></div><div class="game-status" id="bst_${gs.id}">Läuft…</div>`;
+  document.getElementById('arenaBoards').prepend(d);
+  const board=Chessboard(document.getElementById('bw_'+gs.id),{position:gs.vgame.fen(),pieceTheme:'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',draggable:false,showNotation:false});
+  gameBoards[gs.id]=board
 }
-
-function updateClockUI(gs) {
-  const fmt = ms => { const t=Math.max(0,ms); const m=Math.floor(t/60000); const s=Math.floor((t%60000)/1000); return `${m}:${s.toString().padStart(2,'0')}`; };
-  if (gs.isMyGame) {
-    const playerIsWhite = gs.playerColor === 'w';
-    const pMs = playerIsWhite ? gs.whiteClock : gs.blackClock;
-    const oMs = playerIsWhite ? gs.blackClock : gs.whiteClock;
-    const pEl = document.getElementById('myPlayerClock');
-    const oEl = document.getElementById('myOpponentClock');
-    if (pEl) { pEl.textContent=fmt(pMs); pEl.className='player-clock'+(gs.game.turn()===gs.playerColor?' active':'')+(pMs<30000?' low':''); }
-    if (oEl) { oEl.textContent=fmt(oMs); oEl.className='player-clock'+(gs.game.turn()!==gs.playerColor?' active':'')+(oMs<30000?' low':''); }
-  } else {
-    const wEl=document.getElementById('bclk_w_'+gs.id);
-    const bEl=document.getElementById('bclk_b_'+gs.id);
-    if (wEl) { wEl.textContent=fmt(gs.whiteClock); wEl.className='player-clock'+(gs.game.turn()==='w'?' active':'')+(gs.whiteClock<30000?' low':''); }
-    if (bEl) { bEl.textContent=fmt(gs.blackClock); bEl.className='player-clock'+(gs.game.turn()==='b'?' active':'')+(gs.blackClock<30000?' low':''); }
-  }
-}
-
-function createBotBoardUI(gs) {
-  const div = document.createElement('div');
-  div.className='board-card'; div.id='bc_'+gs.id;
-  const fmt = ms=>{ const m=Math.floor(ms/60000); const s=Math.floor((ms%60000)/1000); return `${m}:${s.toString().padStart(2,'0')}`; };
-  div.innerHTML=`
-    <div class="player-row">
-      <div><span class="player-name">${escapeHtml(gs.white.name)}</span> <span class="player-elo">(${gs.white.elo})</span></div>
-      <span class="player-clock active" id="bclk_w_${gs.id}">${fmt(gs.whiteClock)}</span>
-    </div>
-    <div class="board-wrap" id="bw_${gs.id}"></div>
-    <div class="player-row">
-      <div><span class="player-name">${escapeHtml(gs.black.name)}</span> <span class="player-elo">(${gs.black.elo})</span></div>
-      <span class="player-clock" id="bclk_b_${gs.id}">${fmt(gs.blackClock)}</span>
-    </div>
-    <div class="game-status" id="bst_${gs.id}">Partie läuft…</div>
-  `;
-  document.getElementById('arenaBoards').prepend(div);
-  const boardEl = document.getElementById('bw_'+gs.id);
-  const board = Chessboard(boardEl, {
-    position:'start',
-    pieceTheme:'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
-    draggable:false, showNotation:false
-  });
-  gameBoards[gs.id] = board;
-}
-
-function setupMyGameUI(gs) {
+function setupMyGameUI(gs){
   document.getElementById('myGamePanel').style.display='';
-  const opp = gs.playerColor==='w' ? gs.black : gs.white;
-  document.getElementById('myOpponentName').textContent = opp.name;
-  document.getElementById('myOpponentElo').textContent = ` (${opp.elo})`;
-  document.getElementById('myPlayerName').textContent = state.player.name;
-  document.getElementById('myPlayerElo').textContent = ` (${state.player.elo})`;
-  document.getElementById('myGameStatus').textContent = gs.playerColor==='w' ? '♟ Dein Zug' : '⌛ Gegner denkt…';
-  document.getElementById('myGameStatus').className = 'game-status';
-  const boardEl = document.getElementById('myGameBoard');
-  boardEl.innerHTML = '';
-  const board = Chessboard(boardEl, {
-    position:'start',
-    pieceTheme:'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
-    draggable: true,
-    orientation: gs.playerColor==='b' ? 'black' : 'white',
-    onDrop: (from,to) => handlePlayerDrop(gs, from, to),
-    onDragStart: (src, piece) => {
-      if (gs.done || gs.game.turn() !== gs.playerColor) return false;
-      if (gs.playerColor==='w' && !piece.startsWith('w')) return false;
-      if (gs.playerColor==='b' && !piece.startsWith('b')) return false;
-    }
-  });
-  gs.board = board;
-  // TAP-TO-MOVE aktivieren
-  setupTapToMove(gs);
+  const opp=gs.playerColor==='w'?gs.black:gs.white;
+  document.getElementById('myOpponentName').textContent=opp.name;document.getElementById('myOpponentElo').textContent=` (${opp.elo})`;
+  document.getElementById('myPlayerName').textContent=state.player.name;document.getElementById('myPlayerElo').textContent=` (${state.player.elo})`;
+  document.getElementById('myGameStatus').textContent=gs.playerColor==='w'?'♟ Dein Zug':'⌛ Gegner denkt…';
+  document.getElementById('myGameStatus').className='game-status';
+  const el=document.getElementById('myGameBoard');el.innerHTML='';
+  const board=Chessboard(el,{position:gs.vgame.fen(),pieceTheme:'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',draggable:true,orientation:gs.playerColor==='b'?'black':'white',onDrop:(from,to)=>handlePlayerDrop(gs,from,to),onDragStart:(src,piece)=>{if(gs.done||gs.vgame.turn()!==gs.playerColor)return false;if(gs.playerColor==='w'&&!piece.startsWith('w'))return false;if(gs.playerColor==='b'&&!piece.startsWith('b'))return false}});
+  gs.board=board;setupTap(gs)
+}
+function handlePlayerDrop(gs,from,to){
+  if(gs.done||gs.vgame.turn()!==gs.playerColor)return'snapback';
+  clearTapHL();tapState.sel=null;
+  const mv=gs.vgame.move({from,to,promotion:'q'});if(!mv)return'snapback';
+  gs.board.position(gs.vgame.fen());
+  if(gs.incMs>0){if(gs.playerColor==='w')gs.whiteClock+=gs.incMs;else gs.blackClock+=gs.incMs}
+  const st=document.getElementById('myGameStatus');if(st)st.textContent='⌛ Gegner denkt…';
+  checkGameOver(gs);if(!gs.done)scheduleNextMove(gs)
 }
 
-function handlePlayerDrop(gs, from, to) {
-  if (gs.done || gs.game.turn() !== gs.playerColor) return 'snapback';
-  clearTapHighlights(); tapState.selected = null;
-  const move = gs.game.move({ from, to, promotion:'q' });
-  if (!move) return 'snapback';
-  gs.board.position(gs.game.fen());
-  if (gs.incMs>0) { if (gs.playerColor==='w') gs.whiteClock+=gs.incMs; else gs.blackClock+=gs.incMs; }
-  const statusEl = document.getElementById('myGameStatus');
-  if (statusEl) statusEl.textContent = '⌛ Gegner denkt…';
-  checkGameOver(gs);
-  if (!gs.done) scheduleNextMove(gs);
+function scheduleNextMove(gs){
+  if(gs.done||!arena||!arena.running)return;
+  const turn=gs.vgame.turn();
+  if(gs.isMyGame&&gs.playerColor===turn)return;
+  if(gs.thinking)return;
+  gs.thinking=true;
+  const actP=turn==='w'?gs.white:gs.black;
+  const delay=gs.isMyGame?350:(arena.cfg.animSpeed||500);
+  setTimeout(()=>{
+    if(gs.done||!arena||!arena.running){gs.thinking=false;return}
+    const botRef=actP.ref;if(!botRef){gs.thinking=false;return}
+    // Opening book
+    const bookMove=getOpeningMove(botRef,gs.vgame._c);
+    if(bookMove){gs.thinking=false;const mv=gs.vgame.move(bookMove);if(mv){if(gs.incMs>0){if(turn==='w')gs.whiteClock+=gs.incMs;else gs.blackClock+=gs.incMs}applyMoveToUI(gs,turn);checkGameOver(gs);if(!gs.done)scheduleNextMove(gs)}else{scheduleNextMove(gs)}return}
+    // Blunder
+    if(botRef.engine==='random'||(botRef.randomize&&Math.random()*100<(botRef.randomPct||10))){const mvs=gs.vgame.moves();gs.thinking=false;if(mvs.length){const m=gs.vgame.move(mvs[Math.floor(Math.random()*mvs.length)]);if(m){if(gs.incMs>0){if(turn==='w')gs.whiteClock+=gs.incMs;else gs.blackClock+=gs.incMs}applyMoveToUI(gs,turn);checkGameOver(gs);if(!gs.done)scheduleNextMove(gs)}}return}
+    // Variant-specific skill level
+    const varSk=botRef.variantLevels&&botRef.variantLevels[gs.vgame.variant]!=null?botRef.variantLevels[gs.vgame.variant]:botRef.sfLevel??10;
+    const fakeRef={...botRef,sfLevel:varSk};
+    getVariantBotMove(gs.vgame,fakeRef,arena.cfg.baseTime,(mv,isUci)=>{
+      gs.thinking=false;if(gs.done||!arena||!arena.running)return;
+      if(!mv){const mvs=gs.vgame.moves();if(mvs.length)gs.vgame.move(mvs[Math.floor(Math.random()*mvs.length)]);else return}
+      else if(isUci){
+        const from=mv.slice(0,2),to=mv.slice(2,4),promo=mv.length===5?mv[4]:'q';
+        const res=gs.vgame.move({from,to,promotion:promo});
+        if(!res){const mvs=gs.vgame.moves();if(mvs.length)gs.vgame.move(mvs[Math.floor(Math.random()*mvs.length)]);else return}
+      }else{const res=gs.vgame.move(mv);if(!res){const mvs=gs.vgame.moves();if(mvs.length)gs.vgame.move(mvs[Math.floor(Math.random()*mvs.length)]);else return}}
+      if(gs.incMs>0){if(turn==='w')gs.whiteClock+=gs.incMs;else gs.blackClock+=gs.incMs}
+      applyMoveToUI(gs,turn);checkGameOver(gs);if(!gs.done)scheduleNextMove(gs)
+    })
+  },delay)
+}
+function applyMoveToUI(gs,turn){
+  const fen=gs.vgame.fen();
+  if(gs.isMyGame&&gs.board){gs.board.position(fen);const st=document.getElementById('myGameStatus');if(st&&!gs.done)st.textContent=gs.vgame.turn()===gs.playerColor?'♟ Dein Zug':'⌛ Gegner denkt…'}
+  else{const b=gameBoards[gs.id];if(b)b.position(fen)}
+  // show three-check count
+  if(gs.vgame.variant==='threecheck'){const w=gs.vgame.checksGiven.w,b=gs.vgame.checksGiven.b;if(gs.isMyGame){const st=document.getElementById('myGameStatus');if(st&&!gs.done)st.textContent=`Schachs: ${gs.white.name} ${w}✓ – ${gs.black.name} ${b}✓`}else{const st=document.getElementById('bst_'+gs.id);if(st)st.textContent=`${gs.white.name}:${w}✓ ${gs.black.name}:${b}✓`}}
 }
 
-function scheduleNextMove(gs) {
-  if (gs.done || !arena || !arena.running) return;
-  const turn = gs.game.turn();
-  if (gs.isMyGame && gs.playerColor === turn) return;
-  if (gs.thinking) return;
-  gs.thinking = true;
-  const actingP = turn==='w' ? gs.white : gs.black;
-  const delay = gs.isMyGame ? 350 : (arena.config.animSpeed || 500);
-
-  setTimeout(() => {
-    if (gs.done || !arena || !arena.running) { gs.thinking=false; return; }
-    const botRef = actingP.ref;
-    if (!botRef) { gs.thinking=false; return; }
-
-    // Zufalls-Bot oder Blunder
-    if (botRef.engine==='random' || (botRef.randomize && Math.random()*100 < (botRef.randomPct||10))) {
-      const moves = gs.game.moves();
-      gs.thinking = false;
-      if (moves.length) applyBotMove(gs, moves[Math.floor(Math.random()*moves.length)]);
-      return;
-    }
-
-    // Echter Stockfish – Movetime skaliert nach Bedenkzeit des Turniers
-    const fen = gs.game.fen();
-    const skillLevel = botRef.sfLevel ?? 10;
-    const movetime = levelToMovetime(skillLevel, arena.config.baseTime);  // ← FIX
-
-    stockfishGetMove(fen, skillLevel, movetime, (uciMove) => {
-      gs.thinking = false;
-      if (gs.done || !arena || !arena.running) return;
-      if (!uciMove) {
-        const moves = gs.game.moves();
-        if (moves.length) applyBotMove(gs, moves[Math.floor(Math.random()*moves.length)]);
-        return;
-      }
-      const from = uciMove.slice(0,2), to = uciMove.slice(2,4), promo = uciMove.length===5 ? uciMove[4] : 'q';
-      const moved = gs.game.move({ from, to, promotion: promo });
-      if (!moved) {
-        const moves = gs.game.moves();
-        if (moves.length) { const m=gs.game.move(moves[Math.floor(Math.random()*moves.length)]); if (!m) return; }
-      }
-      if (gs.incMs>0) { if (turn==='w') gs.whiteClock+=gs.incMs; else gs.blackClock+=gs.incMs; }
-      if (gs.isMyGame && gs.board) {
-        gs.board.position(gs.game.fen());
-        if (!gs.done) {
-          const statusEl = document.getElementById('myGameStatus');
-          if (statusEl) statusEl.textContent = gs.game.turn()===gs.playerColor ? '♟ Dein Zug' : '⌛ Gegner denkt…';
-        }
-      } else {
-        const b = gameBoards[gs.id];
-        if (b) b.position(gs.game.fen());
-      }
-      checkGameOver(gs);
-      if (!gs.done) scheduleNextMove(gs);
-    });
-  }, delay);
+function checkGameOver(gs){
+  if(gs.done)return;
+  const result=gs.vgame.getResult();
+  if(!result&&!gs.vgame.game_over())return;
+  gs.done=true;if(gs.clockInterval){clearInterval(gs.clockInterval);gs.clockInterval=null}
+  const r=result||{winner:null,reason:'Beendet'};
+  resolveGame(gs,r.winner,r.reason)
 }
+function finishGame(gs,wc,reason){if(gs.done)return;gs.done=true;if(gs.clockInterval){clearInterval(gs.clockInterval);gs.clockInterval=null}resolveGame(gs,wc,reason)}
 
-function applyBotMove(gs, san) {
-  const moved = gs.game.move(san);
-  if (!moved) return;
-  const turn = gs.game.history().length%2===0 ? 'b' : 'w';
-  if (gs.incMs>0) { if (turn==='b') gs.whiteClock+=gs.incMs; else gs.blackClock+=gs.incMs; }
-  if (gs.isMyGame && gs.board) {
-    gs.board.position(gs.game.fen());
-    if (!gs.done) {
-      const statusEl = document.getElementById('myGameStatus');
-      if (statusEl) statusEl.textContent = gs.game.turn()===gs.playerColor ? '♟ Dein Zug' : '⌛ Gegner denkt…';
-    }
-  } else {
-    const b = gameBoards[gs.id]; if (b) b.position(gs.game.fen());
+function resolveGame(gs,winnerColor,reason){
+  const cfg=arena.cfg;const white=gs.white,black=gs.black;let text=reason;
+  white.lastOpponentUid=black.uid;black.lastOpponentUid=white.uid;
+  const variant=gs.vgame.variant||'standard';const tc=getTC(cfg.baseTime);
+  if(winnerColor==='w'){white.score+=cfg.pointsWin;white.streak=(white.streak||0)+1;if(white.streak>=2)white.score+=cfg.streakBonus;black.streak=0;text=`${white.name} gewinnt (${reason})`;addResultFeed(`${VARIANTS[variant].icon} 🟢 ${white.name} ⚔️ ${black.name} — ${reason}`)}
+  else if(winnerColor==='b'){black.score+=cfg.pointsWin;black.streak=(black.streak||0)+1;if(black.streak>=2)black.score+=cfg.streakBonus;white.streak=0;text=`${black.name} gewinnt (${reason})`;addResultFeed(`${VARIANTS[variant].icon} 🟢 ${black.name} ⚔️ ${white.name} — ${reason}`)}
+  else{white.score+=cfg.pointsDraw;black.score+=cfg.pointsDraw;white.streak=0;black.streak=0;text=`Remis (${reason})`;addResultFeed(`${VARIANTS[variant].icon} ⚪ ${white.name} = ${black.name} — ${reason}`)}
+  white.games++;black.games++;white.busy=false;black.busy=false;
+  // Elo
+  if(cfg.updateElo){
+    const K=32,expW=1/(1+Math.pow(10,(black.elo-white.elo)/400)),scW=winnerColor==='w'?1:winnerColor==='b'?0:.5;
+    const nW=Math.max(100,Math.min(3500,Math.round(white.elo+K*(scW-expW))));
+    const nB=Math.max(100,Math.min(3500,Math.round(black.elo+K*((1-scW)-(1-expW)))));
+    white.elo=nW;black.elo=nB;
+    [white,black].forEach((p,pi)=>{
+      if(!p.isPlayer){
+        const bot=state.bots.find(b=>b.id===p.ref.id);if(!bot)return;
+        ensureBotStats(bot);
+        const newElo=pi===0?nW:nB;
+        const oldElo=bot.elo;
+        const eloDiff=newElo-oldElo;
+        bot.elo=newElo;if(!bot.ratingHistory)bot.ratingHistory=[];bot.ratingHistory.push(newElo);
+        bot.games=(bot.games||0)+1;
+        const isWin=(pi===0&&winnerColor==='w')||(pi===1&&winnerColor==='b');
+        const isDraw=!winnerColor;
+        if(isWin){bot.wins=(bot.wins||0)+1;if(newElo>bot.bestWinElo)bot.bestWinElo=newElo}else if(isDraw)bot.draws=(bot.draws||0)+1;else bot.losses=(bot.losses||0)+1;
+        // streak
+        if(!bot.streak)bot.streak={current:0,best:0,type:'win'};
+        if(isWin){if(bot.streak.type==='win')bot.streak.current++;else{bot.streak.current=1;bot.streak.type='win'}bot.streak.best=Math.max(bot.streak.best,bot.streak.current)}else{bot.streak.current=0}
+        // variant stats
+        if(!bot.variantStats[variant])bot.variantStats[variant]={games:0,wins:0,draws:0,losses:0,elo:bot.elo,ratingHistory:[bot.elo]};
+        const vs=bot.variantStats[variant];vs.games++;vs.elo=newElo;if(!vs.ratingHistory)vs.ratingHistory=[newElo];vs.ratingHistory.push(newElo);
+        if(isWin)vs.wins++;else if(isDraw)vs.draws++;else vs.losses++;
+        // tc stats
+        if(!bot.tcStats)bot.tcStats={bullet:{games:0,wins:0,draws:0,losses:0},blitz:{games:0,wins:0,draws:0,losses:0},rapid:{games:0,wins:0,draws:0,losses:0},classical:{games:0,wins:0,draws:0,losses:0}};
+        if(!bot.tcStats[tc])bot.tcStats[tc]={games:0,wins:0,draws:0,losses:0};
+        bot.tcStats[tc].games++;if(isWin)bot.tcStats[tc].wins++;else if(isDraw)bot.tcStats[tc].draws++;else bot.tcStats[tc].losses++;
+        // recent games
+        if(!bot.recentGames)bot.recentGames=[];
+        const opp=pi===0?black:white;
+        bot.recentGames.push({date:new Date().toLocaleDateString('de'),opponent:opp.name,result:isWin?'win':isDraw?'draw':'loss',variant,timeControl:`${cfg.baseTime}+${cfg.increment}`,eloDiff});
+        if(bot.recentGames.length>50)bot.recentGames=bot.recentGames.slice(-50)
+      }
+    })
   }
-  checkGameOver(gs);
-  if (!gs.done) scheduleNextMove(gs);
-}
-
-function checkGameOver(gs) {
-  if (gs.done || !gs.game.game_over()) return;
-  gs.done = true;
-  if (gs.clockInterval) { clearInterval(gs.clockInterval); gs.clockInterval=null; }
-  let winnerColor=null, reason='';
-  if (gs.game.in_checkmate()) { winnerColor=gs.game.turn()==='w'?'b':'w'; reason='Matt'; }
-  else if (gs.game.in_stalemate()) reason='Patt';
-  else if (gs.game.in_threefold_repetition()) reason='3-fach Wiederholung';
-  else if (gs.game.insufficient_material()) reason='Zu wenig Material';
-  else if (gs.game.in_draw()) reason='50-Züge-Remis';
-  else reason='Beendet';
-  resolveGame(gs, winnerColor, reason);
-}
-
-function finishGame(gs, winnerColor, reason) {
-  if (gs.done) return;
-  gs.done = true;
-  if (gs.clockInterval) { clearInterval(gs.clockInterval); gs.clockInterval=null; }
-  resolveGame(gs, winnerColor, reason);
-}
-
-function resolveGame(gs, winnerColor, reason) {
-  const cfg = arena.config;
-  const white = gs.white, black = gs.black;
-  let text = reason;
-
-  // FIX: Paarungs-Gedächtnis aktualisieren (NACH dem Spiel, VOR busy=false)
-  white.lastOpponentUid = black.uid;
-  black.lastOpponentUid = white.uid;
-
-  if (winnerColor==='w') {
-    white.score+=cfg.pointsWin; white.streak=(white.streak||0)+1;
-    if (white.streak>=2) white.score+=cfg.streakBonus;
-    black.streak=0; text=`${white.name} gewinnt (${reason})`;
-    addResultFeed(`🟢 ${white.name} ⚔️ ${black.name} — ${reason}`);
-    white.wins=(white.wins||0)+1; black.losses=(black.losses||0)+1;
-  } else if (winnerColor==='b') {
-    black.score+=cfg.pointsWin; black.streak=(black.streak||0)+1;
-    if (black.streak>=2) black.score+=cfg.streakBonus;
-    white.streak=0; text=`${black.name} gewinnt (${reason})`;
-    addResultFeed(`🟢 ${black.name} ⚔️ ${white.name} — ${reason}`);
-    black.wins=(black.wins||0)+1; white.losses=(white.losses||0)+1;
-  } else {
-    white.score+=cfg.pointsDraw; black.score+=cfg.pointsDraw;
-    white.streak=0; black.streak=0;
-    text=`Remis (${reason})`;
-    addResultFeed(`⚪ ${white.name} = ${black.name} — ${reason}`);
-    white.draws=(white.draws||0)+1; black.draws=(black.draws||0)+1;
-  }
-  white.games++; black.games++;
-  white.busy = false; black.busy = false;
-
-  // Elo K=32
-  if (cfg.updateElo) {
-    const K=32;
-    const expW = 1/(1+Math.pow(10,(black.elo-white.elo)/400));
-    const scoreW = winnerColor==='w'?1:winnerColor==='b'?0:0.5;
-    const newWhiteElo = Math.max(100,Math.min(3500,Math.round(white.elo+K*(scoreW-expW))));
-    const newBlackElo = Math.max(100,Math.min(3500,Math.round(black.elo+K*((1-scoreW)-(1-expW)))));
-    white.elo = newWhiteElo; black.elo = newBlackElo;
-    [white,black].forEach(p => {
-      if (!p.isPlayer) {
-        const bot = state.bots.find(b=>b.id===p.ref.id);
-        if (bot) {
-          bot.elo = p.elo;
-          if (!bot.ratingHistory) bot.ratingHistory = [];
-          bot.ratingHistory.push(bot.elo);
-          bot.games = (bot.games||0)+1;
-          if (winnerColor==='w'&&p===white||winnerColor==='b'&&p===black) bot.wins=(bot.wins||0)+1;
-          else if (!winnerColor) bot.draws=(bot.draws||0)+1;
-          else bot.losses=(bot.losses||0)+1;
-        }
-      }
-    });
-  }
-
-  // Spieler-Stats
-  if (gs.isMyGame) {
+  // Player stats
+  if(gs.isMyGame){
     state.stats.totalGames++;
-    const pC = gs.playerColor||'w';
-    const won = winnerColor===pC, draw = !winnerColor;
-    if (won) { state.player.wins=(state.player.wins||0)+1; state.stats.totalWins++; }
-    else if (draw) state.player.draws=(state.player.draws||0)+1;
-    else state.player.losses=(state.player.losses||0)+1;
+    const pC=gs.playerColor||'w';const won=winnerColor===pC,draw=!winnerColor;
+    if(won){state.player.wins=(state.player.wins||0)+1;state.stats.totalWins++}else if(draw)state.player.draws=(state.player.draws||0)+1;else state.player.losses=(state.player.losses||0)+1;
     state.player.games=(state.player.games||0)+1;
-    if (cfg.updateElo) {
-      // Elo des Spielers wurde bereits in white/black.elo berechnet
-      const pPart = pC==='w' ? white : black;
-      state.player.elo = pPart.elo;
-      if (!state.player.ratingHistory) state.player.ratingHistory = [];
-      state.player.ratingHistory.push(state.player.elo);
-      document.getElementById('playerRatingDisplay').textContent = state.player.elo;
-    }
-    const opp = pC==='w' ? black : white;
-    if (!state.player.gameHistory) state.player.gameHistory=[];
-    const eloDiff = cfg.updateElo ? ((pC==='w'?white.elo:black.elo) - arena.config.baseTime) : 0;
-    state.player.gameHistory.push({
-      date: new Date().toLocaleDateString('de'),
-      opponent: opp.name,
-      result: won?'win':draw?'draw':'loss',
-      eloDiff: 0,
-      timeControl: `${arena.config.baseTime}+${arena.config.increment}`
-    });
-    clearTapHighlights(); tapState.selected = null;
-    const statusEl = document.getElementById('myGameStatus');
-    if (statusEl) { statusEl.textContent=text; statusEl.className='game-status '+(draw?'':won?'win':'loss'); }
-    setTimeout(() => { const p=document.getElementById('myGamePanel'); if(p) p.style.display='none'; }, 3000);
-  } else {
+    if(cfg.updateElo){const pPart=pC==='w'?white:black;state.player.elo=pPart.elo;if(!state.player.ratingHistory)state.player.ratingHistory=[];state.player.ratingHistory.push(state.player.elo);document.getElementById('playerRatingDisplay').textContent=state.player.elo}
+    const opp=pC==='w'?black:white;
+    if(!state.player.gameHistory)state.player.gameHistory=[];
+    state.player.gameHistory.push({date:new Date().toLocaleDateString('de'),opponent:opp.name,result:won?'win':draw?'draw':'loss',eloDiff:0,variant,timeControl:`${cfg.baseTime}+${cfg.increment}`});
+    clearTapHL();tapState.sel=null;
+    const st=document.getElementById('myGameStatus');if(st){st.textContent=text;st.className='game-status '+(draw?'':won?'win':'loss')}
+    setTimeout(()=>{const p=document.getElementById('myGamePanel');if(p)p.style.display='none'},3000)
+  }else{
     state.stats.totalGames++;
-    const card = document.getElementById('bc_'+gs.id);
-    if (card) {
-      const st = document.getElementById('bst_'+gs.id);
-      if (st) st.textContent = text;
-      setTimeout(() => { if(card.parentNode) card.remove(); delete gameBoards[gs.id]; }, 1800);
-    }
+    const card=document.getElementById('bc_'+gs.id);
+    if(card){const st=document.getElementById('bst_'+gs.id);if(st)st.textContent=text;setTimeout(()=>{if(card.parentNode)card.remove();delete gameBoards[gs.id]},1800)}
   }
+  arena.activeGames=arena.activeGames.filter(g=>g.id!==gs.id);
+  updateLeaderboard();saveState();
+  if(arena&&arena.running)setTimeout(fillArena,400)
+}
+function addResultFeed(t){const f=document.getElementById('resultsFeed');const r=document.createElement('div');r.style.cssText='padding:5px 0;border-bottom:1px solid var(--bd);animation:slideIn .2s ease';r.textContent=t;f.prepend(r);while(f.children.length>30)f.removeChild(f.lastChild)}
+function updateLeaderboard(){if(!arena)return;const s=[...arena.participants].sort((a,b)=>b.score-a.score||b.streak-a.streak);document.getElementById('leaderboard').innerHTML=s.map((p,i)=>`<div class="lb-row ${p.isPlayer?'is-me':''}"><div class="lb-rank ${i<3?'top3':''}">${i+1}</div><div style="font-size:16px">${p.isPlayer?(state.player.avatar||'👤'):(p.ref.emoji||'🤖')}</div><div class="lb-name">${escapeHtml(p.name)}${p.isPlayer?' (Du)':''}</div><div class="lb-streak">${p.streak>=2?`🔥${p.streak}`:''}</div><div class="lb-score">${p.score}</div></div>`).join('')}
 
-  arena.activeGames = arena.activeGames.filter(g => g.id !== gs.id);
-  updateLeaderboard();
-  saveState();
-  if (arena && arena.running) setTimeout(fillArena, 400);
-}
+// ══════ PROFIL ══════
+function renderProfile(){const p=state.player;document.getElementById('profileAvatar').textContent=p.avatar||'👤';document.getElementById('profileName').textContent=p.name;document.getElementById('profileElo').textContent=p.elo;document.getElementById('profileGames').textContent=`${p.games||0} Partien`;document.getElementById('profileWins').textContent=`${p.wins||0} Siege`;document.getElementById('profileDraws').textContent=`${p.draws||0} Remis`;document.getElementById('profileLosses').textContent=`${p.losses||0} Niederlagen`;document.getElementById('playerNameDisplay').textContent=p.name;document.getElementById('playerRatingDisplay').textContent=p.elo;renderRatingChart();renderResultDonut();renderGameHistory()}
+function renderRatingChart(){const h=state.player.ratingHistory||[1500];const el=document.getElementById('ratingChart');if(h.length<2){el.innerHTML='<div style="color:var(--mu);font-size:13px;margin:auto">Noch keine Daten</div>';return}const max=Math.max(...h),min=Math.min(...h),range=max-min||1;el.innerHTML=h.slice(-30).map(v=>`<div style="flex:1;background:var(--ac);opacity:.7;height:${Math.max(4,((v-min)/range)*100)}px;border-radius:2px 2px 0 0;min-width:4px" title="${v}"></div>`).join('')}
+function renderResultDonut(){const p=state.player;document.getElementById('resultDonut').innerHTML=`<div style="text-align:center"><div style="font-size:22px;font-weight:900;color:var(--ac)">${p.wins||0}</div><div style="color:var(--mu)">Siege</div></div><div style="text-align:center"><div style="font-size:22px;font-weight:900;color:var(--mu)">${p.draws||0}</div><div style="color:var(--mu)">Remis</div></div><div style="text-align:center"><div style="font-size:22px;font-weight:900;color:var(--dn)">${p.losses||0}</div><div style="color:var(--mu)">Nied.</div></div>`}
+function renderGameHistory(){const tb=document.getElementById('gameHistoryTable');const h=state.player.gameHistory||[];if(!h.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--mu)">Noch keine Partien</td></tr>';return}tb.innerHTML=[...h].reverse().slice(0,50).map(g=>`<tr><td>${g.date||''}</td><td>${escapeHtml(g.opponent||'?')}</td><td>${VARIANTS[g.variant||'standard']?.icon||'♟'}</td><td class="result-${g.result}">${g.result==='win'?'Sieg':g.result==='draw'?'Remis':'Niederlage'}</td><td style="color:${(g.eloDiff||0)>=0?'var(--ac)':'var(--dn)'}">${(g.eloDiff||0)>=0?'+':''}${g.eloDiff||0}</td><td>${g.timeControl||''}</td></tr>`).join('')}
+function openProfileSettings(){document.getElementById('settingPlayerName').value=state.player.name;document.getElementById('settingPlayerElo').value=state.player.elo;document.getElementById('settingAvatar').value=state.player.avatar||'👤';openModal('profileModal')}
+function saveProfileSettings(){state.player.name=document.getElementById('settingPlayerName').value.trim()||'Spieler';state.player.elo=parseInt(document.getElementById('settingPlayerElo').value)||1500;state.player.avatar=document.getElementById('settingAvatar').value||'👤';saveState();closeModal('profileModal');renderProfile();toast('Profil gespeichert!')}
 
-function addResultFeed(text) {
-  const feed = document.getElementById('resultsFeed');
-  const row = document.createElement('div');
-  row.style.cssText = 'padding:5px 0; border-bottom:1px solid var(--border); animation:slideIn 0.2s ease;';
-  row.textContent = text;
-  feed.prepend(row);
-  while (feed.children.length > 30) feed.removeChild(feed.lastChild);
-}
+// ══════ MODALS & TOAST ══════
+function openModal(id){document.getElementById(id).classList.add('open')}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open')}));
+function toast(msg,type=''){const t=document.createElement('div');t.className='toast '+type;t.textContent=msg;document.getElementById('toastContainer').appendChild(t);setTimeout(()=>t.style.opacity='0',3000);setTimeout(()=>t.remove(),3400)}
 
-function updateLeaderboard() {
-  if (!arena) return;
-  const sorted = [...arena.participants].sort((a,b)=>b.score-a.score||b.streak-a.streak);
-  document.getElementById('leaderboard').innerHTML = sorted.map((p,i)=>`
-    <div class="lb-row ${p.isPlayer?'is-me':''}">
-      <div class="lb-rank ${i<3?'top3':''}">${i+1}</div>
-      <div style="font-size:16px;">${p.isPlayer?(state.player.avatar||'👤'):(p.ref.emoji||'🤖')}</div>
-      <div class="lb-name">${escapeHtml(p.name)}${p.isPlayer?' (Du)':''}</div>
-      <div class="lb-streak">${p.streak>=2?`🔥${p.streak}`:''}</div>
-      <div class="lb-score">${p.score}</div>
-    </div>
-  `).join('');
-}
-
-// ══════════════════════════════════════════════════════════
-//  PROFIL
-// ══════════════════════════════════════════════════════════
-function renderProfile() {
-  const p = state.player;
-  document.getElementById('profileAvatar').textContent = p.avatar||'👤';
-  document.getElementById('profileName').textContent = p.name;
-  document.getElementById('profileElo').textContent = p.elo;
-  document.getElementById('profileGames').textContent = `${p.games||0} Partien`;
-  document.getElementById('profileWins').textContent = `${p.wins||0} Siege`;
-  document.getElementById('profileDraws').textContent = `${p.draws||0} Remis`;
-  document.getElementById('profileLosses').textContent = `${p.losses||0} Niederlagen`;
-  document.getElementById('playerNameDisplay').textContent = p.name;
-  document.getElementById('playerRatingDisplay').textContent = p.elo;
-  renderRatingChart(); renderResultDonut(); renderGameHistory();
-}
-function renderRatingChart() {
-  const hist = state.player.ratingHistory||[1500];
-  const el = document.getElementById('ratingChart');
-  if (hist.length<2) { el.innerHTML='<div style="color:var(--muted);font-size:13px;margin:auto;">Noch keine Daten</div>'; return; }
-  const max=Math.max(...hist),min=Math.min(...hist),range=max-min||1,h=100;
-  el.innerHTML = hist.slice(-30).map(v=>`<div style="flex:1;background:var(--accent);opacity:0.7;height:${Math.max(4,((v-min)/range)*h)}px;border-radius:2px 2px 0 0;min-width:4px;" title="${v}"></div>`).join('');
-}
-function renderResultDonut() {
-  const p = state.player;
-  document.getElementById('resultDonut').innerHTML=`
-    <div style="text-align:center"><div style="font-size:22px;font-weight:900;color:var(--accent)">${p.wins||0}</div><div style="color:var(--muted)">Siege</div></div>
-    <div style="text-align:center"><div style="font-size:22px;font-weight:900;color:var(--muted)">${p.draws||0}</div><div style="color:var(--muted)">Remis</div></div>
-    <div style="text-align:center"><div style="font-size:22px;font-weight:900;color:var(--danger)">${p.losses||0}</div><div style="color:var(--muted)">Nied.</div></div>
-  `;
-}
-function renderGameHistory() {
-  const tbody = document.getElementById('gameHistoryTable');
-  const hist = state.player.gameHistory||[];
-  if (!hist.length) { tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--muted);">Noch keine Partien</td></tr>'; return; }
-  tbody.innerHTML = [...hist].reverse().slice(0,50).map(g=>`
-    <tr>
-      <td>${g.date||''}</td>
-      <td>${escapeHtml(g.opponent||'?')}</td>
-      <td class="result-${g.result}">${g.result==='win'?'Sieg':g.result==='draw'?'Remis':'Niederlage'}</td>
-      <td style="color:${g.eloDiff>=0?'var(--accent)':'var(--danger)'}">${g.eloDiff>=0?'+':''}${g.eloDiff}</td>
-      <td>${g.timeControl||''}</td>
-    </tr>
-  `).join('');
-}
-function openProfileSettings() {
-  document.getElementById('settingPlayerName').value = state.player.name;
-  document.getElementById('settingPlayerElo').value = state.player.elo;
-  document.getElementById('settingAvatar').value = state.player.avatar||'👤';
-  openModal('profileModal');
-}
-function saveProfileSettings() {
-  state.player.name = document.getElementById('settingPlayerName').value.trim()||'Spieler';
-  state.player.elo = parseInt(document.getElementById('settingPlayerElo').value)||1500;
-  state.player.avatar = document.getElementById('settingAvatar').value||'👤';
-  if (!state.player.ratingHistory) state.player.ratingHistory = [state.player.elo];
-  saveState(); closeModal('profileModal'); renderProfile(); toast('Profil gespeichert!');
-}
-
-// ══════════════════════════════════════════════════════════
-//  MODALS & TOAST
-// ══════════════════════════════════════════════════════════
-function openModal(id) { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('open'); }));
-function toast(msg, type='') {
-  const t=document.createElement('div');
-  t.className='toast '+type; t.textContent=msg;
-  document.getElementById('toastContainer').appendChild(t);
-  setTimeout(()=>t.style.opacity='0',3000);
-  setTimeout(()=>t.remove(),3400);
-}
-
-// ══════════════════════════════════════════════════════════
-//  INIT
-// ══════════════════════════════════════════════════════════
-updateTimePreview();
-refreshHome();
-document.getElementById('playerNameDisplay').textContent = state.player.name;
-document.getElementById('playerRatingDisplay').textContent = state.player.elo;
-if (!storageAvailable) toast('Hinweis: Kein lokaler Speicher – Fortschritt nur für diese Sitzung','info');
+// ══════ INIT ══════
+updateTimePreview();refreshHome();
+document.getElementById('playerNameDisplay').textContent=state.player.name;
+document.getElementById('playerRatingDisplay').textContent=state.player.elo;
+if(!storageOk)toast('Kein lokaler Speicher – Daten nur für diese Sitzung','info');
 initStockfishPool();
 </script>
 </body>
