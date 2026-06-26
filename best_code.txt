@@ -2,33 +2,16 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dark – Lichess-Style Turniere</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>ChessArena – Lichess-Style Turniere</title>
 
-<!-- Chess Libraries -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js"></script>
 
 <style>
-/* =========================================================
-   DESIGN SYSTEM – Dark Chess Platform
-   Palette:
-     --bg:       #0f1117   deepest background
-     --surface:  #1a1d27   card surface
-     --surface2: #22263a   raised panels
-     --border:   #2e3350   subtle borders
-     --accent:   #7fa650   lichess-green
-     --accent2:  #4f9de8   blue for player
-     --gold:     #e8c84f   rankings/gold
-     --text:     #e8e9f0   primary text
-     --muted:    #7c8296   muted text
-     --danger:   #e85050   danger/loss
-     --white-p:  #f5f5f0   white pieces
-   Font: system-ui stack, monospace for board coords
-   Signature: animated arena bracket lines + live pulse dots
-========================================================= */
 :root {
   --bg: #0f1117;
   --surface: #1a1d27;
@@ -43,9 +26,8 @@
   --radius: 10px;
   --radius-lg: 16px;
 }
-
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
+html, body { overscroll-behavior: none; }
 body {
   background: var(--bg);
   color: var(--text);
@@ -53,8 +35,14 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
 }
+.board-wrap, #myGameBoard, .board-wrap > div {
+  touch-action: none !important;
+  user-select: none;
+}
+/* TAP HIGHLIGHT */
+.tap-selected-sq { background: rgba(79,157,232,0.55) !important; }
+.tap-hint-sq     { background: rgba(127,166,80,0.45) !important; }
 
-/* ── TOPBAR ── */
 .topbar {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
@@ -79,11 +67,7 @@ body {
   cursor: pointer;
 }
 .logo span { color: var(--text); }
-.nav-tabs {
-  display: flex;
-  height: 100%;
-  gap: 2px;
-}
+.nav-tabs { display: flex; height: 100%; gap: 2px; }
 .nav-tab {
   padding: 0 18px;
   height: 100%;
@@ -99,12 +83,7 @@ body {
 }
 .nav-tab:hover { color: var(--text); }
 .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-.topbar-right {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
 .player-badge {
   background: var(--surface2);
   border: 1px solid var(--border);
@@ -126,58 +105,17 @@ body {
   font-size: 11px;
   font-weight: 700;
 }
-
-/* ── PAGES ── */
 .page { display: none; padding: 24px; max-width: 1400px; margin: 0 auto; }
 .page.active { display: block; }
-
-/* ── SECTION HEADERS ── */
-.section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 20px;
-}
-.section-title {
-  font-size: 20px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
+.section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.section-title { font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
 .section-title .icon { font-size: 22px; }
-
-/* ── CARDS ── */
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 20px;
-  margin-bottom: 16px;
-}
-.card-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  margin-bottom: 16px;
-}
-
-/* ── BUTTONS ── */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 16px; }
+.card-title { font-size: 14px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 16px; }
 .btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 9px 18px;
-  border-radius: var(--radius);
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  border: none;
-  transition: all 0.15s;
-  white-space: nowrap;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 9px 18px; border-radius: var(--radius); font-size: 14px; font-weight: 600;
+  cursor: pointer; border: none; transition: all 0.15s; white-space: nowrap;
 }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .btn-primary { background: var(--accent); color: #fff; }
@@ -190,224 +128,61 @@ body {
 .btn-blue:hover:not(:disabled) { background: #62aef5; }
 .btn-sm { padding: 6px 12px; font-size: 12px; }
 .btn-lg { padding: 13px 28px; font-size: 16px; }
-.btn-icon { width: 34px; height: 34px; padding: 0; border-radius: 8px; }
-
-/* ── FORM ── */
 .form-group { margin-bottom: 14px; }
-.form-label {
-  display: block;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  margin-bottom: 6px;
-}
+.form-label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 6px; }
 .form-hint { font-size: 11px; color: var(--muted); margin-top: 4px; }
 .form-input, .form-select {
-  width: 100%;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 9px 12px;
-  color: var(--text);
-  font-size: 14px;
-  outline: none;
-  transition: border-color 0.15s;
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 9px 12px; color: var(--text); font-size: 14px;
+  outline: none; transition: border-color 0.15s;
 }
 .form-input:focus, .form-select:focus { border-color: var(--accent); }
 .form-input::placeholder { color: var(--muted); }
 .form-select option { background: var(--surface2); }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
 .toggle-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 0; border-bottom: 1px solid var(--border);
 }
 .toggle-row:last-child { border-bottom: none; }
 .toggle-info { font-size: 13px; }
 .toggle-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
-.toggle {
-  position: relative;
-  width: 40px;
-  height: 22px;
-  flex-shrink: 0;
-}
+.toggle { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
 .toggle input { display: none; }
-.toggle-track {
-  position: absolute;
-  inset: 0;
-  background: var(--border);
-  border-radius: 11px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
+.toggle-track { position: absolute; inset: 0; background: var(--border); border-radius: 11px; cursor: pointer; transition: background 0.2s; }
 .toggle input:checked ~ .toggle-track { background: var(--accent); }
-.toggle-thumb {
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 16px;
-  height: 16px;
-  background: #fff;
-  border-radius: 50%;
-  transition: transform 0.2s;
-  pointer-events: none;
-}
+.toggle-thumb { position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; background: #fff; border-radius: 50%; transition: transform 0.2s; pointer-events: none; }
 .toggle input:checked ~ .toggle-track .toggle-thumb { transform: translateX(18px); }
 .range-row { display: flex; align-items: center; gap: 12px; }
-.range-row input[type=range] {
-  flex: 1;
-  accent-color: var(--accent);
-  height: 4px;
-  cursor: pointer;
-}
-.range-val {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--accent);
-  min-width: 40px;
-  text-align: right;
-}
-
-/* ── DASHBOARD ── */
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
-}
-.stat-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 20px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-.stat-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 22px;
-  flex-shrink: 0;
-}
+.range-row input[type=range] { flex: 1; accent-color: var(--accent); height: 4px; cursor: pointer; }
+.range-val { font-size: 13px; font-weight: 700; color: var(--accent); min-width: 40px; text-align: right; }
+.dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; display: flex; align-items: center; gap: 16px; }
+.stat-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
 .stat-icon.green { background: rgba(127,166,80,0.15); }
 .stat-icon.blue { background: rgba(79,157,232,0.15); }
 .stat-icon.gold { background: rgba(232,200,79,0.15); }
 .stat-icon.red { background: rgba(232,80,80,0.15); }
 .stat-value { font-size: 26px; font-weight: 800; line-height: 1; }
 .stat-label { font-size: 12px; color: var(--muted); margin-top: 4px; }
-
-/* ── BOT CARDS ── */
-.bots-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 14px;
-}
-.bot-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 16px;
-  position: relative;
-  transition: border-color 0.15s;
-}
+.bots-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.bot-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; position: relative; transition: border-color 0.15s; }
 .bot-card:hover { border-color: var(--accent2); }
 .bot-card.selected { border-color: var(--accent); background: rgba(127,166,80,0.07); }
-.bot-avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 22px;
-  margin-bottom: 10px;
-  font-weight: 900;
-}
-.bot-name-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
-}
+.bot-avatar { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 10px; font-weight: 900; }
+.bot-name-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
 .bot-name { font-size: 15px; font-weight: 700; }
-.bot-elo {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 1px 7px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--gold);
-}
-.bot-level-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  color: var(--muted);
-  background: var(--surface2);
-  border-radius: 6px;
-  padding: 2px 8px;
-  margin-bottom: 10px;
-}
-.bot-stats {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 6px;
-  font-size: 11px;
-  color: var(--muted);
-}
+.bot-elo { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 1px 7px; font-size: 12px; font-weight: 700; color: var(--gold); }
+.bot-level-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); background: var(--surface2); border-radius: 6px; padding: 2px 8px; margin-bottom: 10px; }
+.bot-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; font-size: 11px; color: var(--muted); }
 .bot-stat-val { font-size: 14px; font-weight: 700; color: var(--text); }
-.bot-actions {
-  display: flex;
-  gap: 6px;
-  margin-top: 12px;
-}
-.bot-check {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: var(--accent);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-}
+.bot-actions { display: flex; gap: 6px; margin-top: 12px; }
+.bot-check { position: absolute; top: 12px; right: 12px; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); display: none; align-items: center; justify-content: center; font-size: 12px; }
 .bot-card.selected .bot-check { display: flex; }
-
-/* ── TOURNAMENT LIST ── */
 .tournament-list { display: flex; flex-direction: column; gap: 10px; }
-.tournament-item {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 16px 20px;
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  cursor: pointer;
-  transition: border-color 0.15s;
-}
+.tournament-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px 20px; display: flex; align-items: center; gap: 20px; cursor: pointer; transition: border-color 0.15s; }
 .tournament-item:hover { border-color: var(--accent); }
-.t-status {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
+.t-status { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 .t-status.live { background: var(--danger); animation: pulse 1.5s infinite; }
 .t-status.upcoming { background: var(--gold); }
 .t-status.finished { background: var(--muted); }
@@ -420,273 +195,64 @@ body {
 .t-meta { font-size: 12px; color: var(--muted); margin-top: 3px; }
 .t-time { font-size: 22px; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; min-width: 70px; text-align: right; }
 .t-players { font-size: 12px; color: var(--muted); text-align: right; }
-
-/* ── ARENA PAGE ── */
-.arena-layout {
-  display: grid;
-  grid-template-columns: 1fr 320px;
-  gap: 16px;
-  align-items: start;
-}
+.arena-layout { display: grid; grid-template-columns: 1fr 320px; gap: 16px; align-items: start; }
 @media (max-width: 900px) { .arena-layout { grid-template-columns: 1fr; } }
-
-.arena-boards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 12px;
-}
-.board-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 12px;
-  position: relative;
-}
-.board-card.my-game {
-  border-color: var(--accent2);
-  box-shadow: 0 0 0 2px rgba(79,157,232,0.2);
-}
-.board-card .player-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 5px 0;
-}
+.arena-boards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.board-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 12px; position: relative; }
+.board-card.my-game { border-color: var(--accent2); box-shadow: 0 0 0 2px rgba(79,157,232,0.2); }
+.board-card .player-row { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; }
 .board-card .player-name { font-size: 13px; font-weight: 600; }
 .board-card .player-elo { font-size: 11px; color: var(--muted); }
-.board-card .player-clock {
-  font-size: 14px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  color: var(--text);
-  background: var(--surface2);
-  border-radius: 6px;
-  padding: 2px 8px;
-}
+.board-card .player-clock { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text); background: var(--surface2); border-radius: 6px; padding: 2px 8px; }
 .board-card .player-clock.active { color: var(--accent); background: rgba(127,166,80,0.15); }
 .board-card .player-clock.low { color: var(--danger); background: rgba(232,80,80,0.15); }
-.board-wrap { width: 100%; aspect-ratio: 1; margin: 6px 0; }
-.game-status {
-  text-align: center;
-  font-size: 12px;
-  color: var(--muted);
-  padding: 4px;
-}
+.board-wrap { width: 100%; aspect-ratio: 1; margin: 6px 0; touch-action: none; }
+.game-status { text-align: center; font-size: 12px; color: var(--muted); padding: 4px; }
 .game-status.win { color: var(--accent); font-weight: 700; }
 .game-status.loss { color: var(--danger); font-weight: 700; }
-
-/* ── LEADERBOARD SIDEBAR ── */
 .arena-sidebar { display: flex; flex-direction: column; gap: 12px; }
-.leaderboard { }
-.lb-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 4px;
-  border-bottom: 1px solid var(--border);
-  font-size: 13px;
-  transition: background 0.1s;
-}
+.lb-row { display: flex; align-items: center; gap: 10px; padding: 8px 4px; border-bottom: 1px solid var(--border); font-size: 13px; transition: background 0.1s; }
 .lb-row:last-child { border-bottom: none; }
 .lb-row:hover { background: rgba(255,255,255,0.03); border-radius: 6px; }
 .lb-row.is-me { background: rgba(79,157,232,0.1); border-radius: 6px; }
 .lb-rank { font-size: 12px; color: var(--muted); width: 20px; text-align: center; flex-shrink: 0; }
 .lb-rank.top3 { color: var(--gold); font-weight: 800; }
 .lb-name { flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.lb-score {
-  font-weight: 800;
-  color: var(--accent);
-  min-width: 28px;
-  text-align: right;
-}
-.lb-streak {
-  font-size: 11px;
-  color: var(--gold);
-  min-width: 20px;
-  text-align: right;
-}
-.lb-fire { font-size: 14px; }
-
-/* ── ARENA CONTROLS ── */
-.arena-header {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
-}
+.lb-score { font-weight: 800; color: var(--accent); min-width: 28px; text-align: right; }
+.lb-streak { font-size: 11px; color: var(--gold); min-width: 20px; text-align: right; }
+.arena-header { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
 .arena-title { font-size: 22px; font-weight: 800; }
-.arena-timer {
-  font-size: 28px;
-  font-weight: 900;
-  color: var(--accent);
-  font-variant-numeric: tabular-nums;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 6px 16px;
-}
+.arena-timer { font-size: 28px; font-weight: 900; color: var(--accent); font-variant-numeric: tabular-nums; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 6px 16px; }
 .arena-timer.ending { color: var(--danger); animation: pulse 1s infinite; }
-.live-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: var(--danger);
-  animation: pulse 1.5s infinite;
-  display: inline-block;
-  margin-right: 4px;
-}
-.my-game-panel {
-  background: var(--surface2);
-  border: 1px solid var(--accent2);
-  border-radius: var(--radius-lg);
-  padding: 16px;
-}
-.my-game-board { width: 100%; aspect-ratio: 1; }
-.move-btn-row { display: flex; gap: 6px; margin-top: 10px; }
-.move-input-row { display: flex; gap: 6px; margin-top: 8px; }
-
-/* ── MODALS ── */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 200;
-  backdrop-filter: blur(4px);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s;
-}
+.my-game-panel { background: var(--surface2); border: 1px solid var(--accent2); border-radius: var(--radius-lg); padding: 16px; }
+.my-game-board { width: 100%; aspect-ratio: 1; touch-action: none; }
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 200; backdrop-filter: blur(4px); opacity: 0; pointer-events: none; transition: opacity 0.2s; }
 .modal-overlay.open { opacity: 1; pointer-events: all; }
-.modal {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 28px;
-  width: min(600px, 95vw);
-  max-height: 90vh;
-  overflow-y: auto;
-  transform: translateY(10px);
-  transition: transform 0.2s;
-}
+.modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px; width: min(600px, 95vw); max-height: 90vh; overflow-y: auto; transform: translateY(10px); transition: transform 0.2s; }
 .modal-overlay.open .modal { transform: translateY(0); }
-.modal-title {
-  font-size: 20px;
-  font-weight: 800;
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
+.modal-title { font-size: 20px; font-weight: 800; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
 .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
-
-/* ── STOCKFISH LEVEL DISPLAY ── */
-.sf-level-grid {
-  display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  gap: 6px;
-}
-.sf-level-btn {
-  aspect-ratio: 1;
-  border-radius: 8px;
-  border: 2px solid var(--border);
-  background: var(--surface2);
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s;
-}
+.sf-level-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; }
+.sf-level-btn { aspect-ratio: 1; border-radius: 8px; border: 2px solid var(--border); background: var(--surface2); color: var(--text); font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
 .sf-level-btn:hover { border-color: var(--accent); }
 .sf-level-btn.selected { border-color: var(--accent); background: rgba(127,166,80,0.2); color: var(--accent); }
 .sf-level-desc { font-size: 12px; color: var(--muted); margin-top: 8px; text-align: center; }
-
-/* ── TABS (in modals / sections) ── */
-.tab-row {
-  display: flex;
-  gap: 2px;
-  margin-bottom: 20px;
-  background: var(--surface2);
-  border-radius: 10px;
-  padding: 4px;
-}
-.tab-btn {
-  flex: 1;
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: none;
-  background: transparent;
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s;
-}
+.tab-row { display: flex; gap: 2px; margin-bottom: 20px; background: var(--surface2); border-radius: 10px; padding: 4px; }
+.tab-btn { flex: 1; padding: 8px 12px; border-radius: 8px; border: none; background: transparent; color: var(--muted); font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
 .tab-btn.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
-
-/* ── COLOR PICKER ROW ── */
 .color-row { display: flex; gap: 8px; flex-wrap: wrap; }
-.color-swatch {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  border: 2px solid transparent;
-  cursor: pointer;
-  transition: border-color 0.15s;
-}
+.color-swatch { width: 32px; height: 32px; border-radius: 8px; border: 2px solid transparent; cursor: pointer; transition: border-color 0.15s; }
 .color-swatch.selected { border-color: #fff; }
-
-/* ── TOAST ── */
-.toast-container {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  z-index: 500;
-}
-.toast {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--accent);
-  border-radius: 10px;
-  padding: 12px 18px;
-  font-size: 14px;
-  font-weight: 500;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-  animation: slideIn 0.2s ease;
-  max-width: 320px;
-}
+.toast-container { position: fixed; bottom: 24px; right: 24px; display: flex; flex-direction: column; gap: 8px; z-index: 500; }
+.toast { background: var(--surface2); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 10px; padding: 12px 18px; font-size: 14px; font-weight: 500; box-shadow: 0 4px 20px rgba(0,0,0,0.4); animation: slideIn 0.2s ease; max-width: 320px; }
 .toast.error { border-left-color: var(--danger); }
 .toast.info { border-left-color: var(--accent2); }
-@keyframes slideIn {
-  from { transform: translateX(50px); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
-}
-
-/* ── MISC ── */
-.empty-state {
-  text-align: center;
-  padding: 60px 20px;
-  color: var(--muted);
-}
+@keyframes slideIn { from { transform: translateX(50px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+.empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
 .empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; }
 .empty-state p { font-size: 15px; }
 .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  border-radius: 6px;
-  padding: 2px 8px;
-  font-size: 11px;
-  font-weight: 700;
-}
+.badge { display: inline-flex; align-items: center; gap: 4px; border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 700; }
 .badge-green { background: rgba(127,166,80,0.2); color: var(--accent); }
 .badge-blue { background: rgba(79,157,232,0.2); color: var(--accent2); }
 .badge-gold { background: rgba(232,200,79,0.2); color: var(--gold); }
@@ -695,8 +261,6 @@ body {
 .scrollable::-webkit-scrollbar { width: 4px; }
 .scrollable::-webkit-scrollbar-track { background: var(--surface2); }
 .scrollable::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-/* ── GAME HISTORY TABLE ── */
 .history-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .history-table th { text-align: left; padding: 8px 10px; color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
 .history-table td { padding: 10px; border-bottom: 1px solid rgba(46,51,80,0.5); }
@@ -704,59 +268,17 @@ body {
 .result-win { color: var(--accent); font-weight: 700; }
 .result-loss { color: var(--danger); font-weight: 700; }
 .result-draw { color: var(--muted); font-weight: 700; }
-
-/* ── BOARD THEME ── */
-.white-square { background: #eeeed2 !important; }
-.black-square { background: #769656 !important; }
-
-/* ── PROFILE PAGE ── */
-.profile-header {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  padding: 24px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  margin-bottom: 20px;
-}
-.profile-avatar {
-  width: 72px; height: 72px; border-radius: 18px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 36px; flex-shrink: 0;
-}
+.profile-header { display: flex; align-items: center; gap: 20px; padding: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); margin-bottom: 20px; }
+.profile-avatar { width: 72px; height: 72px; border-radius: 18px; display: flex; align-items: center; justify-content: center; font-size: 36px; flex-shrink: 0; }
 .profile-name { font-size: 24px; font-weight: 800; }
 .profile-elo { font-size: 32px; font-weight: 900; color: var(--gold); }
 .profile-stats { display: flex; gap: 24px; margin-top: 6px; font-size: 13px; color: var(--muted); }
 .profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-
-/* ── COUNTDOWN RING ── */
-.countdown-ring { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.countdown-ring svg { transform: rotate(-90deg); }
-.ring-bg { fill: none; stroke: var(--border); stroke-width: 4; }
-.ring-fg { fill: none; stroke: var(--accent); stroke-width: 4; stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
-
-/* ── ENGINE STATUS BADGE ── */
-.engine-status {
-  position: fixed;
-  bottom: 24px;
-  left: 24px;
-  font-size: 11px;
-  color: var(--muted);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 5px 10px;
-  z-index: 400;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.engine-status .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
-
-/* ── RESPONSIVE ── */
+.engine-status { position: fixed; bottom: 24px; left: 24px; font-size: 11px; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px; z-index: 400; display: flex; align-items: center; gap: 6px; }
+.engine-status .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); transition: background 0.3s; }
+.engine-status .dot.ready { background: var(--accent); }
 @media (max-width: 700px) {
-  .form-row, .form-row-3 { grid-template-columns: 1fr; }
+  .form-row { grid-template-columns: 1fr; }
   .profile-grid { grid-template-columns: 1fr; }
   .topbar { padding: 0 12px; }
   .nav-tab { padding: 0 10px; font-size: 12px; }
@@ -765,7 +287,6 @@ body {
 </head>
 <body>
 
-<!-- TOPBAR -->
 <div class="topbar">
   <div class="logo" onclick="showPage('home')">♛<span>ChessArena</span></div>
   <div class="nav-tabs">
@@ -794,46 +315,15 @@ body {
       <button class="btn btn-blue btn-lg" onclick="openCreateTournament()">🏆 Turnier starten</button>
     </div>
   </div>
-
   <div class="dashboard-grid">
-    <div class="stat-card">
-      <div class="stat-icon green">🤖</div>
-      <div>
-        <div class="stat-value" id="statBots">0</div>
-        <div class="stat-label">Bots erstellt</div>
-      </div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon blue">🏆</div>
-      <div>
-        <div class="stat-value" id="statTournaments">0</div>
-        <div class="stat-label">Turniere gespielt</div>
-      </div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon gold">⚡</div>
-      <div>
-        <div class="stat-value" id="statGames">0</div>
-        <div class="stat-label">Partien gesamt</div>
-      </div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon red">🎯</div>
-      <div>
-        <div class="stat-value" id="statWins">0</div>
-        <div class="stat-label">Siege (Spieler)</div>
-      </div>
-    </div>
+    <div class="stat-card"><div class="stat-icon green">🤖</div><div><div class="stat-value" id="statBots">0</div><div class="stat-label">Bots erstellt</div></div></div>
+    <div class="stat-card"><div class="stat-icon blue">🏆</div><div><div class="stat-value" id="statTournaments">0</div><div class="stat-label">Turniere gespielt</div></div></div>
+    <div class="stat-card"><div class="stat-icon gold">⚡</div><div><div class="stat-value" id="statGames">0</div><div class="stat-label">Partien gesamt</div></div></div>
+    <div class="stat-card"><div class="stat-icon red">🎯</div><div><div class="stat-value" id="statWins">0</div><div class="stat-label">Siege (Spieler)</div></div></div>
   </div>
-
   <div class="card">
     <div class="card-title">Letzte Turniere</div>
-    <div id="recentTournaments">
-      <div class="empty-state">
-        <div class="empty-icon">🏆</div>
-        <p>Noch keine Turniere</p>
-      </div>
-    </div>
+    <div id="recentTournaments"><div class="empty-state"><div class="empty-icon">🏆</div><p>Noch keine Turniere</p></div></div>
   </div>
 </div>
 
@@ -843,12 +333,8 @@ body {
     <div class="section-title"><span class="icon">🤖</span> Bot Manager</div>
     <button class="btn btn-primary" onclick="openBotModal()">➕ Neuer Bot</button>
   </div>
-
   <div id="botGrid" class="bots-grid">
-    <div class="empty-state" style="grid-column:1/-1">
-      <div class="empty-icon">🤖</div>
-      <p>Noch keine Bots. Erstelle deinen ersten Bot!</p>
-    </div>
+    <div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🤖</div><p>Noch keine Bots. Erstelle deinen ersten Bot!</p></div>
   </div>
 </div>
 
@@ -858,12 +344,8 @@ body {
     <div class="section-title"><span class="icon">🏆</span> Turniere</div>
     <button class="btn btn-primary" onclick="openCreateTournament()">➕ Turnier erstellen</button>
   </div>
-
   <div id="tournamentList" class="tournament-list">
-    <div class="empty-state">
-      <div class="empty-icon">🏆</div>
-      <p>Noch keine Turniere</p>
-    </div>
+    <div class="empty-state"><div class="empty-icon">🏆</div><p>Noch keine Turniere</p></div>
   </div>
 </div>
 
@@ -879,36 +361,25 @@ body {
       <button class="btn btn-danger btn-sm" id="btnAbortArena" onclick="abortArena()" style="display:none">⏹ Abbrechen</button>
     </div>
   </div>
-
   <div class="arena-layout">
     <div>
-      <!-- My game panel (shown when player participates) -->
       <div class="my-game-panel" id="myGamePanel" style="display:none; margin-bottom: 16px;">
         <div style="font-size:13px; font-weight:700; color: var(--accent2); margin-bottom:8px;">⚔️ Deine Partie</div>
         <div class="board-card my-game" style="padding:0; border:none; background:transparent;">
           <div class="player-row">
-            <div>
-              <span class="player-name" id="myOpponentName">Gegner</span>
-              <span class="player-elo" id="myOpponentElo"> (1500)</span>
-            </div>
+            <div><span class="player-name" id="myOpponentName">Gegner</span><span class="player-elo" id="myOpponentElo"> (1500)</span></div>
             <div class="player-clock" id="myOpponentClock">5:00</div>
           </div>
-          <div id="myGameBoard" style="width:100%; margin: 6px 0;"></div>
+          <div id="myGameBoard" style="width:280px; max-width:100%; margin:6px auto; touch-action:none;"></div>
           <div class="player-row">
-            <div>
-              <span class="player-name" id="myPlayerName">Du</span>
-              <span class="player-elo" id="myPlayerElo"> (1500)</span>
-            </div>
+            <div><span class="player-name" id="myPlayerName">Du</span><span class="player-elo" id="myPlayerElo"> (1500)</span></div>
             <div class="player-clock active" id="myPlayerClock">5:00</div>
           </div>
           <div class="game-status" id="myGameStatus">Warte auf Zug...</div>
         </div>
       </div>
-
-      <!-- All bot games -->
       <div id="arenaBoards" class="arena-boards"></div>
     </div>
-
     <div class="arena-sidebar">
       <div class="card">
         <div class="card-title">🏆 Rangliste</div>
@@ -936,20 +407,11 @@ body {
         <span id="profileLosses">0 Niederlagen</span>
       </div>
     </div>
-    <div style="margin-left:auto;">
-      <button class="btn btn-secondary" onclick="openProfileSettings()">⚙️ Einstellungen</button>
-    </div>
+    <div style="margin-left:auto;"><button class="btn btn-secondary" onclick="openProfileSettings()">⚙️ Einstellungen</button></div>
   </div>
-
   <div class="profile-grid">
-    <div class="card">
-      <div class="card-title">📈 Rating Verlauf</div>
-      <div id="ratingChart" style="height:120px; display:flex; align-items:flex-end; gap:3px; padding-top:10px;"></div>
-    </div>
-    <div class="card">
-      <div class="card-title">🎯 Ergebnis Verteilung</div>
-      <div id="resultDonut" style="display:flex; align-items:center; justify-content:center; height:120px; gap:20px; font-size:13px;"></div>
-    </div>
+    <div class="card"><div class="card-title">📈 Rating Verlauf</div><div id="ratingChart" style="height:120px; display:flex; align-items:flex-end; gap:3px; padding-top:10px;"></div></div>
+    <div class="card"><div class="card-title">🎯 Ergebnis Verteilung</div><div id="resultDonut" style="display:flex; align-items:center; justify-content:center; height:120px; gap:20px; font-size:13px;"></div></div>
     <div class="card" style="grid-column: 1 / -1">
       <div class="card-title">📋 Partien-Verlauf</div>
       <div class="scrollable" style="max-height:300px;">
@@ -962,21 +424,16 @@ body {
   </div>
 </div>
 
-<!-- ===== MODALS ===== -->
-
 <!-- BOT CREATION MODAL -->
 <div class="modal-overlay" id="botModal">
   <div class="modal">
     <div class="modal-title">🤖 Bot erstellen / bearbeiten</div>
-
     <div class="tab-row">
       <button class="tab-btn active" onclick="switchBotTab('basic',this)">Grundlagen</button>
       <button class="tab-btn" onclick="switchBotTab('ai',this)">KI & Stärke</button>
       <button class="tab-btn" onclick="switchBotTab('style',this)">Spielstil</button>
       <button class="tab-btn" onclick="switchBotTab('appearance',this)">Aussehen</button>
     </div>
-
-    <!-- BASIC TAB -->
     <div id="botTab-basic">
       <div class="form-group">
         <label class="form-label">Bot-Name</label>
@@ -1018,129 +475,75 @@ body {
         <textarea class="form-input" id="botBio" rows="2" placeholder="Kurze Bot-Beschreibung..."></textarea>
       </div>
     </div>
-
-    <!-- AI TAB -->
     <div id="botTab-ai" style="display:none;">
       <div class="form-group">
         <label class="form-label">Engine</label>
         <select class="form-select" id="botEngine">
-          <option value="stockfish">Eingebaute Schach-Engine (Level 1–20)</option>
-          <option value="random">Zufalls-Bot (kein KI)</option>
-          <option value="darkbot">DarkOnWeakBot (heuristisch)</option>
+          <option value="stockfish">♟ Stockfish (original, Level 0–20)</option>
+          <option value="random">🎲 Zufalls-Bot</option>
         </select>
-        <div class="form-hint">Die eingebaute Engine läuft direkt im Browser (kein externer Worker/Server nötig) und liefert garantiert einen Zug innerhalb des Zeitbudgets.</div>
+        <div class="form-hint" id="engineHint">Echter Stockfish UCI-Engine – Skill Level 0–20 steuert die Spielstärke direkt.</div>
       </div>
       <div id="sfLevelSection" class="form-group">
-        <label class="form-label">Engine-Level (1–20)</label>
+        <label class="form-label">Stockfish Skill Level (0–20)</label>
         <div class="sf-level-grid" id="sfLevelGrid"></div>
         <div class="sf-level-desc" id="sfLevelDesc"></div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Denkzeit-Modus</label>
-        <select class="form-select" id="botThinkMode">
-          <option value="movetime">Feste Zeit pro Zug (ms)</option>
-          <option value="depth">Feste Suchtiefe</option>
-          <option value="nodes">Node-Limit</option>
-          <option value="adaptive">Adaptiv (passt sich an)</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Denkzeit / Tiefe</label>
-        <div class="range-row">
-          <input type="range" id="botThinkAmount" min="50" max="5000" step="50" value="500" oninput="updateThinkLabel()">
-          <span class="range-val" id="thinkAmountLabel">500ms</span>
-        </div>
-      </div>
       <div class="toggle-row">
         <div>
-          <div class="toggle-info">Randomisierung</div>
-          <div class="toggle-sub">Bot wählt manchmal einen suboptimalen Zug</div>
+          <div class="toggle-info">Fehler / Zufallszug (Blunder)</div>
+          <div class="toggle-sub">Bot macht gelegentlich absichtlich schlechte Züge</div>
         </div>
         <label class="toggle">
-          <input type="checkbox" id="botRandomize" checked>
+          <input type="checkbox" id="botRandomize">
           <div class="toggle-track"><div class="toggle-thumb"></div></div>
         </label>
       </div>
       <div class="form-group" style="margin-top:14px;" id="randomPctGroup">
-        <label class="form-label">Fehlerrate (%)</label>
+        <label class="form-label">Blunder-Rate (%)</label>
         <div class="range-row">
           <input type="range" id="botRandomPct" min="0" max="80" value="10" oninput="document.getElementById('randomPctLabel').textContent=this.value+'%'">
           <span class="range-val" id="randomPctLabel">10%</span>
         </div>
       </div>
-      <div class="toggle-row">
-        <div>
-          <div class="toggle-info">Eröffnungsbuch verwenden</div>
-          <div class="toggle-sub">Bot nutzt bekannte Eröffnungen</div>
-        </div>
-        <label class="toggle">
-          <input type="checkbox" id="botOpeningBook" checked>
-          <div class="toggle-track"><div class="toggle-thumb"></div></div>
-        </label>
-      </div>
     </div>
-
-    <!-- STYLE TAB -->
     <div id="botTab-style" style="display:none;">
       <div class="form-group">
-        <label class="form-label">Spielstil</label>
+        <label class="form-label">Spielstil (informativ)</label>
         <select class="form-select" id="botPlayStyle">
           <option value="balanced">Ausgewogen</option>
-          <option value="aggressive">Aggressiv (Angriff bevorzugt)</option>
-          <option value="defensive">Defensiv (Sicherheit bevorzugt)</option>
+          <option value="aggressive">Aggressiv</option>
+          <option value="defensive">Defensiv</option>
           <option value="positional">Positionell</option>
-          <option value="tactical">Taktisch (Kombinationen)</option>
+          <option value="tactical">Taktisch</option>
           <option value="endgame">Endspiel-Spezialist</option>
         </select>
       </div>
       <div class="form-group">
-        <label class="form-label">Eröffnungs-Präferenz</label>
-        <select class="form-select" id="botOpeningPref">
-          <option value="any">Beliebig</option>
-          <option value="e4">1.e4 (Offene Spiele)</option>
-          <option value="d4">1.d4 (Geschlossene Spiele)</option>
-          <option value="nf3">1.Sf3 / Flankeneröffnung</option>
-          <option value="c4">1.c4 (Englisch)</option>
-          <option value="sicilian">Sizilianisch (als Schwarz)</option>
-          <option value="french">Französisch (als Schwarz)</option>
-          <option value="kings-indian">Königsindisch</option>
+        <label class="form-label">Elo-Klasse (Anzeige)</label>
+        <select class="form-select" id="botEloClass">
+          <option value="beginner">Anfänger (&lt;1200)</option>
+          <option value="intermediate" selected>Fortgeschritten (1200-1800)</option>
+          <option value="advanced">Fortgeschritten (1800-2200)</option>
+          <option value="expert">Experte (2200-2500)</option>
+          <option value="master">Meister (2500+)</option>
         </select>
       </div>
       <div class="toggle-row">
         <div>
           <div class="toggle-info">Remis akzeptieren</div>
-          <div class="toggle-sub">Bot kann Remis anbieten/annehmen</div>
+          <div class="toggle-sub">Bot kann Remis anbieten / annehmen</div>
         </div>
         <label class="toggle">
           <input type="checkbox" id="botAcceptDraw" checked>
           <div class="toggle-track"><div class="toggle-thumb"></div></div>
         </label>
       </div>
-      <div class="form-group" style="margin-top:14px;">
-        <label class="form-label">Aggressivität (0 = passiv, 100 = sehr aggressiv)</label>
-        <div class="range-row">
-          <input type="range" id="botAggression" min="0" max="100" value="50" oninput="document.getElementById('aggrLabel').textContent=this.value">
-          <span class="range-val" id="aggrLabel">50</span>
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Elo-Klasse (Profil-Anzeige)</label>
-        <select class="form-select" id="botEloClass">
-          <option value="beginner">Anfänger (&lt;1200)</option>
-          <option value="intermediate" selected>Fortgeschrittener (1200-1800)</option>
-          <option value="advanced">Fortgeschritten (1800-2200)</option>
-          <option value="expert">Experte (2200-2500)</option>
-          <option value="master">Meister (2500+)</option>
-        </select>
-      </div>
     </div>
-
-    <!-- APPEARANCE TAB -->
     <div id="botTab-appearance" style="display:none;">
       <div class="form-group">
         <label class="form-label">Bot-Emoji / Avatar</label>
-        <div class="color-row" style="flex-wrap:wrap; gap:6px;" id="emojiPicker">
-        </div>
+        <div class="color-row" style="flex-wrap:wrap; gap:6px;" id="emojiPicker"></div>
       </div>
       <div class="form-group">
         <label class="form-label">Karten-Farbe</label>
@@ -1156,7 +559,6 @@ body {
         </div>
       </div>
     </div>
-
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeBotModal()">Abbrechen</button>
       <button class="btn btn-primary" onclick="saveBot()">💾 Speichern</button>
@@ -1168,15 +570,12 @@ body {
 <div class="modal-overlay" id="tournamentModal">
   <div class="modal" style="width:min(700px,95vw);">
     <div class="modal-title">🏆 Turnier erstellen</div>
-
     <div class="tab-row">
       <button class="tab-btn active" onclick="switchTTab('tbasic',this)">Grundlagen</button>
       <button class="tab-btn" onclick="switchTTab('ttime',this)">Bedenkzeit</button>
       <button class="tab-btn" onclick="switchTTab('tbots',this)">Bots wählen</button>
       <button class="tab-btn" onclick="switchTTab('trules',this)">Regeln</button>
     </div>
-
-    <!-- T BASIC -->
     <div id="tTab-tbasic">
       <div class="form-group">
         <label class="form-label">Turnier-Name</label>
@@ -1193,8 +592,6 @@ body {
             <option value="30">30 Minuten</option>
             <option value="45">45 Minuten</option>
             <option value="60">1 Stunde</option>
-            <option value="90">1,5 Stunden</option>
-            <option value="120">2 Stunden</option>
           </select>
         </div>
         <div class="form-group">
@@ -1206,42 +603,15 @@ body {
           </select>
         </div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Variante</label>
-        <select class="form-select" id="tVariant">
-          <option value="standard">Schach (Standard)</option>
-          <option value="chess960">Chess960 (Fischer Random)</option>
-          <option value="crazyhouse">Crazyhouse</option>
-          <option value="antichess">Antischach</option>
-          <option value="atomic">Atomschach</option>
-          <option value="horde">Horde</option>
-          <option value="kingofthehill">König des Hügels</option>
-        </select>
-        <div class="form-hint">Hinweis: Aktuell wird die Standard-Regelwerk-Engine für alle Varianten verwendet; exotische Varianten (Crazyhouse, Atomic etc.) werden wie Standard-Schach gespielt.</div>
+      <div class="toggle-row">
+        <div><div class="toggle-info">Spieler nimmt teil</div><div class="toggle-sub">Du spielst selbst im Turnier mit</div></div>
+        <label class="toggle"><input type="checkbox" id="tPlayerJoins" checked><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
       </div>
       <div class="toggle-row">
-        <div>
-          <div class="toggle-info">Spieler nimmt teil</div>
-          <div class="toggle-sub">Du spielst selbst im Turnier mit</div>
-        </div>
-        <label class="toggle">
-          <input type="checkbox" id="tPlayerJoins" checked>
-          <div class="toggle-track"><div class="toggle-thumb"></div></div>
-        </label>
-      </div>
-      <div class="toggle-row">
-        <div>
-          <div class="toggle-info">Elo sichtbar</div>
-          <div class="toggle-sub">Bot-Ratings werden angezeigt</div>
-        </div>
-        <label class="toggle">
-          <input type="checkbox" id="tShowElo" checked>
-          <div class="toggle-track"><div class="toggle-thumb"></div></div>
-        </label>
+        <div><div class="toggle-info">Elo sichtbar</div><div class="toggle-sub">Bot-Ratings werden angezeigt</div></div>
+        <label class="toggle"><input type="checkbox" id="tShowElo" checked><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
       </div>
     </div>
-
-    <!-- T TIME CONTROL -->
     <div id="tTab-ttime" style="display:none;">
       <div class="form-row">
         <div class="form-group">
@@ -1267,38 +637,18 @@ body {
             <option value="3">+3 Sekunden</option>
             <option value="5">+5 Sekunden</option>
             <option value="10">+10 Sekunden</option>
-            <option value="15">+15 Sekunden</option>
-            <option value="30">+30 Sekunden</option>
           </select>
         </div>
       </div>
       <div class="card" style="background:var(--surface2);">
         <div style="text-align:center; font-size:28px; font-weight:900; color:var(--accent);" id="timeControlPreview">1+1</div>
-        <div style="text-align:center; font-size:13px; color:var(--muted); margin-top:4px;" id="timeControlType">Blitz</div>
+        <div style="text-align:center; font-size:13px; color:var(--muted); margin-top:4px;" id="timeControlType">Bullet</div>
       </div>
       <div class="toggle-row" style="margin-top:16px;">
-        <div>
-          <div class="toggle-info">Berserk-Modus erlauben</div>
-          <div class="toggle-sub">Spieler kann die Hälfte der Zeit opfern für +1 Punkt bei Sieg</div>
-        </div>
-        <label class="toggle">
-          <input type="checkbox" id="tBerserk">
-          <div class="toggle-track"><div class="toggle-thumb"></div></div>
-        </label>
-      </div>
-      <div class="toggle-row">
-        <div>
-          <div class="toggle-info">Flaggen bei Zeitablauf</div>
-          <div class="toggle-sub">Wer keine Zeit mehr hat, verliert</div>
-        </div>
-        <label class="toggle">
-          <input type="checkbox" id="tFlagging" checked>
-          <div class="toggle-track"><div class="toggle-thumb"></div></div>
-        </label>
+        <div><div class="toggle-info">Flaggen bei Zeitablauf</div><div class="toggle-sub">Wer keine Zeit mehr hat, verliert</div></div>
+        <label class="toggle"><input type="checkbox" id="tFlagging" checked><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
       </div>
     </div>
-
-    <!-- T BOT SELECTION -->
     <div id="tTab-tbots" style="display:none;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
         <div style="font-size:13px; color:var(--muted);">Wähle die Bots für dieses Turnier</div>
@@ -1309,89 +659,41 @@ body {
       </div>
       <div class="scrollable" style="max-height:320px;">
         <div id="tBotGrid" class="bots-grid" style="grid-template-columns: repeat(auto-fill, minmax(200px,1fr));"></div>
-        <div id="tBotEmpty" class="empty-state" style="display:none;">
-          <div class="empty-icon">🤖</div>
-          <p>Erstelle zuerst Bots im Bot Manager</p>
-        </div>
+        <div id="tBotEmpty" class="empty-state" style="display:none;"><div class="empty-icon">🤖</div><p>Erstelle zuerst Bots im Bot Manager</p></div>
       </div>
-      <div style="margin-top:10px; font-size:13px; color: var(--muted);">
-        Ausgewählt: <span id="selectedBotCount" style="color:var(--accent); font-weight:700;">0</span> Bots
-      </div>
+      <div style="margin-top:10px; font-size:13px; color: var(--muted);">Ausgewählt: <span id="selectedBotCount" style="color:var(--accent); font-weight:700;">0</span> Bots</div>
     </div>
-
-    <!-- T RULES -->
     <div id="tTab-trules" style="display:none;">
       <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Punkte: Sieg</label>
-          <input class="form-input" type="number" id="tPointsWin" value="2" min="1" max="10">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Punkte: Remis</label>
-          <input class="form-input" type="number" id="tPointsDraw" value="1" min="0" max="5">
-        </div>
+        <div class="form-group"><label class="form-label">Punkte: Sieg</label><input class="form-input" type="number" id="tPointsWin" value="2" min="1" max="10"></div>
+        <div class="form-group"><label class="form-label">Punkte: Remis</label><input class="form-input" type="number" id="tPointsDraw" value="1" min="0" max="5"></div>
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">Punkte: Siege in Folge (Streak-Bonus)</label>
+          <label class="form-label">Streak-Bonus (2+ Siege in Folge)</label>
           <input class="form-input" type="number" id="tStreakBonus" value="1" min="0" max="5">
-          <div class="form-hint">Extra-Punkte für 2+ Siege am Stück</div>
         </div>
         <div class="form-group">
-          <label class="form-label">Max. Remis-Wiederholungen</label>
-          <input class="form-input" type="number" id="tMaxDrawRepeat" value="3" min="1" max="10">
+          <label class="form-label">Animations-Delay (ms)</label>
+          <div class="range-row">
+            <input type="range" id="tAnimSpeed" min="100" max="2000" step="100" value="500" oninput="document.getElementById('animSpeedLabel').textContent=this.value+'ms'">
+            <span class="range-val" id="animSpeedLabel">500ms</span>
+          </div>
         </div>
       </div>
       <div class="toggle-row">
-        <div>
-          <div class="toggle-info">Gleiche Paarungen vermeiden</div>
-          <div class="toggle-sub">Bots spielen selten zweimal gegeneinander</div>
-        </div>
-        <label class="toggle">
-          <input type="checkbox" id="tAvoidRematches" checked>
-          <div class="toggle-track"><div class="toggle-thumb"></div></div>
-        </label>
+        <div><div class="toggle-info">Gleiche Paarungen vermeiden</div><div class="toggle-sub">Bots spielen selten zweimal gegeneinander</div></div>
+        <label class="toggle"><input type="checkbox" id="tAvoidRematches" checked><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
       </div>
       <div class="toggle-row">
-        <div>
-          <div class="toggle-info">Ähnliches Elo bevorzugen</div>
-          <div class="toggle-sub">Bots mit ähnlichem Rating werden gepaart</div>
-        </div>
-        <label class="toggle">
-          <input type="checkbox" id="tEloMatch" checked>
-          <div class="toggle-track"><div class="toggle-thumb"></div></div>
-        </label>
+        <div><div class="toggle-info">Ähnliches Elo bevorzugen</div><div class="toggle-sub">Bots mit ähnlichem Rating werden gepaart</div></div>
+        <label class="toggle"><input type="checkbox" id="tEloMatch" checked><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
       </div>
       <div class="toggle-row">
-        <div>
-          <div class="toggle-info">Elo-Rating aktualisieren</div>
-          <div class="toggle-sub">Bot-Ratings werden nach jeder Partie angepasst</div>
-        </div>
-        <label class="toggle">
-          <input type="checkbox" id="tUpdateElo" checked>
-          <div class="toggle-track"><div class="toggle-thumb"></div></div>
-        </label>
-      </div>
-      <div class="toggle-row">
-        <div>
-          <div class="toggle-info">Countdown vor Start</div>
-          <div class="toggle-sub">5 Sekunden Countdown bevor Arena beginnt</div>
-        </div>
-        <label class="toggle">
-          <input type="checkbox" id="tCountdown" checked>
-          <div class="toggle-track"><div class="toggle-thumb"></div></div>
-        </label>
-      </div>
-      <div class="form-group" style="margin-top:14px;">
-        <label class="form-label">Spielgeschwindigkeit (Animations-Delay ms)</label>
-        <div class="range-row">
-          <input type="range" id="tAnimSpeed" min="50" max="2000" step="50" value="300" oninput="document.getElementById('animSpeedLabel').textContent=this.value+'ms'">
-          <span class="range-val" id="animSpeedLabel">300ms</span>
-        </div>
-        <div class="form-hint">Niedrig = schnell (besser für viele Partien), Hoch = gut sichtbar</div>
+        <div><div class="toggle-info">Elo-Rating aktualisieren</div><div class="toggle-sub">Ratings werden nach jeder Partie angepasst</div></div>
+        <label class="toggle"><input type="checkbox" id="tUpdateElo" checked><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
       </div>
     </div>
-
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeTournamentModal()">Abbrechen</button>
       <button class="btn btn-primary btn-lg" onclick="startTournament()">🚀 Starten</button>
@@ -1403,19 +705,9 @@ body {
 <div class="modal-overlay" id="profileModal">
   <div class="modal">
     <div class="modal-title">⚙️ Profil-Einstellungen</div>
-    <div class="form-group">
-      <label class="form-label">Dein Spielername</label>
-      <input class="form-input" id="settingPlayerName" placeholder="Dein Name">
-    </div>
-    <div class="form-group">
-      <label class="form-label">Start-Elo</label>
-      <input class="form-input" type="number" id="settingPlayerElo" value="1500" min="100" max="3000">
-      <div class="form-hint">Achtung: Setzt dein Rating zurück</div>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Avatar-Emoji</label>
-      <input class="form-input" id="settingAvatar" placeholder="🧠" maxlength="4">
-    </div>
+    <div class="form-group"><label class="form-label">Spielername</label><input class="form-input" id="settingPlayerName" placeholder="Dein Name"></div>
+    <div class="form-group"><label class="form-label">Start-Elo</label><input class="form-input" type="number" id="settingPlayerElo" value="1500" min="100" max="3000"><div class="form-hint">Achtung: Setzt dein Rating zurück</div></div>
+    <div class="form-group"><label class="form-label">Avatar-Emoji</label><input class="form-input" id="settingAvatar" placeholder="🧠" maxlength="4"></div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('profileModal')">Abbrechen</button>
       <button class="btn btn-primary" onclick="saveProfileSettings()">Speichern</button>
@@ -1423,85 +715,292 @@ body {
   </div>
 </div>
 
-<!-- TOAST CONTAINER -->
 <div class="toast-container" id="toastContainer"></div>
+<div class="engine-status" id="engineStatus">
+  <div class="dot" id="engineDot"></div>
+  <span id="engineStatusText">Stockfish lädt…</span>
+</div>
 
-<!-- ===== MAIN SCRIPT ===== -->
 <script>
-// ──────────────────────────────────────────────
-//  STATE
-// ──────────────────────────────────────────────
-let state = loadState() || {
-  player: {
-    name: 'Spieler',
-    elo: 1500,
-    avatar: '👤',
-    games: 0,
-    wins: 0,
-    draws: 0,
-    losses: 0,
-    ratingHistory: [1500],
-    gameHistory: []
-  },
-  bots: [],
-  tournaments: [],
-  stats: { totalGames: 0, totalTournaments: 0, totalWins: 0 }
-};
+// ══════════════════════════════════════════════════════════
+//  STOCKFISH POOL
+// ══════════════════════════════════════════════════════════
+const SF_POOL_SIZE = 6;
+const sfPool = [];
+let sfReady = false;
 
-let arena = null; // current running arena
-let selectedBotColor = '#7fa650';
-let selectedEmoji = '🤖';
-let editingBotId = null;
-let sfLevelSelected = 5;
-const BOT_EMOJIS = ['🤖','🦾','🧠','👾','🤯','🎯','🦁','🐉','👑','⚡','🌟','🔥','💀','🎩','🤺','🦊','🐺','🦅','🐍','🐻'];
+function createStockfishInstance() {
+  return new Promise((resolve) => {
+    let sf;
+    try { sf = typeof Stockfish === 'function' ? Stockfish() : null; } catch(e) { sf = null; }
+    if (!sf) {
+      try {
+        const blob = new Blob([`importScripts('https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js')`], {type:'text/javascript'});
+        sf = new Worker(URL.createObjectURL(blob));
+      } catch(e2) { resolve(null); return; }
+    }
+    const instance = { sf, busy: false, pending: null };
+    const handler = (event) => {
+      const line = typeof event === 'string' ? event : (event.data || '');
+      if (!line) return;
+      if (!instance.initialized) {
+        if (line.includes('readyok') || line.includes('uciok') || line.includes('Stockfish')) {
+          instance.initialized = true; resolve(instance);
+        }
+        return;
+      }
+      if (instance.pending && line.startsWith('bestmove')) {
+        const parts = line.split(' ');
+        const move = parts[1];
+        const cb = instance.pending;
+        instance.pending = null;
+        instance.busy = false;
+        cb(move && move !== '(none)' ? move : null);
+      }
+    };
+    sf.onmessage = handler;
+    const send = (cmd) => { try { if (typeof sf.postMessage === 'function') sf.postMessage(cmd); } catch(e) {} };
+    instance.send = send;
+    send('uci'); send('isready');
+    setTimeout(() => { if (!instance.initialized) { instance.initialized = true; resolve(instance); } }, 3000);
+  });
+}
 
-// ──────────────────────────────────────────────
-//  PERSISTENCE
-//  NOTE: localStorage can be unavailable (e.g. inside certain sandboxed iframes).
-//  We fall back to an in-memory object so the app never crashes and still
-//  works for the lifetime of the page, just without persistence across reloads.
-// ──────────────────────────────────────────────
+async function initStockfishPool() {
+  updateEngineStatus('Stockfish lädt…', false);
+  const promises = [];
+  for (let i = 0; i < SF_POOL_SIZE; i++) promises.push(createStockfishInstance());
+  const instances = await Promise.all(promises);
+  instances.forEach(inst => { if (inst) sfPool.push(inst); });
+  sfReady = sfPool.length > 0;
+  updateEngineStatus(sfReady ? `Stockfish bereit (${sfPool.length}x)` : 'Engine-Fehler', sfReady);
+  if (!sfReady) toast('Stockfish konnte nicht geladen werden – Fallback aktiv', 'error');
+}
+
+function updateEngineStatus(text, ready) {
+  document.getElementById('engineStatusText').textContent = text;
+  document.getElementById('engineDot').className = 'dot' + (ready ? ' ready' : '');
+}
+
+function stockfishGetMove(fen, skillLevel, movetime, callback) {
+  if (!sfReady || sfPool.length === 0) { fallbackMove(fen, callback); return; }
+  const inst = sfPool.find(p => !p.busy);
+  if (!inst) { setTimeout(() => stockfishGetMove(fen, skillLevel, movetime, callback), 80); return; }
+  inst.busy = true;
+  inst.pending = (move) => { inst.busy = false; callback(move); };
+  const sk = Math.max(0, Math.min(20, skillLevel || 10));
+  const mt = Math.max(50, Math.min(10000, movetime || 500));
+  inst.send('ucinewgame');
+  inst.send(`setoption name Skill Level value ${sk}`);
+  inst.send(`position fen ${fen}`);
+  inst.send(`go movetime ${mt}`);
+  const timeoutMs = mt + 3000;
+  const safetyTimer = setTimeout(() => {
+    if (inst.pending) { console.warn('SF Timeout'); inst.pending = null; inst.busy = false; fallbackMove(fen, callback); }
+  }, timeoutMs);
+  const origPending = inst.pending;
+  inst.pending = (move) => { clearTimeout(safetyTimer); origPending(move); };
+}
+
+function fallbackMove(fen, callback) {
+  try { const g = new Chess(fen); const moves = g.moves(); callback(moves.length ? moves[Math.floor(Math.random()*moves.length)] : null); }
+  catch(e) { callback(null); }
+}
+
+// ══════════════════════════════════════════════════════════
+//  MOVETIME BERECHNUNG – skaliert mit Grundzeit
+//  Skill Level bestimmt die Stärke (SF-Parameter).
+//  Movetime skaliert proportional zur Grundzeit der Partie,
+//  damit Bots in Blitz länger denken als in Bullet.
+// ══════════════════════════════════════════════════════════
+function levelToMovetime(level, baseTimeMinutes) {
+  // Basis-Zeiten für 1-Minuten-Partie (in ms)
+  const baseTimes = [
+    50,   // 0
+    80,   // 1
+    120,  // 2
+    160,  // 3
+    220,  // 4
+    300,  // 5
+    400,  // 6
+    500,  // 7
+    620,  // 8
+    760,  // 9
+    900,  // 10
+    1100, // 11
+    1300, // 12
+    1550, // 13
+    1800, // 14
+    2100, // 15
+    2400, // 16
+    2700, // 17
+    3100, // 18
+    3500, // 19
+    4200, // 20
+  ];
+  const base = baseTimes[Math.max(0, Math.min(20, level || 10))];
+  // Skalierung: sqrt(baseTime / 1) – bei 1min = 1.0x, 4min = 2x, 9min = 3x
+  // Gedeckelt auf maximal 8 Sekunden pro Zug
+  const bm = Math.max(0.25, baseTimeMinutes || 1);
+  const scale = Math.sqrt(bm / 1.0);
+  return Math.min(8000, Math.round(base * scale));
+}
+
+// ══════════════════════════════════════════════════════════
+//  STATE & PERSISTENZ
+// ══════════════════════════════════════════════════════════
 let memoryFallbackStore = {};
 let storageAvailable = true;
 (function testStorage() {
-  try {
-    const k = '__chessarena_test__';
-    localStorage.setItem(k, '1');
-    localStorage.removeItem(k);
-    storageAvailable = true;
-  } catch (e) {
-    storageAvailable = false;
-    console.warn('localStorage nicht verfügbar – verwende In-Memory-Speicher (kein Speichern über Reload hinweg).');
-  }
+  try { const k='__ca__'; localStorage.setItem(k,'1'); localStorage.removeItem(k); }
+  catch(e) { storageAvailable = false; }
 })();
 
 function saveState() {
   try {
-    if (storageAvailable) {
-      localStorage.setItem('chessArenaState', JSON.stringify(state));
-    } else {
-      memoryFallbackStore['chessArenaState'] = JSON.stringify(state);
-    }
-  } catch(e) {
-    // Last-resort fallback if localStorage throws mid-session (quota, etc.)
-    try { memoryFallbackStore['chessArenaState'] = JSON.stringify(state); } catch(e2) {}
-  }
+    const s = JSON.stringify(state);
+    if (storageAvailable) localStorage.setItem('chessArenaState_v2', s);
+    else memoryFallbackStore['chessArenaState_v2'] = s;
+  } catch(e) {}
 }
 function loadState() {
   try {
-    if (storageAvailable) {
-      const s = localStorage.getItem('chessArenaState');
-      return s ? JSON.parse(s) : null;
-    } else {
-      const s = memoryFallbackStore['chessArenaState'];
-      return s ? JSON.parse(s) : null;
-    }
+    const s = storageAvailable ? localStorage.getItem('chessArenaState_v2') : memoryFallbackStore['chessArenaState_v2'];
+    return s ? JSON.parse(s) : null;
   } catch(e) { return null; }
 }
 
-// ──────────────────────────────────────────────
+// Beim Schließen des Tabs immer speichern
+window.addEventListener('beforeunload', saveState);
+
+let state = loadState() || {
+  player: { name:'Spieler', elo:1500, avatar:'👤', games:0, wins:0, draws:0, losses:0, ratingHistory:[1500], gameHistory:[] },
+  bots: [],
+  tournaments: [],
+  stats: { totalGames:0, totalTournaments:0, totalWins:0 }
+};
+// Fehlende Felder ergänzen (Migration alter Saves)
+if (!state.player.ratingHistory) state.player.ratingHistory = [state.player.elo];
+if (!state.player.gameHistory) state.player.gameHistory = [];
+if (!state.stats) state.stats = { totalGames:0, totalTournaments:0, totalWins:0 };
+
+let arena = null;
+let selectedBotColor = '#7fa650';
+let selectedEmoji = '🤖';
+let editingBotId = null;
+let sfLevelSelected = 10;
+const BOT_EMOJIS = ['🤖','🦾','🧠','👾','🤯','🎯','🦁','🐉','👑','⚡','🌟','🔥','💀','🎩','🤺','🦊','🐺','🦅','🐍','🐻'];
+
+// Touch/Drag Scroll-Blockierung
+document.addEventListener('mousedown', (e) => {
+  if (e.target.closest('.board-wrap, #myGameBoard, .board-wrap > *, #myGameBoard > *')) {
+    document.body.style.overflow = 'hidden'; document.body.style.touchAction = 'none';
+  }
+});
+document.addEventListener('mouseup', () => { document.body.style.overflow = ''; document.body.style.touchAction = ''; });
+document.addEventListener('touchstart', (e) => {
+  if (e.target.closest('.board-wrap, #myGameBoard, .board-wrap > *, #myGameBoard > *')) {
+    document.body.style.overflow = 'hidden'; document.body.style.touchAction = 'none';
+  }
+}, { passive: false });
+document.addEventListener('touchend', () => { document.body.style.overflow = ''; document.body.style.touchAction = ''; });
+document.addEventListener('touchmove', (e) => {
+  if (e.target.closest('.board-wrap, #myGameBoard, .board-wrap > *, #myGameBoard > *')) e.preventDefault();
+}, { passive: false });
+
+// ══════════════════════════════════════════════════════════
+//  TAP-TO-MOVE (Antippen zum Auswählen & Ziehen)
+// ══════════════════════════════════════════════════════════
+let tapState = { selected: null, gs: null };
+
+function getSquareFromEl(el) {
+  // Sucht das nächste Element mit data-square Attribut
+  const sq = el.closest('[data-square]');
+  if (sq) return sq.getAttribute('data-square');
+  // Alternativ via CSS-Klasse: square-e2
+  const cls = [...(el.classList||[])].find(c => /^square-[a-h][1-8]$/.test(c));
+  if (cls) return cls.replace('square-', '');
+  const parent = el.parentElement && el.parentElement.closest('[data-square]');
+  if (parent) return parent.getAttribute('data-square');
+  return null;
+}
+
+function clearTapHighlights() {
+  document.querySelectorAll('.tap-selected-sq, .tap-hint-sq').forEach(el => {
+    el.classList.remove('tap-selected-sq', 'tap-hint-sq');
+  });
+}
+
+function highlightTapSquare(sq, type) {
+  const boardEl = document.getElementById('myGameBoard');
+  if (!boardEl) return;
+  const el = boardEl.querySelector(`[data-square="${sq}"]`);
+  if (el) el.classList.add(type === 'selected' ? 'tap-selected-sq' : 'tap-hint-sq');
+}
+
+function showTapHints(gs, fromSq) {
+  // Zeige mögliche Züge als Hinweise
+  const moves = gs.game.moves({ square: fromSq, verbose: true });
+  moves.forEach(m => highlightTapSquare(m.to, 'hint'));
+}
+
+function setupTapToMove(gs) {
+  const boardEl = document.getElementById('myGameBoard');
+  if (!boardEl) return;
+  // Entferne alten Listener
+  boardEl.removeEventListener('click', boardEl._tapHandler);
+  boardEl._tapHandler = function(e) {
+    if (gs.done || gs.game.turn() !== gs.playerColor) return;
+    const sq = getSquareFromEl(e.target);
+    if (!sq) return;
+
+    if (!tapState.selected) {
+      // Kein Feld gewählt → Figur auswählen
+      const piece = gs.game.get(sq);
+      if (!piece || piece.color !== gs.playerColor) return;
+      tapState.selected = sq;
+      tapState.gs = gs;
+      clearTapHighlights();
+      highlightTapSquare(sq, 'selected');
+      showTapHints(gs, sq);
+    } else {
+      const from = tapState.selected;
+      const to = sq;
+      tapState.selected = null;
+      clearTapHighlights();
+
+      // Eigene Figur angeklickt → Auswahl wechseln
+      const piece = gs.game.get(sq);
+      if (piece && piece.color === gs.playerColor && from !== sq) {
+        tapState.selected = sq;
+        highlightTapSquare(sq, 'selected');
+        showTapHints(gs, sq);
+        return;
+      }
+
+      if (from === sq) return; // Gleiches Feld → Abwählen
+
+      // Zug versuchen
+      const move = gs.game.move({ from, to, promotion: 'q' });
+      if (!move) return;
+
+      gs.board.position(gs.game.fen());
+      if (gs.incMs > 0) {
+        if (gs.playerColor === 'w') gs.whiteClock += gs.incMs;
+        else gs.blackClock += gs.incMs;
+      }
+      const statusEl = document.getElementById('myGameStatus');
+      if (statusEl) statusEl.textContent = '⌛ Gegner denkt…';
+      checkGameOver(gs);
+      if (!gs.done) scheduleNextMove(gs);
+    }
+  };
+  boardEl.addEventListener('click', boardEl._tapHandler);
+}
+
+// ══════════════════════════════════════════════════════════
 //  NAVIGATION
-// ──────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════
 function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + id).classList.add('active');
@@ -1515,9 +1014,9 @@ function setActive(el) {
   el.classList.add('active');
 }
 
-// ──────────────────────────────────────────────
-//  UI REFRESH
-// ──────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════
+//  HOME
+// ══════════════════════════════════════════════════════════
 function refreshHome() {
   document.getElementById('statBots').textContent = state.bots.length;
   document.getElementById('statTournaments').textContent = state.stats.totalTournaments;
@@ -1525,14 +1024,10 @@ function refreshHome() {
   document.getElementById('statWins').textContent = state.stats.totalWins;
   document.getElementById('playerNameDisplay').textContent = state.player.name;
   document.getElementById('playerRatingDisplay').textContent = state.player.elo;
-
   const el = document.getElementById('recentTournaments');
   const recent = [...state.tournaments].reverse().slice(0,5);
-  if (!recent.length) {
-    el.innerHTML = '<div class="empty-state"><div class="empty-icon">🏆</div><p>Noch keine Turniere</p></div>';
-    return;
-  }
-  el.innerHTML = recent.map(t => `
+  if (!recent.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">🏆</div><p>Noch keine Turniere</p></div>'; return; }
+  el.innerHTML = recent.map(t=>`
     <div class="lb-row">
       <span style="font-size:18px;">🏆</span>
       <div style="flex:1"><div style="font-weight:600">${escapeHtml(t.name)}</div><div style="font-size:11px;color:var(--muted)">${escapeHtml(t.type)} · ${t.baseTime}+${t.increment} · ${t.participantCount} Teilnehmer</div></div>
@@ -1542,40 +1037,47 @@ function refreshHome() {
 }
 
 function escapeHtml(str) {
-  if (str == null) return '';
-  return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  if (str==null) return '';
+  return String(str).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
-// ──────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════
 //  BOT MODAL
-// ──────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════
+const sfDescs = [
+  'Level 0 – Zufällige Fehler, ca. ~800 Elo','Level 1 – Sehr schwach, ca. ~900 Elo',
+  'Level 2 – Schwach, ca. ~1000 Elo','Level 3 – Anfänger, ca. ~1100 Elo',
+  'Level 4 – Anfänger+, ca. ~1200 Elo','Level 5 – Mittelklasse, ca. ~1350 Elo',
+  'Level 6 – Mittel, ca. ~1500 Elo','Level 7 – Mittel+, ca. ~1600 Elo',
+  'Level 8 – Fortgeschritten, ca. ~1700 Elo','Level 9 – Fortgeschritten+, ca. ~1800 Elo',
+  'Level 10 – Stark, ca. ~1900 Elo','Level 11 – Stark+, ca. ~2000 Elo',
+  'Level 12 – Experte, ca. ~2100 Elo','Level 13 – Experte+, ca. ~2200 Elo',
+  'Level 14 – Meister, ca. ~2300 Elo','Level 15 – Meister+, ca. ~2400 Elo',
+  'Level 16 – Sehr stark, ca. ~2450 Elo','Level 17 – Sehr stark+, ca. ~2500 Elo',
+  'Level 18 – Meister-Niveau, ca. ~2550 Elo','Level 19 – Großmeister-Klasse, ca. ~2600 Elo',
+  'Level 20 – Volle Stärke, ca. ~2700+ Elo',
+];
+
 function buildSFLevelGrid() {
   const grid = document.getElementById('sfLevelGrid');
-  grid.innerHTML = Array.from({length:20},(_,i)=>{
-    const lv = i+1;
-    return `<div class="sf-level-btn ${lv===sfLevelSelected?'selected':''}" onclick="selectSFLevel(${lv})">${lv}</div>`;
-  }).join('');
+  grid.innerHTML = Array.from({length:21},(_,i)=>`<div class="sf-level-btn ${i===sfLevelSelected?'selected':''}" onclick="selectSFLevel(${i})">${i}</div>`).join('');
   updateSFDesc();
 }
 function selectSFLevel(lv) {
   sfLevelSelected = lv;
-  document.querySelectorAll('.sf-level-btn').forEach((b,i)=>b.classList.toggle('selected',i+1===lv));
+  document.querySelectorAll('.sf-level-btn').forEach((b,i)=>b.classList.toggle('selected',i===lv));
   updateSFDesc();
 }
-const sfDescs = ['Anfänger (~600)','Sehr leicht (~800)','Leicht (~1000)','Mittel– (~1150)','Mittel (~1300)','Mittel+ (~1450)','Stark (~1600)','Stark+ (~1750)','Experte (~1900)','Experte+ (~2000)','Meister– (~2100)','Meister (~2200)','Meister+ (~2300)','Sehr stark (~2400)','Sehr stark+ (~2450)','Höchste Stufe (~2500)','Höchste Stufe+ (~2550)','Maximalstufe (~2600)','Maximalstufe+ (~2650)','Volle Stärke (~2700)'];
-function updateSFDesc() {
-  document.getElementById('sfLevelDesc').textContent = `Level ${sfLevelSelected}: ${sfDescs[sfLevelSelected-1]}`;
-}
+function updateSFDesc() { document.getElementById('sfLevelDesc').textContent = sfDescs[sfLevelSelected] || ''; }
 
 function buildEmojiPicker() {
   document.getElementById('emojiPicker').innerHTML = BOT_EMOJIS.map(e=>`
     <div onclick="selectEmoji('${e}')" style="width:38px;height:38px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;border:2px solid ${e===selectedEmoji?'var(--accent)':'var(--border)'};background:var(--surface2);" data-emoji="${e}">${e}</div>
   `).join('');
 }
-
 function selectEmoji(e) {
   selectedEmoji = e;
-  document.querySelectorAll('#emojiPicker > div').forEach(el=>el.style.borderColor = el.dataset.emoji===e ? 'var(--accent)' : 'var(--border)');
+  document.querySelectorAll('#emojiPicker > div').forEach(el=>el.style.borderColor=el.dataset.emoji===e?'var(--accent)':'var(--border)');
 }
 function selectColor(el) {
   selectedBotColor = el.dataset.color;
@@ -1587,40 +1089,23 @@ function switchBotTab(tab, btn) {
   document.querySelectorAll('#botModal .tab-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
 }
-function updateThinkLabel() {
-  const v = document.getElementById('botThinkAmount').value;
-  const mode = document.getElementById('botThinkMode').value;
-  const labels = {movetime:`${v}ms`, depth:`Tiefe ${v}`, nodes:`${v} Nodes`, adaptive:`Auto`};
-  document.getElementById('thinkAmountLabel').textContent = labels[mode] || v;
-}
 document.addEventListener('change', e => {
-  if (e.target.id === 'botThinkMode') updateThinkLabel();
-  if (e.target.id === 'botEngine') {
-    document.getElementById('sfLevelSection').style.display = e.target.value === 'stockfish' ? '' : 'none';
-  }
   if (e.target.id === 'tBaseTime' || e.target.id === 'tIncrement') updateTimePreview();
+  if (e.target.id === 'botEngine') {
+    document.getElementById('sfLevelSection').style.display = e.target.value==='stockfish'?'':'none';
+  }
 });
-
 function updateTimePreview() {
   const base = parseFloat(document.getElementById('tBaseTime').value);
   const inc = parseInt(document.getElementById('tIncrement').value);
   document.getElementById('timeControlPreview').textContent = `${base}+${inc}`;
-  let type = 'Classical';
-  const total = base * 60 + inc * 40;
-  if (total < 30) type = 'Ultrabullet';
-  else if (total < 179) type = 'Bullet';
-  else if (total < 479) type = 'Blitz';
-  else if (total < 1499) type = 'Rapid';
-  else type = 'Classical';
+  const total = base*60 + inc*40;
+  let type = total<30?'Ultrabullet':total<179?'Bullet':total<479?'Blitz':total<1499?'Rapid':'Classical';
   document.getElementById('timeControlType').textContent = type;
 }
 
 function openBotModal(id=null) {
-  editingBotId = id;
-  sfLevelSelected = 5;
-  selectedEmoji = '🤖';
-  selectedBotColor = '#7fa650';
-
+  editingBotId = id; sfLevelSelected = 10; selectedEmoji = '🤖'; selectedBotColor = '#7fa650';
   if (id) {
     const bot = state.bots.find(b=>b.id===id);
     if (bot) {
@@ -1630,21 +1115,14 @@ function openBotModal(id=null) {
       document.getElementById('botTitle').value = bot.title||'';
       document.getElementById('botBio').value = bot.bio||'';
       document.getElementById('botEngine').value = bot.engine||'stockfish';
-      sfLevelSelected = bot.sfLevel||5;
-      document.getElementById('botThinkMode').value = bot.thinkMode||'movetime';
-      document.getElementById('botThinkAmount').value = bot.thinkAmount||500;
-      document.getElementById('botRandomize').checked = bot.randomize!==false;
+      sfLevelSelected = bot.sfLevel ?? 10;
+      document.getElementById('botRandomize').checked = bot.randomize||false;
       document.getElementById('botRandomPct').value = bot.randomPct||10;
       document.getElementById('randomPctLabel').textContent = (bot.randomPct||10)+'%';
-      document.getElementById('botOpeningBook').checked = bot.openingBook!==false;
       document.getElementById('botPlayStyle').value = bot.playStyle||'balanced';
-      document.getElementById('botOpeningPref').value = bot.openingPref||'any';
       document.getElementById('botAcceptDraw').checked = bot.acceptDraw!==false;
-      document.getElementById('botAggression').value = bot.aggression||50;
-      document.getElementById('aggrLabel').textContent = bot.aggression||50;
       document.getElementById('botEloClass').value = bot.eloClass||'intermediate';
-      selectedEmoji = bot.emoji||'🤖';
-      selectedBotColor = bot.color||'#7fa650';
+      selectedEmoji = bot.emoji||'🤖'; selectedBotColor = bot.color||'#7fa650';
       document.getElementById('sfLevelSection').style.display = bot.engine==='stockfish'?'':'none';
     }
   } else {
@@ -1652,26 +1130,16 @@ function openBotModal(id=null) {
     document.getElementById('botStartElo').value = 1500;
     document.getElementById('botBio').value = '';
     document.getElementById('botEngine').value = 'stockfish';
-    document.getElementById('botThinkMode').value = 'movetime';
-    document.getElementById('botThinkAmount').value = 500;
-    document.getElementById('botRandomize').checked = true;
+    document.getElementById('botRandomize').checked = false;
     document.getElementById('botRandomPct').value = 10;
     document.getElementById('randomPctLabel').textContent = '10%';
-    document.getElementById('botOpeningBook').checked = true;
     document.getElementById('botPlayStyle').value = 'balanced';
-    document.getElementById('botOpeningPref').value = 'any';
     document.getElementById('botAcceptDraw').checked = true;
-    document.getElementById('botAggression').value = 50;
-    document.getElementById('aggrLabel').textContent = 50;
     document.getElementById('botEloClass').value = 'intermediate';
     document.getElementById('sfLevelSection').style.display = '';
   }
-
-  buildSFLevelGrid();
-  buildEmojiPicker();
-  updateThinkLabel();
+  buildSFLevelGrid(); buildEmojiPicker();
   document.getElementById('colorPicker').querySelectorAll('.color-swatch').forEach(s=>s.classList.toggle('selected',s.dataset.color===selectedBotColor));
-
   switchBotTab('basic', document.querySelector('#botModal .tab-btn'));
   openModal('botModal');
 }
@@ -1680,48 +1148,33 @@ function closeBotModal() { closeModal('botModal'); }
 function saveBot() {
   const name = document.getElementById('botName').value.trim();
   if (!name) { toast('Bitte einen Bot-Namen eingeben','error'); return; }
-
+  const elo = parseInt(document.getElementById('botStartElo').value)||1500;
   const bot = {
-    id: editingBotId || 'bot_' + Date.now(),
-    name,
-    elo: parseInt(document.getElementById('botStartElo').value)||1500,
+    id: editingBotId || 'bot_'+Date.now(),
+    name, elo,
     country: document.getElementById('botCountry').value,
     title: document.getElementById('botTitle').value,
     bio: document.getElementById('botBio').value,
     engine: document.getElementById('botEngine').value,
     sfLevel: sfLevelSelected,
-    thinkMode: document.getElementById('botThinkMode').value,
-    thinkAmount: parseInt(document.getElementById('botThinkAmount').value),
     randomize: document.getElementById('botRandomize').checked,
     randomPct: parseInt(document.getElementById('botRandomPct').value),
-    openingBook: document.getElementById('botOpeningBook').checked,
     playStyle: document.getElementById('botPlayStyle').value,
-    openingPref: document.getElementById('botOpeningPref').value,
     acceptDraw: document.getElementById('botAcceptDraw').checked,
-    aggression: parseInt(document.getElementById('botAggression').value),
     eloClass: document.getElementById('botEloClass').value,
-    emoji: selectedEmoji,
-    color: selectedBotColor,
-    games: 0, wins: 0, draws: 0, losses: 0,
-    ratingHistory: [parseInt(document.getElementById('botStartElo').value)||1500]
+    emoji: selectedEmoji, color: selectedBotColor,
+    games:0, wins:0, draws:0, losses:0, ratingHistory:[elo]
   };
-
   if (editingBotId) {
     const idx = state.bots.findIndex(b=>b.id===editingBotId);
     if (idx>=0) {
       const old = state.bots[idx];
-      bot.games = old.games; bot.wins = old.wins; bot.draws = old.draws; bot.losses = old.losses;
-      bot.ratingHistory = old.ratingHistory;
-      bot.elo = old.elo;
+      bot.games=old.games; bot.wins=old.wins; bot.draws=old.draws; bot.losses=old.losses;
+      bot.ratingHistory=old.ratingHistory; bot.elo=old.elo;
       state.bots[idx] = bot;
     }
-  } else {
-    state.bots.push(bot);
-  }
-
-  saveState();
-  closeBotModal();
-  renderBotGrid();
+  } else { state.bots.push(bot); }
+  saveState(); closeBotModal(); renderBotGrid();
   toast(`Bot "${name}" ${editingBotId?'aktualisiert':'erstellt'}!`);
   refreshHome();
 }
@@ -1729,30 +1182,24 @@ function saveBot() {
 function deleteBot(id) {
   if (!confirm('Bot wirklich löschen?')) return;
   state.bots = state.bots.filter(b=>b.id!==id);
-  saveState();
-  renderBotGrid();
-  toast('Bot gelöscht','info');
+  saveState(); renderBotGrid(); toast('Bot gelöscht','info');
 }
 
 function renderBotGrid() {
   const grid = document.getElementById('botGrid');
   if (!state.bots.length) {
-    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🤖</div><p>Noch keine Bots. Erstelle deinen ersten Bot!</p></div>';
-    return;
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🤖</div><p>Noch keine Bots. Erstelle deinen ersten Bot!</p></div>'; return;
   }
-  grid.innerHTML = state.bots.map(bot => `
+  grid.innerHTML = state.bots.map(bot=>`
     <div class="bot-card" id="bc_${bot.id}">
       <div class="bot-check">✓</div>
-      <div class="bot-avatar" style="background: ${bot.color}22; border: 1px solid ${bot.color}44;">${bot.emoji}</div>
+      <div class="bot-avatar" style="background:${bot.color}22; border:1px solid ${bot.color}44;">${bot.emoji}</div>
       <div class="bot-name-row">
         ${bot.title?`<span class="badge badge-gold">${escapeHtml(bot.title)}</span>`:''}
         <span class="bot-name">${escapeHtml(bot.name)}</span>
         <span class="bot-elo">${bot.elo}</span>
       </div>
-      <div class="bot-level-badge">
-        ${bot.engine==='stockfish'?`⚙️ Level ${bot.sfLevel}`:bot.engine==='darkbot'?'🌑 DarkBot':'🎲 Random'}
-        · ${bot.country||'🌍'}
-      </div>
+      <div class="bot-level-badge">${bot.engine==='stockfish'?`♟ SF Level ${bot.sfLevel}`:'🎲 Random'} · ${bot.country||'🌍'}</div>
       <div class="bot-stats">
         <div><div class="bot-stat-val">${bot.wins||0}</div>Siege</div>
         <div><div class="bot-stat-val">${bot.draws||0}</div>Remis</div>
@@ -1766,18 +1213,16 @@ function renderBotGrid() {
   `).join('');
 }
 
-// ──────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════
 //  TOURNAMENT MODAL
-// ──────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════
 function switchTTab(tab, btn) {
   ['tbasic','ttime','tbots','trules'].forEach(t=>document.getElementById('tTab-'+t).style.display=t===tab?'':'none');
   document.querySelectorAll('#tournamentModal .tab-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   if (tab==='tbots') renderTBotGrid();
 }
-
 let selectedTBots = new Set();
-
 function renderTBotGrid() {
   const grid = document.getElementById('tBotGrid');
   const empty = document.getElementById('tBotEmpty');
@@ -1790,52 +1235,35 @@ function renderTBotGrid() {
         <div style="font-size:22px;">${bot.emoji}</div>
         <div>
           <div style="font-weight:700;font-size:13px;">${escapeHtml(bot.name)}</div>
-          <div style="font-size:11px;color:var(--muted);">${bot.engine==='stockfish'?'Lvl '+bot.sfLevel:bot.engine} · ${bot.elo} Elo</div>
+          <div style="font-size:11px;color:var(--muted);">SF ${bot.sfLevel||10} · ${bot.elo} Elo</div>
         </div>
       </div>
     </div>
   `).join('');
-  updateSelectedCount();
+  document.getElementById('selectedBotCount').textContent = selectedTBots.size;
 }
-function toggleTBot(id) {
-  if (selectedTBots.has(id)) selectedTBots.delete(id);
-  else selectedTBots.add(id);
-  renderTBotGrid();
-}
+function toggleTBot(id) { if (selectedTBots.has(id)) selectedTBots.delete(id); else selectedTBots.add(id); renderTBotGrid(); }
 function selectAllBots() { state.bots.forEach(b=>selectedTBots.add(b.id)); renderTBotGrid(); }
 function deselectAllBots() { selectedTBots.clear(); renderTBotGrid(); }
-function updateSelectedCount() { document.getElementById('selectedBotCount').textContent = selectedTBots.size; }
-
 function openCreateTournament() {
   selectedTBots = new Set(state.bots.map(b=>b.id));
   switchTTab('tbasic', document.querySelector('#tournamentModal .tab-btn'));
-  updateTimePreview();
-  openModal('tournamentModal');
+  updateTimePreview(); openModal('tournamentModal');
 }
 function closeTournamentModal() { closeModal('tournamentModal'); }
-
 function startTournament() {
-  const name = (document.getElementById('tName').value.trim()) || 'Arena ' + new Date().toLocaleDateString('de');
+  const name = (document.getElementById('tName').value.trim()) || 'Arena '+new Date().toLocaleDateString('de');
   const botIds = [...selectedTBots];
-
-  if (botIds.length < 2 && !document.getElementById('tPlayerJoins').checked) {
-    toast('Mindestens 2 Bots oder aktiviere "Spieler nimmt teil"', 'error'); return;
-  }
-  if (botIds.length < 1 && document.getElementById('tPlayerJoins').checked) {
-    toast('Mindestens 1 Bot für eine Partie nötig', 'error'); return;
-  }
-
+  if (botIds.length < 1) { toast('Mindestens 1 Bot nötig','error'); return; }
+  if (!document.getElementById('tPlayerJoins').checked && botIds.length < 2) { toast('Mindestens 2 Bots oder aktiviere "Spieler nimmt teil"','error'); return; }
   const config = {
-    id: 'T_' + Date.now(),
-    name,
+    id: 'T_'+Date.now(), name,
     type: document.getElementById('tType').value,
-    variant: document.getElementById('tVariant').value,
     duration: parseInt(document.getElementById('tDuration').value),
     baseTime: parseFloat(document.getElementById('tBaseTime').value),
     increment: parseInt(document.getElementById('tIncrement').value),
     playerJoins: document.getElementById('tPlayerJoins').checked,
     showElo: document.getElementById('tShowElo').checked,
-    berserk: document.getElementById('tBerserk').checked,
     flagging: document.getElementById('tFlagging').checked,
     pointsWin: parseInt(document.getElementById('tPointsWin').value)||2,
     pointsDraw: parseInt(document.getElementById('tPointsDraw').value)||1,
@@ -1843,283 +1271,62 @@ function startTournament() {
     avoidRematches: document.getElementById('tAvoidRematches').checked,
     eloMatch: document.getElementById('tEloMatch').checked,
     updateElo: document.getElementById('tUpdateElo').checked,
-    animSpeed: parseInt(document.getElementById('tAnimSpeed').value)||300,
+    animSpeed: parseInt(document.getElementById('tAnimSpeed').value)||500,
     botIds,
     participantCount: botIds.length + (document.getElementById('tPlayerJoins').checked?1:0)
   };
-
-  closeTournamentModal();
-  launchArena(config);
+  closeTournamentModal(); launchArena(config);
 }
-
 function renderTournamentList() {
   const el = document.getElementById('tournamentList');
-  if (!state.tournaments.length) {
-    el.innerHTML = '<div class="empty-state"><div class="empty-icon">🏆</div><p>Noch keine Turniere</p></div>';
-    return;
-  }
+  if (!state.tournaments.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">🏆</div><p>Noch keine Turniere</p></div>'; return; }
   el.innerHTML = [...state.tournaments].reverse().map(t=>`
     <div class="tournament-item">
       <div class="t-status finished"></div>
-      <div class="t-info">
-        <div class="t-name">${escapeHtml(t.name)}</div>
-        <div class="t-meta">${escapeHtml(t.type)} · ${t.baseTime}+${t.increment} · ${escapeHtml(t.variant||'Standard')} · ${t.participantCount} Teilnehmer</div>
-      </div>
-      <div>
-        <div class="t-time">${t.duration}min</div>
-        <div class="t-players">${t.finishedAt||''}</div>
-      </div>
+      <div class="t-info"><div class="t-name">${escapeHtml(t.name)}</div><div class="t-meta">${escapeHtml(t.type)} · ${t.baseTime}+${t.increment} · ${t.participantCount} Teilnehmer</div></div>
+      <div><div class="t-time">${t.duration}min</div><div class="t-players">${t.finishedAt||''}</div></div>
     </div>
   `).join('');
 }
 
-// ──────────────────────────────────────────────
-//  EINGEBAUTE SCHACH-ENGINE (kein externer Worker / CDN nötig)
-// ──────────────────────────────────────────────
-// Diese Engine läuft synchron im Haupt-Thread mittels Alpha-Beta-Minimax mit
-// iterativer Tiefensuche und einem festen ZEITBUDGET pro Zug. Das garantiert,
-// dass JEDER Bot innerhalb einer vorhersagbaren Zeitspanne IMMER einen Zug liefert,
-// unabhängig von Netzwerk, CDN-Erreichbarkeit oder iframe-Sandbox-Restriktionen,
-// die einen externen Web-Worker (z.B. Stockfish via CDN) zuverlässig verhindern
-// können. Level 1-20 steuern Suchtiefe, Zeitbudget UND eine Zufallskomponente,
-// damit niedrige Level "menschlich schwach" und hohe Level stark & schnell spielen.
-
-const PIECE_VALUES = { p:100, n:320, b:330, r:500, q:900, k:20000 };
-const PST = {
-  p: [0,0,0,0,0,0,0,0, 50,50,50,50,50,50,50,50, 10,10,20,30,30,20,10,10,
-      5,5,10,25,25,10,5,5, 0,0,0,20,20,0,0,0, 5,-5,-10,0,0,-10,-5,5,
-      5,10,10,-20,-20,10,10,5, 0,0,0,0,0,0,0,0],
-  n: [-50,-40,-30,-30,-30,-30,-40,-50, -40,-20,0,0,0,0,-20,-40, -30,0,10,15,15,10,0,-30,
-      -30,5,15,20,20,15,5,-30, -30,0,15,20,20,15,0,-30, -30,5,10,15,15,10,5,-30,
-      -40,-20,0,5,5,0,-20,-40, -50,-40,-30,-30,-30,-30,-40,-50],
-  b: [-20,-10,-10,-10,-10,-10,-10,-20, -10,0,0,0,0,0,0,-10, -10,0,5,10,10,5,0,-10,
-      -10,5,5,10,10,5,5,-10, -10,0,10,10,10,10,0,-10, -10,10,10,10,10,10,10,-10,
-      -10,5,0,0,0,0,5,-10, -20,-10,-10,-10,-10,-10,-10,-20],
-  r: [0,0,0,0,0,0,0,0, 5,10,10,10,10,10,10,5, -5,0,0,0,0,0,0,-5,
-      -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5,
-      -5,0,0,0,0,0,0,-5, 0,0,0,5,5,0,0,0],
-  q: [-20,-10,-10,-5,-5,-10,-10,-20, -10,0,0,0,0,0,0,-10, -10,0,5,5,5,5,0,-10,
-      -5,0,5,5,5,5,0,-5, 0,0,5,5,5,5,0,-5, -10,5,5,5,5,5,0,-10,
-      -10,0,5,0,0,0,0,-10, -20,-10,-10,-5,-5,-10,-10,-20],
-  k: [-30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30,
-      -30,-40,-40,-50,-50,-40,-40,-30, -20,-30,-30,-40,-40,-30,-30,-20, -10,-20,-20,-20,-20,-20,-20,-10,
-      20,20,0,0,0,0,20,20, 20,30,10,0,0,10,30,20],
-};
-
-function evaluatePosition(game) {
-  const board = game.board();
-  let score = 0;
-  for (let r = 0; r < 8; r++) {
-    for (let c = 0; c < 8; c++) {
-      const sq = board[r][c];
-      if (!sq) continue;
-      const idx = r * 8 + c;
-      const pstIdx = sq.color === 'w' ? idx : (63 - idx);
-      const val = PIECE_VALUES[sq.type] + (PST[sq.type] ? PST[sq.type][pstIdx] : 0);
-      score += sq.color === 'w' ? val : -val;
-    }
-  }
-  if (game.in_checkmate()) {
-    // The side to move is checkmated -> very bad for them
-    score += game.turn() === 'w' ? -100000 : 100000;
-  }
-  return score;
-}
-
-function orderMoves(moves) {
-  // Simple move ordering: captures and promotions first -> much better alpha-beta pruning
-  return moves.slice().sort((a, b) => {
-    const aScore = (a.includes('x') ? 2 : 0) + (a.includes('=') ? 1 : 0);
-    const bScore = (b.includes('x') ? 2 : 0) + (b.includes('=') ? 1 : 0);
-    return bScore - aScore;
-  });
-}
-
-function minimaxSearch(game, depth, alpha, beta, maximizing, deadline) {
-  if (depth === 0 || game.game_over() || Date.now() > deadline) {
-    return evaluatePosition(game);
-  }
-  const moves = orderMoves(game.moves());
-  if (maximizing) {
-    let best = -Infinity;
-    for (const m of moves) {
-      game.move(m);
-      const val = minimaxSearch(game, depth - 1, alpha, beta, false, deadline);
-      game.undo();
-      if (val > best) best = val;
-      if (best > alpha) alpha = best;
-      if (alpha >= beta || Date.now() > deadline) break;
-    }
-    return best;
-  } else {
-    let best = Infinity;
-    for (const m of moves) {
-      game.move(m);
-      const val = minimaxSearch(game, depth - 1, alpha, beta, true, deadline);
-      game.undo();
-      if (val < best) best = val;
-      if (best < beta) beta = best;
-      if (alpha >= beta || Date.now() > deadline) break;
-    }
-    return best;
-  }
-}
-
-// Level table: maps engine "level" (1-20, like classic Stockfish skill levels) to
-// a search depth ceiling, a time budget in ms, and a "blunder chance" for flavor.
-// Time budgets are intentionally kept well under any reasonable per-move clock
-// allotment so the arena never stalls waiting for a "thinking" bot.
-function levelToSearchParams(level) {
-  const table = [
-    {depth:1,  ms:60},   // 1
-    {depth:1,  ms:90},   // 2
-    {depth:2,  ms:120},  // 3
-    {depth:2,  ms:160},  // 4
-    {depth:3,  ms:200},  // 5
-    {depth:3,  ms:260},  // 6
-    {depth:3,  ms:320},  // 7
-    {depth:4,  ms:380},  // 8
-    {depth:4,  ms:450},  // 9
-    {depth:4,  ms:520},  // 10
-    {depth:5,  ms:600},  // 11
-    {depth:5,  ms:680},  // 12
-    {depth:5,  ms:760},  // 13
-    {depth:6,  ms:850},  // 14
-    {depth:6,  ms:950},  // 15
-    {depth:6,  ms:1050}, // 16
-    {depth:7,  ms:1150}, // 17
-    {depth:7,  ms:1250}, // 18
-    {depth:8,  ms:1350}, // 19
-    {depth:8,  ms:1500}, // 20
-  ];
-  return table[Math.max(0, Math.min((level||5) - 1, 19))];
-}
-
-// Iterative deepening: searches depth 1, 2, 3... up to maxDepth, but always
-// returns the best move found so far the instant the time budget runs out.
-// This is the core fix that makes the bot ALWAYS respond in time.
-function getEngineMove(game, level) {
-  const moves = orderMoves(game.moves());
-  if (!moves.length) return null;
-  if (moves.length === 1) return moves[0];
-
-  const { depth: maxDepth, ms: timeBudget } = levelToSearchParams(level);
-  const maximizing = game.turn() === 'w';
-  const deadline = Date.now() + timeBudget;
-
-  let bestMove = moves[0];
-
-  for (let depth = 1; depth <= maxDepth; depth++) {
-    if (Date.now() > deadline) break;
-    let localBest = maximizing ? -Infinity : Infinity;
-    let localBestMove = null;
-    for (const m of moves) {
-      game.move(m);
-      const val = minimaxSearch(game, depth - 1, -Infinity, Infinity, !maximizing, deadline);
-      game.undo();
-      if (maximizing ? val > localBest : val < localBest) {
-        localBest = val;
-        localBestMove = m;
-      }
-      if (Date.now() > deadline) break;
-    }
-    if (localBestMove) bestMove = localBestMove;
-    if (Date.now() > deadline) break;
-  }
-  return bestMove;
-}
-
-// DarkOnWeakBot heuristic (kept from original design, lightly hardened)
-function darkOnWeakMove(game) {
-  const moves = game.moves({verbose:true});
-  if (!moves.length) return null;
-  const checkmates = moves.filter(m=>{ game.move(m.san); const isMate = game.in_checkmate(); game.undo(); return isMate; });
-  if (checkmates.length) return checkmates[0].san;
-  const checks = moves.filter(m=>{ game.move(m.san); const isCheck = game.in_check(); game.undo(); return isCheck; });
-  if (checks.length && Math.random()<0.8) return checks[Math.floor(Math.random()*checks.length)].san;
-  const captures = moves.filter(m=>m.flags.includes('c')||m.flags.includes('e'));
-  if (captures.length && Math.random()<0.7) return captures[Math.floor(Math.random()*captures.length)].san;
-  return moves[Math.floor(Math.random()*moves.length)].san;
-}
-
-// Runs the engine move computation in small async chunks via setTimeout(0) so
-// the UI thread never visibly freezes even at high search depths, while still
-// being fully synchronous/deterministic underneath (no worker, no race conditions).
-function getBotMove(gameId, bot, game, callback) {
-  if (!bot || !game) {
-    const moves = game ? game.moves() : [];
-    callback(moves.length ? moves[Math.floor(Math.random()*moves.length)] : null);
-    return;
-  }
-
-  // Randomization / "blunder" chance — resolved synchronously but the caller
-  // always wraps this in a setTimeout, so it never blocks scheduling.
-  if (bot.randomize && Math.random() * 100 < (bot.randomPct || 10)) {
-    const moves = game.moves();
-    if (moves.length) { callback(moves[Math.floor(Math.random() * moves.length)]); return; }
-  }
-
-  if (bot.engine === 'random') {
-    const moves = game.moves();
-    callback(moves.length ? moves[Math.floor(Math.random() * moves.length)] : null);
-    return;
-  }
-  if (bot.engine === 'darkbot') {
-    callback(darkOnWeakMove(game));
-    return;
-  }
-
-  // Built-in engine ("stockfish" option label kept for UI continuity, but it's
-  // our own embedded synchronous engine now — no network/worker dependency).
-  try {
-    const move = getEngineMove(game, bot.sfLevel || 5);
-    if (move) { callback(move); return; }
-  } catch (e) {
-    console.error('Engine error, falling back to random move', e);
-  }
-  const moves = game.moves();
-  callback(moves.length ? moves[Math.floor(Math.random()*moves.length)] : null);
-}
-
-// ──────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════
 //  ARENA LAUNCH
-// ──────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════
 function launchArena(config) {
-  // Navigate to arena page
   showPage('arena');
   document.querySelectorAll('.nav-tab').forEach((t,i)=>t.classList.toggle('active',i===3));
-
-  // Init arena state
   arena = {
     config,
-    participants: [], // {ref, isPlayer, score, streak, games, busy}
+    participants: [],
     activeGames: [],
     endTime: Date.now() + config.duration * 60000,
     running: true,
-    lastPairings: [],
   };
-
-  // Setup participants
   config.botIds.forEach(id => {
     const bot = state.bots.find(b=>b.id===id);
-    if (bot) arena.participants.push({ ref: bot, isPlayer: false, score: 0, streak: 0, games: 0, busy: false, name: bot.name, elo: bot.elo });
+    if (bot) arena.participants.push({
+      ref: bot, isPlayer: false, score: 0, streak: 0, games: 0, busy: false,
+      name: bot.name, elo: bot.elo,
+      uid: bot.id,          // stabiler unique key
+      lastOpponentUid: null // FIX: Letzte Paarung – nie direkt wiederholen
+    });
   });
   if (config.playerJoins) {
-    arena.participants.push({ ref: state.player, isPlayer: true, score: 0, streak: 0, games: 0, busy: false, name: state.player.name, elo: state.player.elo });
+    arena.participants.push({
+      ref: state.player, isPlayer: true, score: 0, streak: 0, games: 0, busy: false,
+      name: state.player.name, elo: state.player.elo,
+      uid: 'PLAYER',
+      lastOpponentUid: null
+    });
   }
-
-  // UI
   document.getElementById('arenaTitle').textContent = config.name;
-  document.getElementById('arenaSubtitle').textContent = `${config.baseTime}+${config.increment} · ${config.type} · ${config.variant} · ${config.duration} Min.`;
+  document.getElementById('arenaSubtitle').textContent = `${config.baseTime}+${config.increment} · ${config.type} · ${config.duration} Min.`;
   document.getElementById('arenaBoards').innerHTML = '';
   document.getElementById('leaderboard').innerHTML = '';
   document.getElementById('resultsFeed').innerHTML = '';
   document.getElementById('myGamePanel').style.display = 'none';
   document.getElementById('btnAbortArena').style.display = '';
-
-  updateLeaderboard();
-  startArenaTimer();
-  fillArena();
+  updateLeaderboard(); startArenaTimer(); fillArena();
   toast(`Turnier "${config.name}" gestartet!`, 'info');
 }
 
@@ -2128,15 +1335,12 @@ function startArenaTimer() {
   const update = () => {
     if (!arena || !arena.running) return;
     const remaining = arena.endTime - Date.now();
-    if (remaining <= 0) {
-      endArena();
-      return;
-    }
+    if (remaining <= 0) { endArena(); return; }
     const m = Math.floor(remaining/60000);
     const s = Math.floor((remaining%60000)/1000);
-    const timerEl = document.getElementById('arenaTimer');
-    timerEl.textContent = `${m}:${s.toString().padStart(2,'0')}`;
-    timerEl.className = 'arena-timer' + (remaining < 60000 ? ' ending' : '');
+    const el = document.getElementById('arenaTimer');
+    el.textContent = `${m}:${s.toString().padStart(2,'0')}`;
+    el.className = 'arena-timer'+(remaining<60000?' ending':'');
     setTimeout(update, 500);
   };
   update();
@@ -2151,186 +1355,137 @@ function abortArena() {
 function endArena(aborted=false) {
   if (!arena) return;
   arena.running = false;
-
-  // Stop all running per-game clocks so nothing keeps ticking in the background.
-  arena.activeGames.forEach(gs => { if (gs.clockInterval) { clearInterval(gs.clockInterval); gs.clockInterval = null; } });
-
-  // Save tournament record
+  arena.activeGames.forEach(gs=>{ if (gs.clockInterval) { clearInterval(gs.clockInterval); gs.clockInterval=null; } });
   const sorted = [...arena.participants].sort((a,b)=>b.score-a.score);
-  const rec = {
-    ...arena.config,
-    finishedAt: new Date().toLocaleString('de'),
-    results: sorted.map((p,i)=>({rank:i+1,name:p.name,score:p.score,games:p.games}))
-  };
+  const rec = { ...arena.config, finishedAt:new Date().toLocaleString('de'), results:sorted.map((p,i)=>({rank:i+1,name:p.name,score:p.score,games:p.games})) };
   state.tournaments.push(rec);
   state.stats.totalTournaments++;
-
-  // NOTE: Elo is already updated PER GAME in resolveGame() below. We intentionally
-  // do NOT apply a second, tournament-wide elo adjustment here anymore — doing both
-  // (as the original code did) double-counted every result and made ratings drift
-  // wildly. Per-game elo updates are the single source of truth.
-
   saveState();
-
-  // Show results
-  const timerEl = document.getElementById('arenaTimer');
-  timerEl.textContent = '🏁';
-  timerEl.className = 'arena-timer';
+  document.getElementById('arenaTimer').textContent = '🏁';
+  document.getElementById('arenaTimer').className = 'arena-timer';
   document.getElementById('btnAbortArena').style.display = 'none';
   document.getElementById('myGamePanel').style.display = 'none';
-
-  // Show winner toast
-  if (!aborted && sorted.length) {
-    toast(`🏆 ${sorted[0].name} gewinnt "${arena.config.name}" mit ${sorted[0].score} Punkten!`, 'info');
-  }
-
-  updateLeaderboard();
-  refreshHome();
+  if (!aborted && sorted.length) toast(`🏆 ${sorted[0].name} gewinnt "${arena.config.name}" mit ${sorted[0].score} Punkten!`,'info');
+  updateLeaderboard(); refreshHome();
   arena = null;
 }
 
-// ──────────────────────────────────────────────
-//  ARENA PAIRING & GAME MANAGEMENT
-// ──────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════
+//  PAIRING – robust, kein Consecutive-Repeat
+// ══════════════════════════════════════════════════════════
 function fillArena() {
   if (!arena || !arena.running) return;
-  while (true) {
-    const avail = arena.participants.filter(p=>!p.busy);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    const avail = arena.participants.filter(p => !p.busy);
     if (avail.length < 2) break;
     const pair = pickPair(avail);
-    if (!pair) break;
-    startGame(pair[0], pair[1]);
+    if (pair) { startGame(pair[0], pair[1]); changed = true; }
+    else break;
   }
 }
 
 function pickPair(avail) {
   const cfg = arena.config;
-  const shuffled = [...avail].sort(() => Math.random()-0.5);
+  // Sortiere nach Score (höchste zuerst) für bessere Paarungsqualität
+  const sorted = [...avail].sort((a,b) => b.score - a.score || Math.random()-0.5);
 
-  for (let i=0;i<shuffled.length;i++) {
-    for (let j=i+1;j<shuffled.length;j++) {
-      const a = shuffled[i], b = shuffled[j];
-      const key1 = `${a.name}-${b.name}`;
-      if (cfg.avoidRematches && arena.lastPairings.includes(key1)) continue;
-      if (cfg.eloMatch && Math.abs(a.elo-b.elo) > 400 && avail.length > 3) continue;
+  // Suche bestes Paar (kein direkter Wiederhol-Gegner)
+  for (let i = 0; i < sorted.length; i++) {
+    for (let j = i+1; j < sorted.length; j++) {
+      const a = sorted[i], b = sorted[j];
+      const aUid = a.uid, bUid = b.uid;
 
-      arena.lastPairings.push(key1);
-      if (arena.lastPairings.length > 30) arena.lastPairings.shift();
+      // HAUPTREGEL: Niemals direkt hintereinander dasselbe Paar
+      // (erst wenn einer von beiden jemand anderen gespielt hat, ist es wieder OK)
+      const justPlayed = (a.lastOpponentUid === bUid && b.lastOpponentUid === aUid);
+      if (justPlayed && avail.length > 2) continue;
+
+      // Elo-Differenz optional beschränken (nur wenn genug Kandidaten)
+      if (cfg.eloMatch && Math.abs(a.elo - b.elo) > 500 && avail.length > 3) continue;
+
       a.busy = true; b.busy = true;
-      return [a,b];
+      return [a, b];
     }
   }
 
-  // Fallback: just pick first two (guarantees fillArena always terminates)
-  const a = shuffled[0], b = shuffled[1];
-  a.busy = true; b.busy = true;
-  return [a,b];
+  // Absoluter Fallback: Alle Restriktionen aufheben (nur 2 Teilnehmer übrig)
+  if (sorted.length >= 2) {
+    sorted[0].busy = true; sorted[1].busy = true;
+    return [sorted[0], sorted[1]];
+  }
+  return null;
 }
 
+// ══════════════════════════════════════════════════════════
+//  GAME ENGINE
+// ══════════════════════════════════════════════════════════
 let gameBoards = {};
 
 function startGame(pA, pB) {
-  const game = new Chess(); // chess.js always starts with White to move
-  const gameId = 'g_' + Date.now() + '_' + Math.random().toString(36).slice(2,5);
-
+  const game = new Chess();
+  const gameId = 'g_'+Date.now()+'_'+Math.random().toString(36).slice(2,5);
   const isMyGame = pA.isPlayer || pB.isPlayer;
-
-  // pA is always assigned White, pB Black. (Color balance across many games
-  // evens out naturally because pickPair shuffles candidates every round.)
-  const white = pA;
-  const black = pB;
-
+  const white = pA, black = pB;
   const baseMs = arena.config.baseTime * 60 * 1000;
-  const incMs = arena.config.increment * 1000;
-
-  const gameState = {
+  const incMs  = arena.config.increment * 1000;
+  const gs = {
     id: gameId, game, white, black,
     whiteClock: baseMs, blackClock: baseMs,
     incMs, clockInterval: null,
     thinking: false, done: false, isMyGame,
     playerColor: isMyGame ? (pA.isPlayer ? 'w' : 'b') : null
   };
-
-  // Build the board UI FIRST and let it fully render before anything else
-  // touches the game (timer, scheduling). This removes the render race where
-  // a fast opening move could be applied before chessboard.js had finished
-  // mounting, which could make the very first move appear to be "missing"
-  // (looking as if Black had moved first).
-  if (isMyGame) {
-    setupMyGameUI(gameState);
-  } else {
-    createBotBoardUI(gameState);
-  }
-
-  arena.activeGames.push(gameState);
-
-  // Defer move scheduling and clock start to the next animation frame so the
-  // board has definitely painted the starting position first.
+  if (isMyGame) setupMyGameUI(gs);
+  else createBotBoardUI(gs);
+  arena.activeGames.push(gs);
   requestAnimationFrame(() => {
-    if (!arena || !arena.running || gameState.done) return;
-    startClock(gameState);
-    updateClockUI(gameState);
-    scheduleNextMove(gameState);
+    if (!arena || !arena.running || gs.done) return;
+    startClock(gs); updateClockUI(gs); scheduleNextMove(gs);
   });
 }
 
 function startClock(gs) {
   if (gs.clockInterval) clearInterval(gs.clockInterval);
-  gs.clockInterval = setInterval(()=>{
-    if (gs.done || !arena || !arena.running) { clearInterval(gs.clockInterval); gs.clockInterval = null; return; }
+  gs.clockInterval = setInterval(() => {
+    if (gs.done || !arena || !arena.running) { clearInterval(gs.clockInterval); gs.clockInterval=null; return; }
     const turn = gs.game.turn();
-    if (turn==='w') gs.whiteClock -= 100;
-    else gs.blackClock -= 100;
-
+    if (turn==='w') gs.whiteClock-=100; else gs.blackClock-=100;
     if (arena.config.flagging) {
-      if (gs.whiteClock <= 0) { finishGame(gs, 'b', 'Zeit'); return; }
-      if (gs.blackClock <= 0) { finishGame(gs, 'w', 'Zeit'); return; }
+      if (gs.whiteClock<=0) { finishGame(gs,'b','Zeit'); return; }
+      if (gs.blackClock<=0) { finishGame(gs,'w','Zeit'); return; }
     } else {
-      if (gs.whiteClock < 0) gs.whiteClock = 0;
-      if (gs.blackClock < 0) gs.blackClock = 0;
+      gs.whiteClock=Math.max(0,gs.whiteClock);
+      gs.blackClock=Math.max(0,gs.blackClock);
     }
     updateClockUI(gs);
   }, 100);
 }
 
 function updateClockUI(gs) {
-  const fmt = ms => {
-    const tot = Math.max(0, ms);
-    const m = Math.floor(tot/60000);
-    const s = Math.floor((tot%60000)/1000);
-    return `${m}:${s.toString().padStart(2,'0')}`;
-  };
+  const fmt = ms => { const t=Math.max(0,ms); const m=Math.floor(t/60000); const s=Math.floor((t%60000)/1000); return `${m}:${s.toString().padStart(2,'0')}`; };
   if (gs.isMyGame) {
-    const playerIsWhite = gs.playerColor==='w';
-    const playerMs = playerIsWhite?gs.whiteClock:gs.blackClock;
-    const oppMs = playerIsWhite?gs.blackClock:gs.whiteClock;
-    document.getElementById('myPlayerClock').textContent = fmt(playerMs);
-    document.getElementById('myOpponentClock').textContent = fmt(oppMs);
-    const playerActive = gs.game.turn()===(gs.playerColor||'w');
-    const myClk = document.getElementById('myPlayerClock');
-    const opClk = document.getElementById('myOpponentClock');
-    myClk.className = 'player-clock' + (playerActive?' active':'') + (playerMs<30000?' low':'');
-    opClk.className = 'player-clock' + (!playerActive?' active':'') + (oppMs<30000?' low':'');
+    const playerIsWhite = gs.playerColor === 'w';
+    const pMs = playerIsWhite ? gs.whiteClock : gs.blackClock;
+    const oMs = playerIsWhite ? gs.blackClock : gs.whiteClock;
+    const pEl = document.getElementById('myPlayerClock');
+    const oEl = document.getElementById('myOpponentClock');
+    if (pEl) { pEl.textContent=fmt(pMs); pEl.className='player-clock'+(gs.game.turn()===gs.playerColor?' active':'')+(pMs<30000?' low':''); }
+    if (oEl) { oEl.textContent=fmt(oMs); oEl.className='player-clock'+(gs.game.turn()!==gs.playerColor?' active':'')+(oMs<30000?' low':''); }
   } else {
-    const wClk = document.getElementById('bclk_w_'+gs.id);
-    const bClk = document.getElementById('bclk_b_'+gs.id);
-    if (wClk) {
-      wClk.textContent = fmt(gs.whiteClock);
-      wClk.className = 'player-clock' + (gs.game.turn()==='w'?' active':'') + (gs.whiteClock<30000?' low':'');
-    }
-    if (bClk) {
-      bClk.textContent = fmt(gs.blackClock);
-      bClk.className = 'player-clock' + (gs.game.turn()==='b'?' active':'') + (gs.blackClock<30000?' low':'');
-    }
+    const wEl=document.getElementById('bclk_w_'+gs.id);
+    const bEl=document.getElementById('bclk_b_'+gs.id);
+    if (wEl) { wEl.textContent=fmt(gs.whiteClock); wEl.className='player-clock'+(gs.game.turn()==='w'?' active':'')+(gs.whiteClock<30000?' low':''); }
+    if (bEl) { bEl.textContent=fmt(gs.blackClock); bEl.className='player-clock'+(gs.game.turn()==='b'?' active':'')+(gs.blackClock<30000?' low':''); }
   }
 }
 
 function createBotBoardUI(gs) {
   const div = document.createElement('div');
-  div.className = 'board-card';
-  div.id = 'bc_' + gs.id;
-  const fmt = ms => { const m=Math.floor(ms/60000); const s=Math.floor((ms%60000)/1000); return `${m}:${s.toString().padStart(2,'0')}`; };
-  div.innerHTML = `
+  div.className='board-card'; div.id='bc_'+gs.id;
+  const fmt = ms=>{ const m=Math.floor(ms/60000); const s=Math.floor((ms%60000)/1000); return `${m}:${s.toString().padStart(2,'0')}`; };
+  div.innerHTML=`
     <div class="player-row">
       <div><span class="player-name">${escapeHtml(gs.white.name)}</span> <span class="player-elo">(${gs.white.elo})</span></div>
       <span class="player-clock active" id="bclk_w_${gs.id}">${fmt(gs.whiteClock)}</span>
@@ -2343,56 +1498,52 @@ function createBotBoardUI(gs) {
     <div class="game-status" id="bst_${gs.id}">Partie läuft…</div>
   `;
   document.getElementById('arenaBoards').prepend(div);
-
   const boardEl = document.getElementById('bw_'+gs.id);
   const board = Chessboard(boardEl, {
     position:'start',
     pieceTheme:'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
-    draggable: false,
-    showNotation: false
+    draggable:false, showNotation:false
   });
   gameBoards[gs.id] = board;
 }
 
 function setupMyGameUI(gs) {
-  document.getElementById('myGamePanel').style.display = '';
+  document.getElementById('myGamePanel').style.display='';
   const opp = gs.playerColor==='w' ? gs.black : gs.white;
   document.getElementById('myOpponentName').textContent = opp.name;
   document.getElementById('myOpponentElo').textContent = ` (${opp.elo})`;
   document.getElementById('myPlayerName').textContent = state.player.name;
   document.getElementById('myPlayerElo').textContent = ` (${state.player.elo})`;
-  document.getElementById('myGameStatus').textContent = gs.playerColor === 'w' ? '♟ Dein Zug' : '⌛ Gegner denkt…';
+  document.getElementById('myGameStatus').textContent = gs.playerColor==='w' ? '♟ Dein Zug' : '⌛ Gegner denkt…';
   document.getElementById('myGameStatus').className = 'game-status';
-
   const boardEl = document.getElementById('myGameBoard');
   boardEl.innerHTML = '';
   const board = Chessboard(boardEl, {
-    position: 'start',
-    pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
+    position:'start',
+    pieceTheme:'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
     draggable: true,
-    orientation: gs.playerColor==='b'?'black':'white',
+    orientation: gs.playerColor==='b' ? 'black' : 'white',
     onDrop: (from,to) => handlePlayerDrop(gs, from, to),
-    onDragStart: (src,piece) => {
-      if (gs.done) return false;
-      if (gs.game.turn() !== gs.playerColor) return false;
-      const col = gs.playerColor==='w'?'w':'b';
-      if (!piece.startsWith(col)) return false;
+    onDragStart: (src, piece) => {
+      if (gs.done || gs.game.turn() !== gs.playerColor) return false;
+      if (gs.playerColor==='w' && !piece.startsWith('w')) return false;
+      if (gs.playerColor==='b' && !piece.startsWith('b')) return false;
     }
   });
   gs.board = board;
+  // TAP-TO-MOVE aktivieren
+  setupTapToMove(gs);
 }
 
 function handlePlayerDrop(gs, from, to) {
-  if (gs.done) return 'snapback';
-  if (gs.game.turn() !== gs.playerColor) return 'snapback';
-  const move = gs.game.move({from,to,promotion:'q'});
+  if (gs.done || gs.game.turn() !== gs.playerColor) return 'snapback';
+  clearTapHighlights(); tapState.selected = null;
+  const move = gs.game.move({ from, to, promotion:'q' });
   if (!move) return 'snapback';
   gs.board.position(gs.game.fen());
-  if (gs.incMs > 0) {
-    if (gs.playerColor==='w') gs.whiteClock += gs.incMs;
-    else gs.blackClock += gs.incMs;
-  }
-  document.getElementById('myGameStatus').textContent = '⌛ Gegner denkt…';
+  if (gs.incMs>0) { if (gs.playerColor==='w') gs.whiteClock+=gs.incMs; else gs.blackClock+=gs.incMs; }
+  const statusEl = document.getElementById('myGameStatus');
+  if (statusEl) statusEl.textContent = '⌛ Gegner denkt…';
   checkGameOver(gs);
   if (!gs.done) scheduleNextMove(gs);
 }
@@ -2400,84 +1551,97 @@ function handlePlayerDrop(gs, from, to) {
 function scheduleNextMove(gs) {
   if (gs.done || !arena || !arena.running) return;
   const turn = gs.game.turn();
-
-  // Is it the human player's turn? If so, wait for their drag/drop input.
   if (gs.isMyGame && gs.playerColor === turn) return;
-
-  const actingParticipant = turn==='w' ? gs.white : gs.black;
   if (gs.thinking) return;
   gs.thinking = true;
-
-  const delay = gs.isMyGame ? 300 : (arena.config.animSpeed || 300);
+  const actingP = turn==='w' ? gs.white : gs.black;
+  const delay = gs.isMyGame ? 350 : (arena.config.animSpeed || 500);
 
   setTimeout(() => {
-    if (gs.done || !arena || !arena.running) { gs.thinking = false; return; }
+    if (gs.done || !arena || !arena.running) { gs.thinking=false; return; }
+    const botRef = actingP.ref;
+    if (!botRef) { gs.thinking=false; return; }
 
-    const botRef = actingParticipant.ref;
-    if (!botRef) { gs.thinking = false; return; }
+    // Zufalls-Bot oder Blunder
+    if (botRef.engine==='random' || (botRef.randomize && Math.random()*100 < (botRef.randomPct||10))) {
+      const moves = gs.game.moves();
+      gs.thinking = false;
+      if (moves.length) applyBotMove(gs, moves[Math.floor(Math.random()*moves.length)]);
+      return;
+    }
 
-    getBotMove(gs.id, botRef, gs.game, (san) => {
+    // Echter Stockfish – Movetime skaliert nach Bedenkzeit des Turniers
+    const fen = gs.game.fen();
+    const skillLevel = botRef.sfLevel ?? 10;
+    const movetime = levelToMovetime(skillLevel, arena.config.baseTime);  // ← FIX
+
+    stockfishGetMove(fen, skillLevel, movetime, (uciMove) => {
       gs.thinking = false;
       if (gs.done || !arena || !arena.running) return;
-      if (!san) return;
-
-      const moved = gs.game.move(san);
-      if (!moved) return;
-
-      if (gs.incMs > 0) {
-        if (turn === 'w') gs.whiteClock += gs.incMs;
-        else gs.blackClock += gs.incMs;
+      if (!uciMove) {
+        const moves = gs.game.moves();
+        if (moves.length) applyBotMove(gs, moves[Math.floor(Math.random()*moves.length)]);
+        return;
       }
-
+      const from = uciMove.slice(0,2), to = uciMove.slice(2,4), promo = uciMove.length===5 ? uciMove[4] : 'q';
+      const moved = gs.game.move({ from, to, promotion: promo });
+      if (!moved) {
+        const moves = gs.game.moves();
+        if (moves.length) { const m=gs.game.move(moves[Math.floor(Math.random()*moves.length)]); if (!m) return; }
+      }
+      if (gs.incMs>0) { if (turn==='w') gs.whiteClock+=gs.incMs; else gs.blackClock+=gs.incMs; }
       if (gs.isMyGame && gs.board) {
         gs.board.position(gs.game.fen());
         if (!gs.done) {
-          document.getElementById('myGameStatus').textContent =
-            gs.game.turn() === gs.playerColor ? '♟ Dein Zug' : '⌛ Gegner denkt…';
+          const statusEl = document.getElementById('myGameStatus');
+          if (statusEl) statusEl.textContent = gs.game.turn()===gs.playerColor ? '♟ Dein Zug' : '⌛ Gegner denkt…';
         }
       } else {
         const b = gameBoards[gs.id];
         if (b) b.position(gs.game.fen());
       }
-
       checkGameOver(gs);
-      if (!gs.done) {
-        scheduleNextMove(gs);
-      }
+      if (!gs.done) scheduleNextMove(gs);
     });
   }, delay);
 }
 
-function checkGameOver(gs) {
-  const g = gs.game;
-  if (gs.done) return;
-  if (!g.game_over()) return;
-  gs.done = true;
-  if (gs.clockInterval) { clearInterval(gs.clockInterval); gs.clockInterval = null; }
-
-  let winnerColor = null, reason = '';
-  if (g.in_checkmate()) {
-    winnerColor = g.turn() === 'w' ? 'b' : 'w';
-    reason = 'Matt';
-  } else if (g.in_stalemate()) {
-    reason = 'Patt';
-  } else if (g.in_threefold_repetition()) {
-    reason = '3-fach Wiederholung';
-  } else if (g.insufficient_material()) {
-    reason = 'Zu wenig Material';
-  } else if (g.in_draw()) {
-    reason = 'Remis (50-Züge)';
+function applyBotMove(gs, san) {
+  const moved = gs.game.move(san);
+  if (!moved) return;
+  const turn = gs.game.history().length%2===0 ? 'b' : 'w';
+  if (gs.incMs>0) { if (turn==='b') gs.whiteClock+=gs.incMs; else gs.blackClock+=gs.incMs; }
+  if (gs.isMyGame && gs.board) {
+    gs.board.position(gs.game.fen());
+    if (!gs.done) {
+      const statusEl = document.getElementById('myGameStatus');
+      if (statusEl) statusEl.textContent = gs.game.turn()===gs.playerColor ? '♟ Dein Zug' : '⌛ Gegner denkt…';
+    }
   } else {
-    reason = 'Beendet';
+    const b = gameBoards[gs.id]; if (b) b.position(gs.game.fen());
   }
+  checkGameOver(gs);
+  if (!gs.done) scheduleNextMove(gs);
+}
 
+function checkGameOver(gs) {
+  if (gs.done || !gs.game.game_over()) return;
+  gs.done = true;
+  if (gs.clockInterval) { clearInterval(gs.clockInterval); gs.clockInterval=null; }
+  let winnerColor=null, reason='';
+  if (gs.game.in_checkmate()) { winnerColor=gs.game.turn()==='w'?'b':'w'; reason='Matt'; }
+  else if (gs.game.in_stalemate()) reason='Patt';
+  else if (gs.game.in_threefold_repetition()) reason='3-fach Wiederholung';
+  else if (gs.game.insufficient_material()) reason='Zu wenig Material';
+  else if (gs.game.in_draw()) reason='50-Züge-Remis';
+  else reason='Beendet';
   resolveGame(gs, winnerColor, reason);
 }
 
 function finishGame(gs, winnerColor, reason) {
   if (gs.done) return;
   gs.done = true;
-  if (gs.clockInterval) { clearInterval(gs.clockInterval); gs.clockInterval = null; }
+  if (gs.clockInterval) { clearInterval(gs.clockInterval); gs.clockInterval=null; }
   resolveGame(gs, winnerColor, reason);
 }
 
@@ -2486,132 +1650,107 @@ function resolveGame(gs, winnerColor, reason) {
   const white = gs.white, black = gs.black;
   let text = reason;
 
-  if (winnerColor === 'w') {
-    white.score += cfg.pointsWin;
-    white.streak = (white.streak || 0) + 1;
-    if (white.streak >= 2) white.score += cfg.streakBonus;
-    black.streak = 0;
-    text = `${white.name} gewinnt (${reason})`;
-    addResultFeed(`🟢 ${white.name} ⚔️ ${black.name} — ${reason}`);
-    white.wins = (white.wins || 0) + 1;
-    black.losses = (black.losses || 0) + 1;
-  } else if (winnerColor === 'b') {
-    black.score += cfg.pointsWin;
-    black.streak = (black.streak || 0) + 1;
-    if (black.streak >= 2) black.score += cfg.streakBonus;
-    white.streak = 0;
-    text = `${black.name} gewinnt (${reason})`;
-    addResultFeed(`🟢 ${black.name} ⚔️ ${white.name} — ${reason}`);
-    black.wins = (black.wins || 0) + 1;
-    white.losses = (white.losses || 0) + 1;
-  } else {
-    white.score += cfg.pointsDraw;
-    black.score += cfg.pointsDraw;
-    white.streak = 0; black.streak = 0;
-    text = `Remis (${reason})`;
-    addResultFeed(`⚪ ${white.name} = ${black.name} — ${reason}`);
-    white.draws = (white.draws || 0) + 1;
-    black.draws = (black.draws || 0) + 1;
-  }
+  // FIX: Paarungs-Gedächtnis aktualisieren (NACH dem Spiel, VOR busy=false)
+  white.lastOpponentUid = black.uid;
+  black.lastOpponentUid = white.uid;
 
+  if (winnerColor==='w') {
+    white.score+=cfg.pointsWin; white.streak=(white.streak||0)+1;
+    if (white.streak>=2) white.score+=cfg.streakBonus;
+    black.streak=0; text=`${white.name} gewinnt (${reason})`;
+    addResultFeed(`🟢 ${white.name} ⚔️ ${black.name} — ${reason}`);
+    white.wins=(white.wins||0)+1; black.losses=(black.losses||0)+1;
+  } else if (winnerColor==='b') {
+    black.score+=cfg.pointsWin; black.streak=(black.streak||0)+1;
+    if (black.streak>=2) black.score+=cfg.streakBonus;
+    white.streak=0; text=`${black.name} gewinnt (${reason})`;
+    addResultFeed(`🟢 ${black.name} ⚔️ ${white.name} — ${reason}`);
+    black.wins=(black.wins||0)+1; white.losses=(white.losses||0)+1;
+  } else {
+    white.score+=cfg.pointsDraw; black.score+=cfg.pointsDraw;
+    white.streak=0; black.streak=0;
+    text=`Remis (${reason})`;
+    addResultFeed(`⚪ ${white.name} = ${black.name} — ${reason}`);
+    white.draws=(white.draws||0)+1; black.draws=(black.draws||0)+1;
+  }
   white.games++; black.games++;
   white.busy = false; black.busy = false;
 
-  // Single source of truth for Elo: one K=32 update per finished game.
-  // (Earlier version of this app ALSO re-adjusted Elo again at tournament end,
-  // which double-counted every result. That second adjustment has been removed.)
+  // Elo K=32
   if (cfg.updateElo) {
-    const K = 32;
-    const expectedWhite = 1 / (1 + Math.pow(10, (black.elo - white.elo) / 400));
-    const expectedBlack = 1 - expectedWhite;
-    const scoreWhite = winnerColor === 'w' ? 1 : winnerColor === 'b' ? 0 : 0.5;
-    const scoreBlack = 1 - scoreWhite;
-
-    white.elo = Math.max(100, Math.min(3500, Math.round(white.elo + K * (scoreWhite - expectedWhite))));
-    black.elo = Math.max(100, Math.min(3500, Math.round(black.elo + K * (scoreBlack - expectedBlack))));
-
-    [white, black].forEach(p => {
+    const K=32;
+    const expW = 1/(1+Math.pow(10,(black.elo-white.elo)/400));
+    const scoreW = winnerColor==='w'?1:winnerColor==='b'?0:0.5;
+    const newWhiteElo = Math.max(100,Math.min(3500,Math.round(white.elo+K*(scoreW-expW))));
+    const newBlackElo = Math.max(100,Math.min(3500,Math.round(black.elo+K*((1-scoreW)-(1-expW)))));
+    white.elo = newWhiteElo; black.elo = newBlackElo;
+    [white,black].forEach(p => {
       if (!p.isPlayer) {
-        const bot = state.bots.find(b => b.id === p.ref.id);
+        const bot = state.bots.find(b=>b.id===p.ref.id);
         if (bot) {
           bot.elo = p.elo;
           if (!bot.ratingHistory) bot.ratingHistory = [];
           bot.ratingHistory.push(bot.elo);
-          bot.games = (bot.games || 0) + 1;
-          if ((p === white && winnerColor === 'w') || (p === black && winnerColor === 'b')) {
-            bot.wins = (bot.wins || 0) + 1;
-          } else if (!winnerColor) {
-            bot.draws = (bot.draws || 0) + 1;
-          } else {
-            bot.losses = (bot.losses || 0) + 1;
-          }
+          bot.games = (bot.games||0)+1;
+          if (winnerColor==='w'&&p===white||winnerColor==='b'&&p===black) bot.wins=(bot.wins||0)+1;
+          else if (!winnerColor) bot.draws=(bot.draws||0)+1;
+          else bot.losses=(bot.losses||0)+1;
         }
       }
     });
   }
 
-  // Player stats
+  // Spieler-Stats
   if (gs.isMyGame) {
     state.stats.totalGames++;
-    const pColor = gs.playerColor || 'w';
-    const playerWon = winnerColor === pColor;
-    const isDraw = !winnerColor;
-    if (playerWon) { state.player.wins = (state.player.wins||0)+1; state.stats.totalWins++; }
-    else if (isDraw) state.player.draws = (state.player.draws||0)+1;
-    else state.player.losses = (state.player.losses||0)+1;
-    state.player.games = (state.player.games||0)+1;
-
+    const pC = gs.playerColor||'w';
+    const won = winnerColor===pC, draw = !winnerColor;
+    if (won) { state.player.wins=(state.player.wins||0)+1; state.stats.totalWins++; }
+    else if (draw) state.player.draws=(state.player.draws||0)+1;
+    else state.player.losses=(state.player.losses||0)+1;
+    state.player.games=(state.player.games||0)+1;
     if (cfg.updateElo) {
-      // Player elo already reflects the update applied above (player is white or black).
-      document.getElementById('playerRatingDisplay').textContent = state.player.elo;
+      // Elo des Spielers wurde bereits in white/black.elo berechnet
+      const pPart = pC==='w' ? white : black;
+      state.player.elo = pPart.elo;
       if (!state.player.ratingHistory) state.player.ratingHistory = [];
-      // ratingHistory already pushed once above via the white/black branch if player
-      // participates — guard against double push by checking the last entry.
-      if (state.player.ratingHistory[state.player.ratingHistory.length-1] !== state.player.elo) {
-        state.player.ratingHistory.push(state.player.elo);
-      }
+      state.player.ratingHistory.push(state.player.elo);
+      document.getElementById('playerRatingDisplay').textContent = state.player.elo;
     }
-
-    const opp = pColor === 'w' ? black : white;
-    if (!state.player.gameHistory) state.player.gameHistory = [];
+    const opp = pC==='w' ? black : white;
+    if (!state.player.gameHistory) state.player.gameHistory=[];
+    const eloDiff = cfg.updateElo ? ((pC==='w'?white.elo:black.elo) - arena.config.baseTime) : 0;
     state.player.gameHistory.push({
       date: new Date().toLocaleDateString('de'),
       opponent: opp.name,
-      result: playerWon ? 'win' : isDraw ? 'draw' : 'loss',
-      eloDiff: 0, // informational only; precise per-game delta not tracked separately
+      result: won?'win':draw?'draw':'loss',
+      eloDiff: 0,
       timeControl: `${arena.config.baseTime}+${arena.config.increment}`
     });
-
+    clearTapHighlights(); tapState.selected = null;
     const statusEl = document.getElementById('myGameStatus');
-    if (statusEl) {
-      statusEl.textContent = text;
-      statusEl.className = 'game-status ' + ((!winnerColor) ? '' : playerWon ? 'win' : 'loss');
-    }
-    setTimeout(() => { const p = document.getElementById('myGamePanel'); if (p) p.style.display = 'none'; }, 3000);
+    if (statusEl) { statusEl.textContent=text; statusEl.className='game-status '+(draw?'':won?'win':'loss'); }
+    setTimeout(() => { const p=document.getElementById('myGamePanel'); if(p) p.style.display='none'; }, 3000);
   } else {
     state.stats.totalGames++;
-    const card = document.getElementById('bc_' + gs.id);
+    const card = document.getElementById('bc_'+gs.id);
     if (card) {
-      const st = document.getElementById('bst_' + gs.id);
+      const st = document.getElementById('bst_'+gs.id);
       if (st) st.textContent = text;
-      setTimeout(() => {
-        if (card.parentNode) card.remove();
-        delete gameBoards[gs.id];
-      }, 1800);
+      setTimeout(() => { if(card.parentNode) card.remove(); delete gameBoards[gs.id]; }, 1800);
     }
   }
 
   arena.activeGames = arena.activeGames.filter(g => g.id !== gs.id);
   updateLeaderboard();
   saveState();
-
   if (arena && arena.running) setTimeout(fillArena, 400);
 }
 
 function addResultFeed(text) {
   const feed = document.getElementById('resultsFeed');
   const row = document.createElement('div');
-  row.style.cssText = 'padding:5px 0; border-bottom: 1px solid var(--border); animation: slideIn 0.2s ease;';
+  row.style.cssText = 'padding:5px 0; border-bottom:1px solid var(--border); animation:slideIn 0.2s ease;';
   row.textContent = text;
   feed.prepend(row);
   while (feed.children.length > 30) feed.removeChild(feed.lastChild);
@@ -2620,11 +1759,10 @@ function addResultFeed(text) {
 function updateLeaderboard() {
   if (!arena) return;
   const sorted = [...arena.participants].sort((a,b)=>b.score-a.score||b.streak-a.streak);
-  const lb = document.getElementById('leaderboard');
-  lb.innerHTML = sorted.map((p,i)=>`
+  document.getElementById('leaderboard').innerHTML = sorted.map((p,i)=>`
     <div class="lb-row ${p.isPlayer?'is-me':''}">
       <div class="lb-rank ${i<3?'top3':''}">${i+1}</div>
-      <div style="font-size:16px;">${p.isPlayer ? (state.player.avatar||'👤') : (p.ref.emoji||'🤖')}</div>
+      <div style="font-size:16px;">${p.isPlayer?(state.player.avatar||'👤'):(p.ref.emoji||'🤖')}</div>
       <div class="lb-name">${escapeHtml(p.name)}${p.isPlayer?' (Du)':''}</div>
       <div class="lb-streak">${p.streak>=2?`🔥${p.streak}`:''}</div>
       <div class="lb-score">${p.score}</div>
@@ -2632,9 +1770,9 @@ function updateLeaderboard() {
   `).join('');
 }
 
-// ──────────────────────────────────────────────
-//  PROFILE
-// ──────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════
+//  PROFIL
+// ══════════════════════════════════════════════════════════
 function renderProfile() {
   const p = state.player;
   document.getElementById('profileAvatar').textContent = p.avatar||'👤';
@@ -2646,39 +1784,27 @@ function renderProfile() {
   document.getElementById('profileLosses').textContent = `${p.losses||0} Niederlagen`;
   document.getElementById('playerNameDisplay').textContent = p.name;
   document.getElementById('playerRatingDisplay').textContent = p.elo;
-
-  renderRatingChart();
-  renderResultDonut();
-  renderGameHistory();
+  renderRatingChart(); renderResultDonut(); renderGameHistory();
 }
-
 function renderRatingChart() {
-  const hist = state.player.ratingHistory || [1500];
+  const hist = state.player.ratingHistory||[1500];
   const el = document.getElementById('ratingChart');
-  if (hist.length < 2) { el.innerHTML = '<div style="color:var(--muted);font-size:13px;margin:auto;">Noch keine Daten</div>'; return; }
-  const max = Math.max(...hist), min = Math.min(...hist);
-  const range = max - min || 1;
-  const h = 100;
-  el.innerHTML = hist.slice(-30).map(v => {
-    const pct = ((v - min) / range) * h;
-    return `<div style="flex:1;background:var(--accent);opacity:0.7;height:${Math.max(4,pct)}px;border-radius:2px 2px 0 0;min-width:4px;" title="${v}"></div>`;
-  }).join('');
+  if (hist.length<2) { el.innerHTML='<div style="color:var(--muted);font-size:13px;margin:auto;">Noch keine Daten</div>'; return; }
+  const max=Math.max(...hist),min=Math.min(...hist),range=max-min||1,h=100;
+  el.innerHTML = hist.slice(-30).map(v=>`<div style="flex:1;background:var(--accent);opacity:0.7;height:${Math.max(4,((v-min)/range)*h)}px;border-radius:2px 2px 0 0;min-width:4px;" title="${v}"></div>`).join('');
 }
-
 function renderResultDonut() {
   const p = state.player;
-  const el = document.getElementById('resultDonut');
-  el.innerHTML = `
+  document.getElementById('resultDonut').innerHTML=`
     <div style="text-align:center"><div style="font-size:22px;font-weight:900;color:var(--accent)">${p.wins||0}</div><div style="color:var(--muted)">Siege</div></div>
     <div style="text-align:center"><div style="font-size:22px;font-weight:900;color:var(--muted)">${p.draws||0}</div><div style="color:var(--muted)">Remis</div></div>
     <div style="text-align:center"><div style="font-size:22px;font-weight:900;color:var(--danger)">${p.losses||0}</div><div style="color:var(--muted)">Nied.</div></div>
   `;
 }
-
 function renderGameHistory() {
   const tbody = document.getElementById('gameHistoryTable');
-  const hist = state.player.gameHistory || [];
-  if (!hist.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);">Noch keine Partien</td></tr>'; return; }
+  const hist = state.player.gameHistory||[];
+  if (!hist.length) { tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--muted);">Noch keine Partien</td></tr>'; return; }
   tbody.innerHTML = [...hist].reverse().slice(0,50).map(g=>`
     <tr>
       <td>${g.date||''}</td>
@@ -2689,58 +1815,43 @@ function renderGameHistory() {
     </tr>
   `).join('');
 }
-
 function openProfileSettings() {
   document.getElementById('settingPlayerName').value = state.player.name;
   document.getElementById('settingPlayerElo').value = state.player.elo;
   document.getElementById('settingAvatar').value = state.player.avatar||'👤';
   openModal('profileModal');
 }
-
 function saveProfileSettings() {
-  const name = document.getElementById('settingPlayerName').value.trim()||'Spieler';
-  state.player.name = name;
+  state.player.name = document.getElementById('settingPlayerName').value.trim()||'Spieler';
   state.player.elo = parseInt(document.getElementById('settingPlayerElo').value)||1500;
   state.player.avatar = document.getElementById('settingAvatar').value||'👤';
-  if (!state.player.ratingHistory) state.player.ratingHistory=[state.player.elo];
-  saveState();
-  closeModal('profileModal');
-  renderProfile();
-  toast('Profil gespeichert!');
+  if (!state.player.ratingHistory) state.player.ratingHistory = [state.player.elo];
+  saveState(); closeModal('profileModal'); renderProfile(); toast('Profil gespeichert!');
 }
 
-// ──────────────────────────────────────────────
-//  MODALS
-// ──────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════
+//  MODALS & TOAST
+// ══════════════════════════════════════════════════════════
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-
-document.querySelectorAll('.modal-overlay').forEach(overlay=>{
-  overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.classList.remove('open'); });
-});
-
-// ──────────────────────────────────────────────
-//  TOAST
-// ──────────────────────────────────────────────
+document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('open'); }));
 function toast(msg, type='') {
-  const t = document.createElement('div');
-  t.className = 'toast ' + type;
-  t.textContent = msg;
+  const t=document.createElement('div');
+  t.className='toast '+type; t.textContent=msg;
   document.getElementById('toastContainer').appendChild(t);
-  setTimeout(()=>t.style.opacity='0', 3000);
-  setTimeout(()=>t.remove(), 3400);
+  setTimeout(()=>t.style.opacity='0',3000);
+  setTimeout(()=>t.remove(),3400);
 }
 
-// ──────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════
 //  INIT
-// ──────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════
 updateTimePreview();
 refreshHome();
 document.getElementById('playerNameDisplay').textContent = state.player.name;
 document.getElementById('playerRatingDisplay').textContent = state.player.elo;
-if (!storageAvailable) {
-  toast('Hinweis: Lokaler Speicher ist in dieser Umgebung nicht verfügbar — Fortschritt bleibt nur für diese Sitzung erhalten.', 'info');
-}
+if (!storageAvailable) toast('Hinweis: Kein lokaler Speicher – Fortschritt nur für diese Sitzung','info');
+initStockfishPool();
 </script>
 </body>
 </html>
