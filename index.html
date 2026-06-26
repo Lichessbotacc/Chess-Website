@@ -161,7 +161,6 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-
 .mini-chart{display:flex;align-items:flex-end;gap:2px;height:60px;padding-top:6px}
 .mini-chart-bar{flex:1;background:var(--ac);opacity:.7;border-radius:2px 2px 0 0;min-width:3px}
 .streak-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(232,200,79,.15);border:1px solid rgba(232,200,79,.3);border-radius:8px;padding:4px 10px;font-size:13px;font-weight:700;color:var(--gold)}
-/* Blunder indicator */
 .blunder-bar{height:4px;border-radius:2px;margin-top:4px;background:linear-gradient(to right,var(--ac),var(--gold),var(--dn))}
 @media(max-width:700px){.form-row{grid-template-columns:1fr}.profile-grid{grid-template-columns:1fr}.topbar{padding:0 12px}.nav-tab{padding:0 10px;font-size:12px}.bp-grid{grid-template-columns:1fr 1fr}.sf-level-grid{grid-template-columns:repeat(7,1fr)}}
 </style>
@@ -638,7 +637,7 @@ function createStockfishInstance() {
         sf = new Worker(URL.createObjectURL(b));
       } catch(e2) { resolve(null); return; }
     }
-    const inst = { sf, busy: false, pending: null, pv: {} };
+    const inst = { sf, busy: false, pending: null };
     const handler = ev => {
       const l = typeof ev === 'string' ? ev : (ev.data || '');
       if (!l) return;
@@ -648,23 +647,10 @@ function createStockfishInstance() {
         }
         return;
       }
-      if (l.startsWith('info') && l.includes(' pv ')) {
-        const mpvM = l.match(/multipv (\d+)/);
-        const cpM  = l.match(/score cp (-?\d+)/);
-        const mateM = l.match(/score mate (-?\d+)/);
-        const pvM  = l.match(/ pv (\S+)/);
-        if (pvM) {
-          const idx = mpvM ? parseInt(mpvM[1]) : 1;
-          const score = mateM ? (parseInt(mateM[1]) > 0 ? 100000 : -100000) : (cpM ? parseInt(cpM[1]) : 0);
-          inst.pv[idx] = { move: pvM[1], score };
-        }
-      }
       if (inst.pending && l.startsWith('bestmove')) {
         const m = l.split(' ')[1];
         const cb = inst.pending; inst.pending = null; inst.busy = false;
-        const candidates = Object.keys(inst.pv).map(Number).sort((a,b)=>a-b).map(k => inst.pv[k]);
-        inst.pv = {};
-        cb(m && m !== '(none)' ? m : null, candidates);
+        cb(m && m !== '(none)' ? m : null);
       }
     };
     sf.onmessage = handler;
@@ -689,69 +675,32 @@ function updateEngineStatus(t, r) {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  SKILL SYSTEM — echte Stärkeunterschiede zwischen Level 0–20
-//
-//  Drei Hebel greifen zusammen:
-//  1. UCI_Elo + UCI_LimitStrength → Stockfish begrenzt Suchtiefe intern
-//  2. MultiPV → bei niedrigen Leveln werden schwächere Züge als Kandidaten gesammelt
-//  3. Blunder-Injektion → je nach Level werden gezielt schlechte Züge erzwungen
+//  SKILL SYSTEM
+//  Bewusst auf das robuste Code-1-Prinzip zurückgeführt:
+//  einzig der native "Skill Level" (0–20) von Stockfish bestimmt
+//  die Spielstärke. Stockfish injiziert dabei selbst, intern und
+//  gut kalibriert, Rauschen/Schwäche in die Zugauswahl.
+//  KEIN UCI_LimitStrength / UCI_Elo (diese Engine-Version setzt
+//  damit niedrige Elo-Werte nicht zuverlässig um und überschreibt
+//  faktisch das Skill-Level-Verhalten).
+//  KEIN künstliches MultiPV-„Abschwächen" mehr (das Sampling war
+//  fehlerhaft gewichtet und hat den Stärkeunterschied zwischen den
+//  Leveln eher verwischt als verstärkt).
+//  Die Denkzeit (movetime) ist weiterhin nach Level gestaffelt und
+//  skaliert zusätzlich mit der Bedenkzeit der Partie – das war schon
+//  in Code 1 der entscheidende zweite Hebel für glaubwürdige Stärke.
 // ══════════════════════════════════════════════════════════════
 
-// Elo-Mapping: Level → UCI_Elo (hart, nicht nur Skill Level)
+// Elo-Mapping nur noch zur Anzeige/Beschriftung im UI – fließt NICHT
+// mehr in die Engine-Konfiguration ein.
 const LEVEL_ELO = [400,500,620,750,900,1050,1200,1350,1500,1650,1800,1950,2050,2150,2250,2350,2430,2500,2580,2650,2750];
 
-// Movetime-Tabelle: Level → Millisekunden Basis-Denkzeit
-// Stark gespreizt: Level 0 denkt kaum, Level 20 denkt lang
-const LEVEL_MOVETIME = [20,30,50,80,120,180,260,370,500,680,900,1150,1400,1700,2050,2400,2800,3300,3900,4600,5500];
-
-// MultiPV-Kandidaten: je mehr, desto eher wählen wir NICHT den besten Zug
-function levelToMultiPV(lv) {
-  if (lv <= 2)  return 8;
-  if (lv <= 5)  return 6;
-  if (lv <= 9)  return 4;
-  if (lv <= 13) return 2;
-  return 1;
-}
-
-// Wahrscheinlichkeit, aus den schwächeren MultiPV-Kandidaten zu wählen
-// Level 0 → fast immer den schlechtesten; Level 10+ → immer besten
-function weakenProb(lv) {
-  if (lv <= 0)  return 0.97;
-  if (lv <= 1)  return 0.90;
-  if (lv <= 2)  return 0.80;
-  if (lv <= 3)  return 0.68;
-  if (lv <= 4)  return 0.55;
-  if (lv <= 5)  return 0.42;
-  if (lv <= 6)  return 0.30;
-  if (lv <= 7)  return 0.20;
-  if (lv <= 8)  return 0.12;
-  if (lv <= 9)  return 0.06;
-  return 0;
-}
-
-// Blunder-Chance pro Zug (zufälliger legaler Zug statt Stockfish-Zug)
-// Level 0 macht fast jeden zweiten Zug einen Blunder
-function blunderChance(lv) {
-  if (lv <= 0)  return 0.55;
-  if (lv <= 1)  return 0.42;
-  if (lv <= 2)  return 0.30;
-  if (lv <= 3)  return 0.20;
-  if (lv <= 4)  return 0.12;
-  if (lv <= 5)  return 0.07;
-  if (lv <= 6)  return 0.04;
-  if (lv <= 7)  return 0.02;
-  if (lv <= 8)  return 0.01;
-  return 0;
-}
+// Movetime-Tabelle: Level → Basis-Millisekunden Denkzeit bei 1-Minuten-Partie.
+// Stark gespreizt, damit niedrige Level kaum, hohe Level lange denken.
+const LEVEL_MOVETIME = [40,60,90,130,180,250,340,450,580,730,900,1100,1320,1570,1850,2150,2480,2850,3300,3800,4500];
 
 function stockfishGetMove(fen, lv, remainingMs, incMs, pressure, is960, cb) {
   const sk = Math.max(0, Math.min(20, lv || 10));
-
-  // Spontaner Blunder: legalen Zufallszug spielen
-  if (Math.random() < blunderChance(sk)) {
-    fallbackMove(fen, cb);
-    return;
-  }
 
   if (!sfReady || !sfPool.length) { fallbackMove(fen, cb); return; }
   const inst = sfPool.find(p => !p.busy);
@@ -759,29 +708,14 @@ function stockfishGetMove(fen, lv, remainingMs, incMs, pressure, is960, cb) {
   inst.busy = true;
 
   const mt = calcMovetime(sk, remainingMs, incMs, pressure);
-  const mpv = levelToMultiPV(sk);
-  const uciElo = LEVEL_ELO[sk];
 
-  inst.pending = (mv, candidates) => {
+  inst.pending = (mv) => {
     inst.busy = false;
-    let chosen = mv;
-    // MultiPV-Schwächung: aus schlechteren Kandidaten wählen
-    if (candidates && candidates.length > 1 && Math.random() < weakenProb(sk)) {
-      // Je schwächer das Level, desto weiter hinten in der Kandidatenliste
-      const maxIdx = Math.min(candidates.length - 1, mpv - 1);
-      // Gewichtet Richtung schlechtere Züge
-      const pick = Math.floor(Math.pow(Math.random(), 0.4) * (maxIdx + 1));
-      const flipped = maxIdx - pick; // invertieren: 0=bester → maxIdx=schlechtester
-      if (candidates[flipped] && candidates[flipped].move) chosen = candidates[flipped].move;
-    }
-    cb(chosen);
+    cb(mv);
   };
 
   inst.send('ucinewgame');
   if (is960) inst.send('setoption name UCI_Chess960 value true');
-  inst.send(`setoption name MultiPV value ${mpv}`);
-  inst.send('setoption name UCI_LimitStrength value true');
-  inst.send(`setoption name UCI_Elo value ${uciElo}`);
   inst.send(`setoption name Skill Level value ${sk}`);
   inst.send(`position fen ${fen}`);
   inst.send(`go movetime ${mt}`);
@@ -790,12 +724,13 @@ function stockfishGetMove(fen, lv, remainingMs, incMs, pressure, is960, cb) {
     if (inst.pending) { inst.pending = null; inst.busy = false; fallbackMove(fen, cb); }
   }, mt + 4000);
   const orig = inst.pending;
-  inst.pending = (mv, candidates) => { clearTimeout(timer); orig(mv, candidates); };
+  inst.pending = (mv) => { clearTimeout(timer); orig(mv); };
 }
 
 function calcMovetime(sk, remainingMs, incMs, pressure) {
   const base = LEVEL_MOVETIME[Math.max(0, Math.min(20, sk))];
   const remMin = Math.max(0.05, (remainingMs ?? 60000) / 60000);
+  // sqrt-Skalierung wie in Code 1: 1min Partie = 1.0x, 4min = 2x, 9min = 3x usw.
   let want = Math.round(base * Math.sqrt(remMin));
 
   const lowTime = remainingMs != null && remainingMs < 15000;
@@ -1154,7 +1089,7 @@ function refreshHome() {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  SF LEVEL GRID — zeigt Elo-Wert direkt im Button
+//  SF LEVEL GRID — zeigt Elo-Wert direkt im Button (nur Anzeige)
 // ══════════════════════════════════════════════════════════════
 const sfDescs = [
   '🔴 Level 0 — ~400 Elo — hängerisch, massive Blunders, verliert Figuren ständig',
@@ -1197,7 +1132,7 @@ function buildSFGrid() {
          onclick="selectSFLevel(${i})"
          style="${i===sfLevelSelected?'border-color:'+sfColors[i]+';background:'+sfColors[i]+'22;color:'+sfColors[i]:''}">
       <div class="lv-num">${i}</div>
-      <div class="lv-elo" style="color:${i===sfLevelSelected?sfColors[i]:'var(--mu)'}">${Math.round(LEVEL_ELO[i]/100)*100===LEVEL_ELO[i]?LEVEL_ELO[i]:LEVEL_ELO[i]}</div>
+      <div class="lv-elo" style="color:${i===sfLevelSelected?sfColors[i]:'var(--mu)'}">${LEVEL_ELO[i]}</div>
     </div>`).join('');
   updateSFDesc();
 }
