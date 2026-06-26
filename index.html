@@ -42,7 +42,6 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-
 .form-input,.form-select{width:100%;background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:9px 12px;color:var(--tx);font-size:14px;outline:none;transition:border-color .15s}
 .form-input:focus,.form-select:focus{border-color:var(--ac)}.form-input::placeholder{color:var(--mu)}.form-select option{background:var(--s2)}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.form-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
 .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--bd)}
 .toggle-row:last-child{border-bottom:none}.toggle-info{font-size:13px}.toggle-sub{font-size:11px;color:var(--mu);margin-top:2px}
 .toggle{position:relative;width:40px;height:22px;flex-shrink:0}.toggle input{display:none}
@@ -112,10 +111,11 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-
 .modal-overlay.open .modal{transform:translateY(0)}
 .modal-title{font-size:20px;font-weight:800;margin-bottom:20px;display:flex;align-items:center;gap:10px}
 .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:24px}
-.sf-level-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}
-.sf-level-btn{aspect-ratio:1;border-radius:8px;border:2px solid var(--bd);background:var(--s2);color:var(--tx);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.sf-level-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.sf-level-btn{aspect-ratio:1;border-radius:8px;border:2px solid var(--bd);background:var(--s2);color:var(--tx);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-direction:column;gap:1px}
 .sf-level-btn:hover{border-color:var(--ac)}.sf-level-btn.selected{border-color:var(--ac);background:rgba(127,166,80,.2);color:var(--ac)}
-.sf-level-desc{font-size:12px;color:var(--mu);margin-top:8px;text-align:center}
+.sf-level-btn .lv-num{font-size:14px;font-weight:800}.sf-level-btn .lv-elo{font-size:8px;color:var(--mu);font-weight:500}
+.sf-level-desc{font-size:12px;color:var(--mu);margin-top:8px;text-align:center;min-height:36px;background:var(--s2);border-radius:8px;padding:8px 12px}
 .tab-row{display:flex;gap:2px;margin-bottom:20px;background:var(--s2);border-radius:10px;padding:4px;overflow-x:auto}
 .tab-btn{flex:1;padding:8px 10px;border-radius:8px;border:none;background:transparent;color:var(--mu);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;min-width:fit-content}
 .tab-btn.active{background:var(--s1);color:var(--tx);box-shadow:0 1px 4px rgba(0,0,0,.3)}
@@ -144,9 +144,7 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-
 .engine-status{position:fixed;bottom:24px;left:24px;font-size:11px;color:var(--mu);background:var(--s1);border:1px solid var(--bd);border-radius:8px;padding:5px 10px;z-index:400;display:flex;align-items:center;gap:6px}
 .engine-status .dot{width:6px;height:6px;border-radius:50%;background:var(--mu);transition:background .3s}
 .engine-status .dot.ready{background:var(--ac)}
-/* Variant badges */
 .variant-pill{display:inline-flex;align-items:center;gap:4px;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;background:rgba(79,157,232,.15);color:var(--ac2)}
-/* Bot profile modal specifics */
 .bp-header{display:flex;align-items:center;gap:20px;margin-bottom:24px;padding:20px;background:var(--s2);border-radius:var(--rl)}
 .bp-avatar{width:80px;height:80px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:40px;flex-shrink:0}
 .bp-name{font-size:22px;font-weight:800}.bp-elo{font-size:28px;font-weight:900;color:var(--gold);line-height:1.1}
@@ -160,12 +158,12 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-
 .bp-bar-wrap{flex:1;height:8px;background:var(--bd);border-radius:4px;overflow:hidden;display:flex}
 .bp-bar-win{background:var(--ac);height:100%}.bp-bar-draw{background:var(--mu);height:100%}.bp-bar-loss{background:var(--dn);height:100%}
 .bp-elo-sm{font-size:12px;color:var(--gold);font-weight:700;min-width:40px;text-align:right}
-/* Rating chart mini */
 .mini-chart{display:flex;align-items:flex-end;gap:2px;height:60px;padding-top:6px}
 .mini-chart-bar{flex:1;background:var(--ac);opacity:.7;border-radius:2px 2px 0 0;min-width:3px}
-/* Streak */
 .streak-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(232,200,79,.15);border:1px solid rgba(232,200,79,.3);border-radius:8px;padding:4px 10px;font-size:13px;font-weight:700;color:var(--gold)}
-@media(max-width:700px){.form-row,.form-row3{grid-template-columns:1fr}.profile-grid{grid-template-columns:1fr}.topbar{padding:0 12px}.nav-tab{padding:0 10px;font-size:12px}.bp-grid{grid-template-columns:1fr 1fr}}
+/* Blunder indicator */
+.blunder-bar{height:4px;border-radius:2px;margin-top:4px;background:linear-gradient(to right,var(--ac),var(--gold),var(--dn))}
+@media(max-width:700px){.form-row{grid-template-columns:1fr}.profile-grid{grid-template-columns:1fr}.topbar{padding:0 12px}.nav-tab{padding:0 10px;font-size:12px}.bp-grid{grid-template-columns:1fr 1fr}.sf-level-grid{grid-template-columns:repeat(7,1fr)}}
 </style>
 </head>
 <body>
@@ -298,6 +296,7 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-
       <button class="tab-btn" onclick="switchBotTab('variants',this)">♟ Varianten</button>
       <button class="tab-btn" onclick="switchBotTab('look',this)">🎨 Aussehen</button>
     </div>
+
     <!-- TAB: Profil -->
     <div id="botTab-profil">
       <div class="form-group"><label class="form-label">Bot-Name</label><input class="form-input" id="botName" placeholder="z.B. DeepKnight, AlphaPawn..."></div>
@@ -306,74 +305,164 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-
         <div class="form-group"><label class="form-label">Titel</label><select class="form-select" id="botTitle"><option value="">Kein Titel</option><option value="CM">CM</option><option value="FM">FM</option><option value="IM">IM</option><option value="GM">GM</option><option value="WFM">WFM</option><option value="WIM">WIM</option><option value="WGM">WGM</option><option value="BOT">BOT</option></select></div>
       </div>
       <div class="form-row">
-        <div class="form-group"><label class="form-label">Land</label><select class="form-select" id="botCountry"><option>🌍 International</option><option>🇩🇪 Deutschland</option><option>🇦🇹 Österreich</option><option>🇨🇭 Schweiz</option><option>🇷🇺 Russland</option><option>🇺🇸 USA</option><option>🇬🇧 England</option><option>🇳🇴 Norwegen</option><option>🇮🇳 Indien</option><option>🇨🇳 China</option><option>🇫🇷 Frankreich</option><option>🇪🇸 Spanien</option></select></div>
+        <div class="form-group"><label class="form-label">Land</label>
+          <select class="form-select" id="botCountry">
+            <option>🌍 International</option>
+            <optgroup label="Europa">
+              <option>🇦🇱 Albanien</option><option>🇦🇩 Andorra</option><option>🇦🇹 Österreich</option>
+              <option>🇧🇾 Belarus</option><option>🇧🇪 Belgien</option><option>🇧🇦 Bosnien-Herzegowina</option>
+              <option>🇧🇬 Bulgarien</option><option>🇩🇰 Dänemark</option><option>🇩🇪 Deutschland</option>
+              <option>🇪🇪 Estland</option><option>🇫🇮 Finnland</option><option>🇫🇷 Frankreich</option>
+              <option>🇬🇷 Griechenland</option><option>🇬🇧 Großbritannien</option><option>🇮🇪 Irland</option>
+              <option>🇮🇸 Island</option><option>🇮🇹 Italien</option><option>🇽🇰 Kosovo</option>
+              <option>🇭🇷 Kroatien</option><option>🇱🇻 Lettland</option><option>🇱🇮 Liechtenstein</option>
+              <option>🇱🇹 Litauen</option><option>🇱🇺 Luxemburg</option><option>🇲🇹 Malta</option>
+              <option>🇲🇰 Nordmazedonien</option><option>🇲🇩 Moldau</option><option>🇲🇨 Monaco</option>
+              <option>🇲🇪 Montenegro</option><option>🇳🇱 Niederlande</option><option>🇳🇴 Norwegen</option>
+              <option>🇵🇱 Polen</option><option>🇵🇹 Portugal</option><option>🇷🇴 Rumänien</option>
+              <option>🇷🇺 Russland</option><option>🇸🇲 San Marino</option><option>🇸🇪 Schweden</option>
+              <option>🇨🇭 Schweiz</option><option>🇷🇸 Serbien</option><option>🇸🇰 Slowakei</option>
+              <option>🇸🇮 Slowenien</option><option>🇪🇸 Spanien</option><option>🇨🇿 Tschechien</option>
+              <option>🇺🇦 Ukraine</option><option>🇭🇺 Ungarn</option><option>🇻🇦 Vatikan</option>
+              <option>🇬🇧 Wales</option>
+            </optgroup>
+            <optgroup label="Asien">
+              <option>🇦🇫 Afghanistan</option><option>🇦🇲 Armenien</option><option>🇦🇿 Aserbaidschan</option>
+              <option>🇧🇭 Bahrain</option><option>🇧🇩 Bangladesch</option><option>🇧🇹 Bhutan</option>
+              <option>🇧🇳 Brunei</option><option>🇰🇭 Kambodscha</option><option>🇨🇳 China</option>
+              <option>🇬🇪 Georgien</option><option>🇮🇳 Indien</option><option>🇮🇩 Indonesien</option>
+              <option>🇮🇶 Irak</option><option>🇮🇷 Iran</option><option>🇮🇱 Israel</option>
+              <option>🇯🇵 Japan</option><option>🇯🇴 Jordanien</option><option>🇰🇿 Kasachstan</option>
+              <option>🇶🇦 Katar</option><option>🇰🇬 Kirgisistan</option><option>🇰🇵 Nordkorea</option>
+              <option>🇰🇷 Südkorea</option><option>🇰🇼 Kuwait</option><option>🇱🇦 Laos</option>
+              <option>🇱🇧 Libanon</option><option>🇲🇾 Malaysia</option><option>🇲🇻 Malediven</option>
+              <option>🇲🇳 Mongolei</option><option>🇲🇲 Myanmar</option><option>🇳🇵 Nepal</option>
+              <option>🇴🇲 Oman</option><option>🇵🇰 Pakistan</option><option>🇵🇭 Philippinen</option>
+              <option>🇸🇦 Saudi-Arabien</option><option>🇸🇬 Singapur</option><option>🇱🇰 Sri Lanka</option>
+              <option>🇸🇾 Syrien</option><option>🇹🇼 Taiwan</option><option>🇹🇯 Tadschikistan</option>
+              <option>🇹🇭 Thailand</option><option>🇹🇲 Turkmenistan</option><option>🇹🇷 Türkei</option>
+              <option>🇺🇿 Usbekistan</option><option>🇦🇪 Vereinigte Arabische Emirate</option>
+              <option>🇻🇳 Vietnam</option><option>🇾🇪 Jemen</option>
+            </optgroup>
+            <optgroup label="Amerika">
+              <option>🇦🇷 Argentinien</option><option>🇧🇧 Barbados</option><option>🇧🇴 Bolivien</option>
+              <option>🇧🇷 Brasilien</option><option>🇨🇱 Chile</option><option>🇨🇴 Kolumbien</option>
+              <option>🇨🇷 Costa Rica</option><option>🇨🇺 Kuba</option><option>🇩🇴 Dominikanische Republik</option>
+              <option>🇪🇨 Ecuador</option><option>🇸🇻 El Salvador</option><option>🇬🇹 Guatemala</option>
+              <option>🇭🇹 Haiti</option><option>🇭🇳 Honduras</option><option>🇯🇲 Jamaika</option>
+              <option>🇨🇦 Kanada</option><option>🇲🇽 Mexiko</option><option>🇳🇮 Nicaragua</option>
+              <option>🇵🇦 Panama</option><option>🇵🇾 Paraguay</option><option>🇵🇪 Peru</option>
+              <option>🇵🇷 Puerto Rico</option><option>🇹🇹 Trinidad und Tobago</option><option>🇺🇾 Uruguay</option>
+              <option>🇺🇸 USA</option><option>🇻🇪 Venezuela</option>
+            </optgroup>
+            <optgroup label="Afrika">
+              <option>🇩🇿 Algerien</option><option>🇦🇴 Angola</option><option>🇧🇯 Benin</option>
+              <option>🇧🇼 Botswana</option><option>🇧🇫 Burkina Faso</option><option>🇧🇮 Burundi</option>
+              <option>🇨🇫 Zentralafrikanische Republik</option><option>🇨🇲 Kamerun</option>
+              <option>🇨🇻 Kap Verde</option><option>🇨🇩 Kongo (DRK)</option><option>🇨🇬 Kongo</option>
+              <option>🇨🇮 Elfenbeinküste</option><option>🇩🇯 Dschibuti</option><option>🇪🇬 Ägypten</option>
+              <option>🇪🇷 Eritrea</option><option>🇪🇹 Äthiopien</option><option>🇬🇦 Gabun</option>
+              <option>🇬🇲 Gambia</option><option>🇬🇭 Ghana</option><option>🇬🇳 Guinea</option>
+              <option>🇰🇪 Kenia</option><option>🇱🇸 Lesotho</option><option>🇱🇷 Liberia</option>
+              <option>🇱🇾 Libyen</option><option>🇲🇬 Madagaskar</option><option>🇲🇼 Malawi</option>
+              <option>🇲🇱 Mali</option><option>🇲🇦 Marokko</option><option>🇲🇿 Mosambik</option>
+              <option>🇳🇦 Namibia</option><option>🇳🇪 Niger</option><option>🇳🇬 Nigeria</option>
+              <option>🇷🇼 Ruanda</option><option>🇸🇳 Senegal</option><option>🇸🇱 Sierra Leone</option>
+              <option>🇸🇴 Somalia</option><option>🇿🇦 Südafrika</option><option>🇸🇩 Sudan</option>
+              <option>🇸🇿 Eswatini</option><option>🇹🇿 Tansania</option><option>🇹🇬 Togo</option>
+              <option>🇹🇳 Tunesien</option><option>🇺🇬 Uganda</option><option>🇿🇲 Sambia</option>
+              <option>🇿🇼 Simbabwe</option>
+            </optgroup>
+            <optgroup label="Ozeanien">
+              <option>🇦🇺 Australien</option><option>🇫🇯 Fidschi</option><option>🇳🇿 Neuseeland</option>
+              <option>🇵🇬 Papua-Neuguinea</option><option>🇸🇧 Salomonen</option>
+            </optgroup>
+          </select>
+        </div>
         <div class="form-group"><label class="form-label">Lieblingsfarbe</label><select class="form-select" id="botPrefColor"><option value="random">Zufällig</option><option value="w">Weiß</option><option value="b">Schwarz</option></select></div>
       </div>
-      <div class="form-group"><label class="form-label">Biografie</label><textarea class="form-input" id="botBio" rows="2" placeholder="Kurze Bot-Beschreibung..."></textarea></div>
     </div>
+
     <!-- TAB: Engine -->
     <div id="botTab-engine" style="display:none">
       <div class="form-group">
         <label class="form-label">Engine</label>
-        <select class="form-select" id="botEngine">
+        <select class="form-select" id="botEngine" onchange="document.getElementById('sfSection').style.display=this.value==='stockfish'?'':'none'">
           <option value="stockfish">♟ Stockfish (Level 0–20)</option>
-          <option value="random">🎲 Zufalls-Bot</option>
+          <option value="random">🎲 Zufalls-Bot (immer random)</option>
         </select>
       </div>
       <div id="sfSection">
-        <div class="form-group"><label class="form-label">Skill Level (0–20)</label><div class="sf-level-grid" id="sfLevelGrid"></div><div class="sf-level-desc" id="sfLevelDesc"></div></div>
-        <div class="form-group"><label class="form-label">Contempt (-100 bis +100) — positiv = Remis vermeiden</label>
-          <div class="range-row"><input type="range" id="botContempt" min="-100" max="100" value="0" oninput="document.getElementById('contemptLabel').textContent=this.value"><span class="range-val" id="contemptLabel">0</span></div>
+        <div class="form-group">
+          <label class="form-label">Spielstärke — Level 0–20</label>
+          <div class="sf-level-grid" id="sfLevelGrid"></div>
+          <div class="sf-level-desc" id="sfLevelDesc"></div>
+          <div class="form-hint" style="margin-top:8px">⚠️ Level 0–4 blundern oft, Level 5–9 gelegentlich, Level 10–14 solide, Level 15–20 stark bis Meisterstärke</div>
         </div>
-        <div class="form-group"><label class="form-label">Denkzeit-Varianz (±%)</label>
-          <div class="range-row"><input type="range" id="botTimeVariance" min="0" max="60" value="10" oninput="document.getElementById('timeVarLabel').textContent=this.value+'%'"><span class="range-val" id="timeVarLabel">10%</span></div>
-          <div class="form-hint">Wie unregelmäßig der Bot denkt – mehr Varianz = menschlicher</div>
+        <div class="form-group">
+          <label class="form-label">Denkzeit-Varianz (±%)</label>
+          <div class="range-row"><input type="range" id="botTimeVariance" min="0" max="60" value="15" oninput="document.getElementById('timeVarLabel').textContent=this.value+'%'"><span class="range-val" id="timeVarLabel">15%</span></div>
+          <div class="form-hint">Höhere Varianz = unregelmäßigere Zuggeschwindigkeit (menschlicher)</div>
         </div>
-      </div>
-      <div class="toggle-row">
-        <div><div class="toggle-info">Absichtliche Fehler (Blunders)</div><div class="toggle-sub">Bot macht gelegentlich schlechte Züge</div></div>
-        <label class="toggle"><input type="checkbox" id="botRandomize"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
-      </div>
-      <div class="form-group" style="margin-top:14px">
-        <label class="form-label">Blunder-Rate (%)</label>
-        <div class="range-row"><input type="range" id="botRandomPct" min="0" max="80" value="10" oninput="document.getElementById('randomPctLabel').textContent=this.value+'%'"><span class="range-val" id="randomPctLabel">10%</span></div>
       </div>
     </div>
+
     <!-- TAB: Eröffnung -->
     <div id="botTab-opening" style="display:none">
-      <div class="form-group"><label class="form-label">Eröffnungsbuch</label>
+      <div class="form-group">
+        <label class="form-label">Erster Zug als Weiß</label>
         <select class="form-select" id="botOpeningBook">
-          <option value="random">🎲 Zufällig (alle Züge)</option>
-          <option value="e4">e4 – Offene Spiele</option>
-          <option value="d4">d4 – Geschlossene Spiele</option>
-          <option value="Nf3">Nf3 – Reti / Englisch</option>
-          <option value="c4">c4 – Englische Eröffnung</option>
-          <option value="f4">f4 – Vogel-Gambit</option>
-          <option value="b3">b3 – Nimzo-Larsen</option>
-          <option value="none">Kein Buch (reines SF)</option>
+          <option value="random">🎲 Zufällig</option>
+          <optgroup label="Offene Spiele (1.e4)">
+            <option value="e4">1.e4 — Offene Spiele</option>
+          </optgroup>
+          <optgroup label="Halboffene Spiele (1.e4 …)">
+            <option value="e4_sicilian">1.e4 + Sizilianisch (als Schwarz)</option>
+            <option value="e4_french">1.e4 + Französisch (als Schwarz)</option>
+            <option value="e4_caro">1.e4 + Caro-Kann (als Schwarz)</option>
+            <option value="e4_pirc">1.e4 + Pirc/Modern (als Schwarz)</option>
+            <option value="e4_scandinavian">1.e4 + Skandinavisch (als Schwarz)</option>
+          </optgroup>
+          <optgroup label="Geschlossene Spiele (1.d4)">
+            <option value="d4">1.d4 — Geschlossene Spiele</option>
+            <option value="d4_queens">1.d4 + Damengambit</option>
+            <option value="d4_kings">1.d4 + Königsindisch (als Schwarz)</option>
+            <option value="d4_nimzo">1.d4 + Nimzo-Indisch (als Schwarz)</option>
+            <option value="d4_dutch">1.d4 + Holländisch (als Schwarz)</option>
+            <option value="d4_benko">1.d4 + Benko-Gambit (als Schwarz)</option>
+          </optgroup>
+          <optgroup label="Flankeneröffnungen">
+            <option value="Nf3">1.Sf3 — Réti / Zukertort</option>
+            <option value="c4">1.c4 — Englische Eröffnung</option>
+            <option value="g3">1.g3 — Königsfianchetto</option>
+            <option value="b3">1.b3 — Nimzo-Larsen</option>
+            <option value="f4">1.f4 — Vogelgambit / Birdfangspiel</option>
+            <option value="b4">1.b4 — Orangutan / Sokolsky</option>
+            <option value="a3">1.a3 — Anderssen-Eröffnung</option>
+            <option value="e3">1.e3 — Van't Kruijs</option>
+            <option value="d3">1.d3 — Mieses-Eröffnung</option>
+            <option value="c3">1.c3 — Saragossa</option>
+          </optgroup>
+          <optgroup label="Gambits als Weiß">
+            <option value="e4_gc">1.e4 e5 2.f4 — Königsgambit</option>
+            <option value="e4_danish">1.e4 e5 2.d4 — Dänisches Gambit</option>
+            <option value="e4_evan">1.e4 e5 2.Sf3 3.Lc4 b4 — Evans-Gambit</option>
+            <option value="e4_fried">1.e4 e5 2.Sf3 3.Lc4 — Giuoco Piano</option>
+            <option value="e4_scotch">1.e4 e5 2.Sf3 3.d4 — Schottische Partie</option>
+            <option value="e4_ruy">1.e4 e5 2.Sf3 3.Lb5 — Spanische Partie (Ruy Lopez)</option>
+            <option value="e4_italian">1.e4 e5 2.Sf3 3.Lc4 — Italienische Partie</option>
+            <option value="e4_ponziani">1.e4 e5 2.Sf3 3.c3 — Ponziani</option>
+            <option value="e4_vienna">1.e4 e5 2.Sc3 — Wiener Partie</option>
+          </optgroup>
+          <option value="none">Kein Buch (reines Stockfish)</option>
         </select>
-        <div class="form-hint">Der Bot beginnt mit diesem Zug, wenn er Weiß hat</div>
       </div>
-      <div class="form-group"><label class="form-label">Eröffnungsvielfalt (1 = immer gleich, 5 = sehr variabel)</label>
+      <div class="form-group">
+        <label class="form-label">Eröffnungsvielfalt (1 = immer gleich, 5 = sehr variabel)</label>
         <div class="range-row"><input type="range" id="botOpeningVariety" min="1" max="5" value="3" oninput="document.getElementById('openVarLabel').textContent=this.value"><span class="range-val" id="openVarLabel">3</span></div>
       </div>
-      <div class="form-group"><label class="form-label">Gambit-Neigung</label>
-        <select class="form-select" id="botGambitStyle">
-          <option value="neutral">Neutral</option>
-          <option value="gambit">Gambit-spieler (risikoreich)</option>
-          <option value="solid">Solide (kein Gambit)</option>
-          <option value="antiGambit">Anti-Gambit (Gammit ablehnen)</option>
-        </select>
-      </div>
-      <div class="toggle-row">
-        <div><div class="toggle-info">Sizilianische Verteidigung bevorzugen</div><div class="toggle-sub">Als Schwarz gegen e4 oft Sizilianisch</div></div>
-        <label class="toggle"><input type="checkbox" id="botPreferSicilian"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
-      </div>
-      <div class="toggle-row">
-        <div><div class="toggle-info">Indische Verteidigung bevorzugen</div><div class="toggle-sub">Als Schwarz gegen d4 oft Indisch</div></div>
-        <label class="toggle"><input type="checkbox" id="botPreferIndian"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
-      </div>
     </div>
+
     <!-- TAB: Charakter -->
     <div id="botTab-char" style="display:none">
       <div class="form-group"><label class="form-label">Spielstil</label>
@@ -384,9 +473,6 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-
           <option value="gambler">Zocker</option><option value="solid">Solide / Klassisch</option>
         </select>
       </div>
-      <div class="form-group"><label class="form-label">Aggressivität (0 = defensiv, 100 = extrem aggressiv)</label>
-        <div class="range-row"><input type="range" id="botAggressiveness" min="0" max="100" value="50" oninput="document.getElementById('aggrLabel').textContent=this.value"><span class="range-val" id="aggrLabel">50</span></div>
-      </div>
       <div class="form-group"><label class="form-label">Zeitdruck-Verhalten</label>
         <select class="form-select" id="botTimePressure">
           <option value="normal">Normal</option>
@@ -395,7 +481,7 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-
           <option value="panic">Panik (zufällig bei Zeitdruck)</option>
         </select>
       </div>
-      <div class="form-group"><label class="form-label">Aufgeben bei Bewertung ≤ (Centipawns)</label>
+      <div class="form-group"><label class="form-label">Aufgeben bei Bewertung ≤</label>
         <select class="form-select" id="botResignThreshold">
           <option value="0">Niemals aufgeben</option>
           <option value="-300">-3 Bauern (locker)</option>
@@ -404,27 +490,8 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-
           <option value="-1200">-12 Bauern (sehr kämpferisch)</option>
         </select>
       </div>
-      <div class="form-group"><label class="form-label">Remis-Verhalten</label>
-        <select class="form-select" id="botDrawBehavior">
-          <option value="balanced">Ausgewogen</option>
-          <option value="accept">Remis immer akzeptieren</option>
-          <option value="refuse">Remis ablehnen wenn möglich</option>
-          <option value="offer">Remis aktiv anbieten wenn schlechter</option>
-        </select>
-      </div>
-      <div class="toggle-row">
-        <div><div class="toggle-info">Figurenopfer mögen</div><div class="toggle-sub">Bot opfert gerne Material für Initiative</div></div>
-        <label class="toggle"><input type="checkbox" id="botLoveSacrifice"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
-      </div>
-      <div class="toggle-row">
-        <div><div class="toggle-info">Läuferpaar-Experte</div><div class="toggle-sub">Bot bewertet das Läuferpaar sehr hoch</div></div>
-        <label class="toggle"><input type="checkbox" id="botBishopPair"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
-      </div>
-      <div class="toggle-row">
-        <div><div class="toggle-info">Bauernstruktur-Fokus</div><div class="toggle-sub">Bot achtet stark auf Bauernstruktur</div></div>
-        <label class="toggle"><input type="checkbox" id="botPawnFocus"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
-      </div>
     </div>
+
     <!-- TAB: Varianten -->
     <div id="botTab-variants" style="display:none">
       <div class="form-group"><label class="form-label">Bevorzugte Variante</label>
@@ -437,6 +504,7 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-
       <div style="font-size:12px;color:var(--mu);margin-bottom:12px">Skill Level pro Variante (0–20) – unabhängig vom Haupt-Level</div>
       <div id="variantLevelSliders"></div>
     </div>
+
     <!-- TAB: Aussehen -->
     <div id="botTab-look" style="display:none">
       <div class="form-group"><label class="form-label">Avatar-Emoji</label><div id="emojiPicker" style="display:flex;flex-wrap:wrap;gap:6px"></div></div>
@@ -454,13 +522,8 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-
           <div class="color-swatch" style="background:#fd7e14" data-color="#fd7e14" onclick="selectColor(this)"></div>
         </div>
       </div>
-      <div class="form-group"><label class="form-label">Elo-Klasse (Anzeige)</label>
-        <select class="form-select" id="botEloClass">
-          <option value="beginner">Anfänger (&lt;1200)</option><option value="intermediate" selected>Fortgeschritten (1200-1800)</option>
-          <option value="advanced">Stark (1800-2200)</option><option value="expert">Experte (2200-2500)</option><option value="master">Meister (2500+)</option>
-        </select>
-      </div>
     </div>
+
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeBotModal()">Abbrechen</button>
       <button class="btn btn-primary" onclick="saveBot()">💾 Speichern</button>
@@ -494,7 +557,7 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-
         <div class="form-group"><label class="form-label">Turnier-Typ</label><select class="form-select" id="tType"><option value="arena">Arena (Lichess-Stil)</option><option value="swiss">Schweizer System</option><option value="roundrobin">Round Robin</option></select></div>
       </div>
       <div class="toggle-row"><div><div class="toggle-info">Spieler nimmt teil</div></div><label class="toggle"><input type="checkbox" id="tPlayerJoins" checked><div class="toggle-track"><div class="toggle-thumb"></div></div></label></div>
-      <div class="toggle-row"><div><div class="toggle-info">Elo sichtbar</div></div><label class="toggle"><input type="checkbox" id="tShowElo" checked><div class="toggle-track"><div class="toggle-thumb"></div></div></label></div>
+      <div class="toggle-row"><div><div class="toggle-info">Elo-Rating aktualisieren</div></div><label class="toggle"><input type="checkbox" id="tUpdateElo" checked><div class="toggle-track"><div class="toggle-thumb"></div></div></label></div>
     </div>
     <div id="tTab-ttime" style="display:none">
       <div class="form-row">
@@ -538,7 +601,6 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-
       </div>
       <div class="toggle-row"><div><div class="toggle-info">Gleiche Paarungen vermeiden</div></div><label class="toggle"><input type="checkbox" id="tAvoidRematches" checked><div class="toggle-track"><div class="toggle-thumb"></div></div></label></div>
       <div class="toggle-row"><div><div class="toggle-info">Ähnliches Elo bevorzugen</div></div><label class="toggle"><input type="checkbox" id="tEloMatch" checked><div class="toggle-track"><div class="toggle-thumb"></div></div></label></div>
-      <div class="toggle-row"><div><div class="toggle-info">Elo-Rating aktualisieren</div></div><label class="toggle"><input type="checkbox" id="tUpdateElo" checked><div class="toggle-track"><div class="toggle-thumb"></div></div></label></div>
     </div>
     <div class="modal-actions"><button class="btn btn-secondary" onclick="closeTournamentModal()">Abbrechen</button><button class="btn btn-primary btn-lg" onclick="startTournament()">🚀 Starten</button></div>
   </div>
@@ -559,518 +621,739 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-
 <div class="engine-status" id="engineStatus"><div class="dot" id="engineDot"></div><span id="engineStatusText">Stockfish lädt…</span></div>
 
 <script>
-// ══════ STOCKFISH POOL ══════
-const SF_POOL_SIZE=6;const sfPool=[];let sfReady=false;
-function createStockfishInstance(){return new Promise(resolve=>{let sf;try{sf=typeof Stockfish==='function'?Stockfish():null}catch(e){sf=null}if(!sf){try{const b=new Blob([`importScripts('https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js')`],{type:'text/javascript'});sf=new Worker(URL.createObjectURL(b))}catch(e2){resolve(null);return}}const inst={sf,busy:false,pending:null,pv:{}};const handler=ev=>{const l=typeof ev==='string'?ev:(ev.data||'');if(!l)return;if(!inst.initialized){if(l.includes('readyok')||l.includes('uciok')||l.includes('Stockfish')){inst.initialized=true;resolve(inst)}return}
-  // MultiPV-Kandidatenzüge aus den info-Zeilen mitschneiden (für niedrige Skill-Level
-  // brauchen wir mehr als nur den allerbesten Zug, siehe stockfishGetMove)
-  if(l.startsWith('info')&&l.includes(' pv ')){
-    const mpvM=l.match(/multipv (\d+)/);const cpM=l.match(/score cp (-?\d+)/);const mateM=l.match(/score mate (-?\d+)/);const pvM=l.match(/ pv (\S+)/);
-    if(pvM){const idx=mpvM?parseInt(mpvM[1]):1;const score=mateM?(parseInt(mateM[1])>0?100000:-100000):(cpM?parseInt(cpM[1]):0);inst.pv[idx]={move:pvM[1],score}}
-  }
-  if(inst.pending&&l.startsWith('bestmove')){const m=l.split(' ')[1];const cb=inst.pending;inst.pending=null;inst.busy=false;const candidates=Object.keys(inst.pv).map(Number).sort((a,b)=>a-b).map(k=>inst.pv[k]);inst.pv={};cb(m&&m!=='(none)'?m:null,candidates)}};sf.onmessage=handler;const send=cmd=>{try{if(typeof sf.postMessage==='function')sf.postMessage(cmd)}catch(e){}};inst.send=send;send('uci');send('isready');setTimeout(()=>{if(!inst.initialized){inst.initialized=true;resolve(inst)}},3000)})}
-async function initStockfishPool(){updateEngineStatus('Stockfish lädt…',false);const arr=await Promise.all(Array.from({length:SF_POOL_SIZE},createStockfishInstance));arr.forEach(i=>{if(i)sfPool.push(i)});sfReady=sfPool.length>0;updateEngineStatus(sfReady?`Stockfish bereit (${sfPool.length}x)`:'Engine-Fehler',sfReady)}
-function updateEngineStatus(t,r){document.getElementById('engineStatusText').textContent=t;document.getElementById('engineDot').className='dot'+(r?' ready':'')}
-// Rechnet Skill Level (0-20) auf eine ungefähre UCI_Elo um, damit UCI_LimitStrength
-// die Spielstärke wirklich hart begrenzt (Skill Level allein reicht bei kurzer
-// movetime oft nicht aus, siehe Erklärung im Bot-Editor).
-function skillToElo(sk){
-  const e=[400,500,600,700,800,900,1000,1100,1200,1320,1450,1600,1750,1900,2050,2200,2350,2500,2650,2800,2950];
-  return e[Math.max(0,Math.min(20,sk||0))]
-}
-function stockfishGetMove(fen,sk,mt,is960,cb){
-  if(!sfReady||!sfPool.length){fallbackMove(fen,cb);return}
-  const inst=sfPool.find(p=>!p.busy);if(!inst){setTimeout(()=>stockfishGetMove(fen,sk,mt,is960,cb),80);return}
-  inst.busy=true;
-  const s=Math.max(0,Math.min(20,sk||10));const m=Math.max(50,Math.min(10000,mt||500));
-  // Niedrige Level: mehrere Kandidatenzüge anfordern (MultiPV) und absichtlich nicht
-  // immer den allerbesten wählen -> macht Stärkeunterschiede spürbar, auch wenn die
-  // Engine selbst (asm.js Build) Skill Level/UCI_Elo nur unvollständig durchsetzt.
-  const multiPv=s<=4?5:s<=9?3:s<=14?2:1;
-  inst.pending=(mv,candidates)=>{
-    inst.busy=false;
-    let chosen=mv;
-    if(candidates&&candidates.length>1){
-      // Je niedriger das Level, desto eher wird NICHT der beste Kandidat genommen
-      const weakenChance=Math.max(0,(10-s)/10); // Level 0 ~1.0, Level 10 ~0.0
-      if(Math.random()<weakenChance){
-        const poolSize=Math.min(candidates.length,multiPv);
-        const pick=1+Math.floor(Math.random()*poolSize); // bewusst auch schwächere PV-Linien
-        if(candidates[pick-1]&&candidates[pick-1].move)chosen=candidates[pick-1].move
-      }
+// ══════════════════════════════════════════════════════════════
+//  STOCKFISH POOL
+// ══════════════════════════════════════════════════════════════
+const SF_POOL_SIZE = 6;
+const sfPool = [];
+let sfReady = false;
+
+function createStockfishInstance() {
+  return new Promise(resolve => {
+    let sf;
+    try { sf = typeof Stockfish === 'function' ? Stockfish() : null; } catch(e) { sf = null; }
+    if (!sf) {
+      try {
+        const b = new Blob([`importScripts('https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js')`], {type:'text/javascript'});
+        sf = new Worker(URL.createObjectURL(b));
+      } catch(e2) { resolve(null); return; }
     }
-    cb(chosen)
-  };
-  inst.send('ucinewgame');
-  if(is960)inst.send('setoption name UCI_Chess960 value true');
-  inst.send(`setoption name MultiPV value ${multiPv}`);
-  inst.send('setoption name UCI_LimitStrength value true');
-  inst.send(`setoption name UCI_Elo value ${skillToElo(s)}`);
-  inst.send(`setoption name Skill Level value ${s}`);
-  inst.send(`position fen ${fen}`);
-  inst.send(`go movetime ${m}`);
-  const timer=setTimeout(()=>{if(inst.pending){inst.pending=null;inst.busy=false;fallbackMove(fen,cb)}},m+3000);
-  const orig=inst.pending;inst.pending=(mv,candidates)=>{clearTimeout(timer);orig(mv,candidates)}
+    const inst = { sf, busy: false, pending: null, pv: {} };
+    const handler = ev => {
+      const l = typeof ev === 'string' ? ev : (ev.data || '');
+      if (!l) return;
+      if (!inst.initialized) {
+        if (l.includes('readyok') || l.includes('uciok') || l.includes('Stockfish')) {
+          inst.initialized = true; resolve(inst);
+        }
+        return;
+      }
+      if (l.startsWith('info') && l.includes(' pv ')) {
+        const mpvM = l.match(/multipv (\d+)/);
+        const cpM  = l.match(/score cp (-?\d+)/);
+        const mateM = l.match(/score mate (-?\d+)/);
+        const pvM  = l.match(/ pv (\S+)/);
+        if (pvM) {
+          const idx = mpvM ? parseInt(mpvM[1]) : 1;
+          const score = mateM ? (parseInt(mateM[1]) > 0 ? 100000 : -100000) : (cpM ? parseInt(cpM[1]) : 0);
+          inst.pv[idx] = { move: pvM[1], score };
+        }
+      }
+      if (inst.pending && l.startsWith('bestmove')) {
+        const m = l.split(' ')[1];
+        const cb = inst.pending; inst.pending = null; inst.busy = false;
+        const candidates = Object.keys(inst.pv).map(Number).sort((a,b)=>a-b).map(k => inst.pv[k]);
+        inst.pv = {};
+        cb(m && m !== '(none)' ? m : null, candidates);
+      }
+    };
+    sf.onmessage = handler;
+    const send = cmd => { try { if (typeof sf.postMessage === 'function') sf.postMessage(cmd); } catch(e) {} };
+    inst.send = send;
+    send('uci'); send('isready');
+    setTimeout(() => { if (!inst.initialized) { inst.initialized = true; resolve(inst); } }, 3000);
+  });
 }
-function fallbackMove(fen,cb){try{const g=new Chess(fen);const mv=g.moves();cb(mv.length?mv[Math.floor(Math.random()*mv.length)]:null)}catch(e){cb(null)}}
 
-// ══════ MOVETIME ══════
-// NEU: reagiert jetzt auf die ECHTE Restzeit des ziehenden Bots (remainingMs) statt
-// nur auf die statische Turnier-Grundzeit. Berücksichtigt außerdem das im Bot-Editor
-// gewählte "Zeitdruck-Verhalten" (pressure: normal | flagging | cautious | panic).
-function levelToMovetime(lv,remainingMs,incMs,pressure){
-  // Stärker gespreizt als zuvor: sehr niedrige Level bekommen nur eine minimale
-  // Suchzeit, damit der Stärkeunterschied zu hohen Leveln auch über die Suchtiefe
-  // (nicht nur über UCI_Elo/MultiPV) spürbar wird.
-  const t=[10,15,20,30,45,70,110,170,260,380,550,780,1050,1400,1800,2250,2750,3300,3900,4600,5400];
-  const base=t[Math.max(0,Math.min(20,lv||10))];
+async function initStockfishPool() {
+  updateEngineStatus('Stockfish lädt…', false);
+  const arr = await Promise.all(Array.from({length: SF_POOL_SIZE}, createStockfishInstance));
+  arr.forEach(i => { if (i) sfPool.push(i); });
+  sfReady = sfPool.length > 0;
+  updateEngineStatus(sfReady ? `Stockfish bereit (${sfPool.length}x)` : 'Engine-Fehler', sfReady);
+}
 
-  // Restzeit in Minuten (Fallback: 1 Minute, falls keine Uhr übergeben wurde)
-  const remMin=Math.max(0.05,(remainingMs??60000)/60000);
-  let want=Math.round(base*Math.sqrt(remMin));
+function updateEngineStatus(t, r) {
+  document.getElementById('engineStatusText').textContent = t;
+  document.getElementById('engineDot').className = 'dot' + (r ? ' ready' : '');
+}
 
-  const lowTime = remainingMs!=null && remainingMs<15000; // <15s = kritischer Zeitdruck
+// ══════════════════════════════════════════════════════════════
+//  SKILL SYSTEM — echte Stärkeunterschiede zwischen Level 0–20
+//
+//  Drei Hebel greifen zusammen:
+//  1. UCI_Elo + UCI_LimitStrength → Stockfish begrenzt Suchtiefe intern
+//  2. MultiPV → bei niedrigen Leveln werden schwächere Züge als Kandidaten gesammelt
+//  3. Blunder-Injektion → je nach Level werden gezielt schlechte Züge erzwungen
+// ══════════════════════════════════════════════════════════════
 
-  switch(pressure){
-    case 'flagging': // zieht bei wenig Zeit sehr schnell, sonst normal
-      if(lowTime) want=Math.min(want,80);
-      break;
-    case 'cautious': // bleibt auch unter Zeitdruck möglichst gründlich
-      want=Math.max(want,Math.round(base*0.6));
-      break;
-    case 'panic': // bei Zeitdruck unberechenbar
-      if(lowTime) want=Math.random()<0.5?30:Math.round(want*1.4);
-      break;
-    default:
-      break; // 'normal': nur die Wurzel-Skalierung nach Restzeit oben
+// Elo-Mapping: Level → UCI_Elo (hart, nicht nur Skill Level)
+const LEVEL_ELO = [400,500,620,750,900,1050,1200,1350,1500,1650,1800,1950,2050,2150,2250,2350,2430,2500,2580,2650,2750];
+
+// Movetime-Tabelle: Level → Millisekunden Basis-Denkzeit
+// Stark gespreizt: Level 0 denkt kaum, Level 20 denkt lang
+const LEVEL_MOVETIME = [20,30,50,80,120,180,260,370,500,680,900,1150,1400,1700,2050,2400,2800,3300,3900,4600,5500];
+
+// MultiPV-Kandidaten: je mehr, desto eher wählen wir NICHT den besten Zug
+function levelToMultiPV(lv) {
+  if (lv <= 2)  return 8;
+  if (lv <= 5)  return 6;
+  if (lv <= 9)  return 4;
+  if (lv <= 13) return 2;
+  return 1;
+}
+
+// Wahrscheinlichkeit, aus den schwächeren MultiPV-Kandidaten zu wählen
+// Level 0 → fast immer den schlechtesten; Level 10+ → immer besten
+function weakenProb(lv) {
+  if (lv <= 0)  return 0.97;
+  if (lv <= 1)  return 0.90;
+  if (lv <= 2)  return 0.80;
+  if (lv <= 3)  return 0.68;
+  if (lv <= 4)  return 0.55;
+  if (lv <= 5)  return 0.42;
+  if (lv <= 6)  return 0.30;
+  if (lv <= 7)  return 0.20;
+  if (lv <= 8)  return 0.12;
+  if (lv <= 9)  return 0.06;
+  return 0;
+}
+
+// Blunder-Chance pro Zug (zufälliger legaler Zug statt Stockfish-Zug)
+// Level 0 macht fast jeden zweiten Zug einen Blunder
+function blunderChance(lv) {
+  if (lv <= 0)  return 0.55;
+  if (lv <= 1)  return 0.42;
+  if (lv <= 2)  return 0.30;
+  if (lv <= 3)  return 0.20;
+  if (lv <= 4)  return 0.12;
+  if (lv <= 5)  return 0.07;
+  if (lv <= 6)  return 0.04;
+  if (lv <= 7)  return 0.02;
+  if (lv <= 8)  return 0.01;
+  return 0;
+}
+
+function stockfishGetMove(fen, lv, remainingMs, incMs, pressure, is960, cb) {
+  const sk = Math.max(0, Math.min(20, lv || 10));
+
+  // Spontaner Blunder: legalen Zufallszug spielen
+  if (Math.random() < blunderChance(sk)) {
+    fallbackMove(fen, cb);
+    return;
   }
 
-  // Sicherheitsnetz: nie mehr Bedenkzeit anfordern, als realistisch zur Verfügung steht,
-  // damit der Bot nicht durch die eigene "Denkzeit" die Uhr abreißen lässt.
-  const safetyCap=Math.max(40,(remainingMs??8000)*0.6+(incMs||0)*0.8);
-  return Math.max(30,Math.min(8000,want,safetyCap));
+  if (!sfReady || !sfPool.length) { fallbackMove(fen, cb); return; }
+  const inst = sfPool.find(p => !p.busy);
+  if (!inst) { setTimeout(() => stockfishGetMove(fen, lv, remainingMs, incMs, pressure, is960, cb), 80); return; }
+  inst.busy = true;
+
+  const mt = calcMovetime(sk, remainingMs, incMs, pressure);
+  const mpv = levelToMultiPV(sk);
+  const uciElo = LEVEL_ELO[sk];
+
+  inst.pending = (mv, candidates) => {
+    inst.busy = false;
+    let chosen = mv;
+    // MultiPV-Schwächung: aus schlechteren Kandidaten wählen
+    if (candidates && candidates.length > 1 && Math.random() < weakenProb(sk)) {
+      // Je schwächer das Level, desto weiter hinten in der Kandidatenliste
+      const maxIdx = Math.min(candidates.length - 1, mpv - 1);
+      // Gewichtet Richtung schlechtere Züge
+      const pick = Math.floor(Math.pow(Math.random(), 0.4) * (maxIdx + 1));
+      const flipped = maxIdx - pick; // invertieren: 0=bester → maxIdx=schlechtester
+      if (candidates[flipped] && candidates[flipped].move) chosen = candidates[flipped].move;
+    }
+    cb(chosen);
+  };
+
+  inst.send('ucinewgame');
+  if (is960) inst.send('setoption name UCI_Chess960 value true');
+  inst.send(`setoption name MultiPV value ${mpv}`);
+  inst.send('setoption name UCI_LimitStrength value true');
+  inst.send(`setoption name UCI_Elo value ${uciElo}`);
+  inst.send(`setoption name Skill Level value ${sk}`);
+  inst.send(`position fen ${fen}`);
+  inst.send(`go movetime ${mt}`);
+
+  const timer = setTimeout(() => {
+    if (inst.pending) { inst.pending = null; inst.busy = false; fallbackMove(fen, cb); }
+  }, mt + 4000);
+  const orig = inst.pending;
+  inst.pending = (mv, candidates) => { clearTimeout(timer); orig(mv, candidates); };
 }
 
-// ══════ CHESS 960 ══════
-function genChess960FEN(){
-  const r=Array(8).fill(null);
-  r[[1,3,5,7][Math.floor(Math.random()*4)]]='b';
-  r[[0,2,4,6][Math.floor(Math.random()*4)]]='b';
-  let e=r.map((v,i)=>v==null?i:-1).filter(i=>i>=0);
-  r[e.splice(Math.floor(Math.random()*e.length),1)[0]]='q';
-  e=r.map((v,i)=>v==null?i:-1).filter(i=>i>=0);
-  r[e.splice(Math.floor(Math.random()*e.length),1)[0]]='n';
-  e=r.map((v,i)=>v==null?i:-1).filter(i=>i>=0);
-  r[e.splice(Math.floor(Math.random()*e.length),1)[0]]='n';
-  e=r.map((v,i)=>v==null?i:-1).filter(i=>i>=0).sort((a,b)=>a-b);
-  r[e[0]]='r';r[e[1]]='k';r[e[2]]='r';
-  const wh=r.map(p=>p.toUpperCase()).join('');
-  const bl=r.join('');
-  return `${bl}/pppppppp/8/8/8/8/PPPPPPPP/${wh} w - - 0 1`
+function calcMovetime(sk, remainingMs, incMs, pressure) {
+  const base = LEVEL_MOVETIME[Math.max(0, Math.min(20, sk))];
+  const remMin = Math.max(0.05, (remainingMs ?? 60000) / 60000);
+  let want = Math.round(base * Math.sqrt(remMin));
+
+  const lowTime = remainingMs != null && remainingMs < 15000;
+  switch (pressure) {
+    case 'flagging': if (lowTime) want = Math.min(want, 80); break;
+    case 'cautious': want = Math.max(want, Math.round(base * 0.6)); break;
+    case 'panic':    if (lowTime) want = Math.random() < 0.5 ? 30 : Math.round(want * 1.4); break;
+  }
+  const safetyCap = Math.max(40, (remainingMs ?? 8000) * 0.6 + (incMs || 0) * 0.8);
+  return Math.max(20, Math.min(8000, want, safetyCap));
 }
 
-// ══════ VARIANT GAME ══════
-const VARIANTS={
-  standard:{name:'Standard',icon:'♟',desc:'Klassisches Schach nach FIDE-Regeln.'},
-  chess960:{name:'Chess960',icon:'🎲',desc:'Fischer Random – die Startaufstellung der Figuren auf der Grundreihe wird zufällig bestimmt.'},
-  kingofthehill:{name:'König der Mitte',icon:'👑',desc:'Wer seinen König auf d4, d5, e4 oder e5 zieht, gewinnt sofort!'},
-  threecheck:{name:'Drei-Schach',icon:'3️⃣',desc:'Wer den Gegner dreimal schachbietet, gewinnt! Schachanzahl wird angezeigt.'},
-  atomic:{name:'Atomares Schach',icon:'💥',desc:'Jede Figur die schlägt, explodiert und zerstört alle Nachbarfelder (außer Bauern). Ziel: Königsexplosion!'},
-  antichess:{name:'Räuberschach',icon:'🔄',desc:'Schlagen ist Pflicht! Wer zuerst alle Figuren verliert (oder pattgesetzt wird), gewinnt!'}
+function fallbackMove(fen, cb) {
+  try { const g = new Chess(fen); const mv = g.moves(); cb(mv.length ? mv[Math.floor(Math.random() * mv.length)] : null); }
+  catch(e) { cb(null); }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  CHESS 960
+// ══════════════════════════════════════════════════════════════
+function genChess960FEN() {
+  const r = Array(8).fill(null);
+  r[[1,3,5,7][Math.floor(Math.random()*4)]] = 'b';
+  r[[0,2,4,6][Math.floor(Math.random()*4)]] = 'b';
+  let e = r.map((v,i) => v==null?i:-1).filter(i=>i>=0);
+  r[e.splice(Math.floor(Math.random()*e.length),1)[0]] = 'q';
+  e = r.map((v,i) => v==null?i:-1).filter(i=>i>=0);
+  r[e.splice(Math.floor(Math.random()*e.length),1)[0]] = 'n';
+  e = r.map((v,i) => v==null?i:-1).filter(i=>i>=0);
+  r[e.splice(Math.floor(Math.random()*e.length),1)[0]] = 'n';
+  e = r.map((v,i) => v==null?i:-1).filter(i=>i>=0).sort((a,b)=>a-b);
+  r[e[0]]='r'; r[e[1]]='k'; r[e[2]]='r';
+  const wh = r.map(p=>p.toUpperCase()).join('');
+  const bl = r.join('');
+  return `${bl}/pppppppp/8/8/8/8/PPPPPPPP/${wh} w - - 0 1`;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  VARIANT GAME
+// ══════════════════════════════════════════════════════════════
+const VARIANTS = {
+  standard:      {name:'Standard',       icon:'♟', desc:'Klassisches Schach nach FIDE-Regeln.'},
+  chess960:      {name:'Chess960',        icon:'🎲', desc:'Fischer Random – die Startaufstellung der Figuren auf der Grundreihe wird zufällig bestimmt.'},
+  kingofthehill: {name:'König der Mitte', icon:'👑', desc:'Wer seinen König auf d4, d5, e4 oder e5 zieht, gewinnt sofort!'},
+  threecheck:    {name:'Drei-Schach',     icon:'3️⃣', desc:'Wer den Gegner dreimal schachbietet, gewinnt!'},
+  atomic:        {name:'Atomares Schach', icon:'💥', desc:'Jede Figur die schlägt, explodiert und zerstört alle Nachbarfelder. Ziel: Königsexplosion!'},
+  antichess:     {name:'Räuberschach',    icon:'🔄', desc:'Schlagen ist Pflicht! Wer zuerst alle Figuren verliert (oder pattgesetzt wird), gewinnt!'}
 };
 
-class VariantGame{
-  constructor(variant){
-    this.variant=variant||'standard';
-    this.checksGiven={w:0,b:0};
-    this._atomicKingDead=null;
-    this._antichessWinner=null;
-    if(variant==='chess960'){this._c=new Chess(genChess960FEN())}
-    else{this._c=new Chess()}
+class VariantGame {
+  constructor(variant) {
+    this.variant = variant || 'standard';
+    this.checksGiven = {w:0, b:0};
+    this._atomicKingDead = null;
+    this._antichessWinner = null;
+    this._c = (variant === 'chess960') ? new Chess(genChess960FEN()) : new Chess();
   }
-  fen(){return this._c.fen()}
-  turn(){return this._c.turn()}
-  get(sq){return this._c.get(sq)}
-  history(o){return this._c.history(o)}
-  in_check(){return this._c.in_check()}
-  in_threefold_repetition(){return this._c.in_threefold_repetition()}
-  insufficient_material(){return this._c.insufficient_material()}
-  board(){return this._c.board()}
-  moves(opts={}){
-    if(this.variant==='antichess'){
-      const all=this._c.moves({verbose:true,square:opts.square});
-      const cap=all.filter(m=>m.captured);
-      const pool=cap.length?cap:all;
-      return opts.verbose?pool:pool.map(m=>m.san)
+  fen()  { return this._c.fen(); }
+  turn() { return this._c.turn(); }
+  get(sq){ return this._c.get(sq); }
+  history(o) { return this._c.history(o); }
+  in_check() { return this._c.in_check(); }
+  in_threefold_repetition() { return this._c.in_threefold_repetition(); }
+  insufficient_material()   { return this._c.insufficient_material(); }
+  board() { return this._c.board(); }
+
+  moves(opts={}) {
+    if (this.variant === 'antichess') {
+      const all = this._c.moves({verbose:true, square:opts.square});
+      const cap = all.filter(m => m.captured);
+      const pool = cap.length ? cap : all;
+      return opts.verbose ? pool : pool.map(m=>m.san);
     }
-    if(this.variant==='atomic'){
-      const all=this._c.moves({verbose:true,square:opts.square});
-      const filtered=all.filter(m=>!(m.captured&&m.piece==='k'));
-      return opts.verbose?filtered:filtered.map(m=>m.san)
+    if (this.variant === 'atomic') {
+      const all = this._c.moves({verbose:true, square:opts.square});
+      const filtered = all.filter(m => !(m.captured && m.piece==='k'));
+      return opts.verbose ? filtered : filtered.map(m=>m.san);
     }
-    return this._c.moves(opts)
+    return this._c.moves(opts);
   }
-  move(obj){
-    if(this.variant==='antichess'){
-      const all=this._c.moves({verbose:true});
-      const cap=all.filter(m=>m.captured);
-      if(cap.length){
-        const isOk=all.find(m=>typeof obj==='string'?m.san===obj:(m.from===obj.from&&m.to===obj.to));
-        if(!isOk||!isOk.captured)return null
+
+  move(obj) {
+    if (this.variant === 'antichess') {
+      const all = this._c.moves({verbose:true});
+      const cap = all.filter(m => m.captured);
+      if (cap.length) {
+        const isOk = all.find(m => typeof obj==='string' ? m.san===obj : (m.from===obj.from && m.to===obj.to));
+        if (!isOk || !isOk.captured) return null;
       }
     }
-    if(this.variant==='atomic'){
-      const all=this._c.moves({verbose:true});
-      const mv=all.find(m=>typeof obj==='string'?m.san===obj:(m.from===obj.from&&m.to===obj.to));
-      if(mv&&mv.captured&&mv.piece==='k')return null
+    if (this.variant === 'atomic') {
+      const all = this._c.moves({verbose:true});
+      const mv = all.find(m => typeof obj==='string' ? m.san===obj : (m.from===obj.from && m.to===obj.to));
+      if (mv && mv.captured && mv.piece==='k') return null;
     }
-    const res=this._c.move(typeof obj==='string'?obj:{...obj,promotion:obj.promotion||'q'});
-    if(!res)return null;
-    if(this.variant==='threecheck'&&this._c.in_check()){
-      this.checksGiven[res.color]++
-    }
-    if(this.variant==='atomic'&&res.captured){
-      this._explode(res.to)
-    }
-    if(this.variant==='antichess'){
-      if(this._countPieces(res.color)===0)this._antichessWinner=res.color
-    }
-    return res
+    const res = this._c.move(typeof obj==='string' ? obj : {...obj, promotion: obj.promotion||'q'});
+    if (!res) return null;
+    if (this.variant === 'threecheck' && this._c.in_check()) this.checksGiven[res.color]++;
+    if (this.variant === 'atomic' && res.captured) this._explode(res.to);
+    if (this.variant === 'antichess' && this._countPieces(res.color) === 0) this._antichessWinner = res.color;
+    return res;
   }
-  _countPieces(col){
+
+  _countPieces(col) {
     let n=0;
-    for(let f=0;f<8;f++)for(let r=1;r<=8;r++){const p=this._c.get(String.fromCharCode(97+f)+r);if(p&&p.color===col)n++}
-    return n
+    for(let f=0;f<8;f++) for(let r=1;r<=8;r++) { const p=this._c.get(String.fromCharCode(97+f)+r); if(p&&p.color===col) n++; }
+    return n;
   }
-  _explode(sq){
-    const fi=sq.charCodeAt(0)-97,ri=parseInt(sq[1])-1;
-    const toRemove=[sq];
-    for(let df=-1;df<=1;df++)for(let dr=-1;dr<=1;dr++){if(!df&&!dr)continue;const nf=fi+df,nr=ri+dr;if(nf<0||nf>7||nr<0||nr>7)continue;const ns=String.fromCharCode(97+nf)+(nr+1);const p=this._c.get(ns);if(p&&p.type!=='p'){if(p.type==='k')this._atomicKingDead=p.color;toRemove.push(ns)}}
-    toRemove.forEach(s=>{try{this._c.remove(s)}catch(e){}});
-    // remove the capturing piece too (it exploded)
+
+  _explode(sq) {
+    const fi = sq.charCodeAt(0)-97, ri = parseInt(sq[1])-1;
+    const toRemove = [sq];
+    for(let df=-1;df<=1;df++) for(let dr=-1;dr<=1;dr++) {
+      if(!df&&!dr) continue;
+      const nf=fi+df, nr=ri+dr;
+      if(nf<0||nf>7||nr<0||nr>7) continue;
+      const ns = String.fromCharCode(97+nf)+(nr+1);
+      const p = this._c.get(ns);
+      if(p && p.type!=='p') { if(p.type==='k') this._atomicKingDead=p.color; toRemove.push(ns); }
+    }
+    toRemove.forEach(s => { try{this._c.remove(s)}catch(e){} });
     try{this._c.remove(sq)}catch(e){}
   }
-  game_over(){
-    if(this._atomicKingDead)return true;
-    if(this._antichessWinner)return true;
-    if(this.variant==='threecheck'&&(this.checksGiven.w>=3||this.checksGiven.b>=3))return true;
-    if(this.variant==='kingofthehill'){for(const s of['d4','d5','e4','e5']){const p=this._c.get(s);if(p&&p.type==='k')return true}}
-    if(this.variant==='antichess'&&this._c.in_stalemate())return true;
-    return this._c.game_over()
+
+  game_over() {
+    if (this._atomicKingDead) return true;
+    if (this._antichessWinner) return true;
+    if (this.variant==='threecheck' && (this.checksGiven.w>=3||this.checksGiven.b>=3)) return true;
+    if (this.variant==='kingofthehill') for(const s of['d4','d5','e4','e5']){const p=this._c.get(s);if(p&&p.type==='k')return true;}
+    if (this.variant==='antichess' && this._c.in_stalemate()) return true;
+    return this._c.game_over();
   }
-  getResult(){
-    if(this._atomicKingDead)return{winner:this._atomicKingDead==='w'?'b':'w',reason:'Explosion'}
-    if(this._antichessWinner)return{winner:this._antichessWinner,reason:'Alle Figuren verloren'}
-    if(this.variant==='antichess'&&this._c.in_stalemate())return{winner:this._c.turn(),reason:'Patt (Sieg)'}
-    if(this.variant==='threecheck'){if(this.checksGiven.w>=3)return{winner:'w',reason:'3 Schachs'};if(this.checksGiven.b>=3)return{winner:'b',reason:'3 Schachs'}}
-    if(this.variant==='kingofthehill'){for(const s of['d4','d5','e4','e5']){const p=this._c.get(s);if(p&&p.type==='k')return{winner:p.color,reason:'König in der Mitte'}}}
-    if(this._c.in_checkmate())return{winner:this._c.turn()==='w'?'b':'w',reason:'Matt'}
-    if(this._c.in_stalemate())return{winner:null,reason:'Patt'}
-    if(this._c.in_threefold_repetition())return{winner:null,reason:'3-fach Wiederholung'}
-    if(this._c.insufficient_material())return{winner:null,reason:'Material'}
-    if(this._c.in_draw())return{winner:null,reason:'Remis'}
-    return null
+
+  getResult() {
+    if (this._atomicKingDead) return {winner: this._atomicKingDead==='w'?'b':'w', reason:'Explosion'};
+    if (this._antichessWinner) return {winner: this._antichessWinner, reason:'Alle Figuren verloren'};
+    if (this.variant==='antichess' && this._c.in_stalemate()) return {winner: this._c.turn(), reason:'Patt (Sieg)'};
+    if (this.variant==='threecheck') {
+      if (this.checksGiven.w>=3) return {winner:'w', reason:'3 Schachs'};
+      if (this.checksGiven.b>=3) return {winner:'b', reason:'3 Schachs'};
+    }
+    if (this.variant==='kingofthehill') for(const s of['d4','d5','e4','e5']){const p=this._c.get(s);if(p&&p.type==='k')return{winner:p.color,reason:'König in der Mitte'};}
+    if (this._c.in_checkmate()) return {winner: this._c.turn()==='w'?'b':'w', reason:'Matt'};
+    if (this._c.in_stalemate()) return {winner:null, reason:'Patt'};
+    if (this._c.in_threefold_repetition()) return {winner:null, reason:'3-fach Wiederholung'};
+    if (this._c.insufficient_material()) return {winner:null, reason:'Material'};
+    if (this._c.in_draw()) return {winner:null, reason:'Remis'};
+    return null;
   }
-  in_checkmate(){
-    if(this.variant==='threecheck'){if(this.checksGiven.w>=3||this.checksGiven.b>=3)return false}
-    return this._c.in_checkmate()
-  }
-  in_stalemate(){return this.variant==='antichess'?false:this._c.in_stalemate()}
-  in_draw(){return this._c.in_draw()}
+
+  in_checkmate() { return this._c.in_checkmate(); }
+  in_stalemate()  { return this.variant==='antichess' ? false : this._c.in_stalemate(); }
+  in_draw()       { return this._c.in_draw(); }
 }
 
-// Variant-smart bot move
-// NEU: bekommt jetzt remainingMs + incMs (echte Uhr des ziehenden Bots) statt
-// der statischen Turnier-Grundzeit baseTimeMin.
-function getVariantBotMove(vg,botRef,remainingMs,incMs,cb){
-  const v=vg.variant;
-  if(v==='standard'||v==='chess960'){
-    const sk=botRef.sfLevel??10;
-    const mt=levelToMovetime(sk,remainingMs,incMs,botRef.timePressure);
-    const tv=botRef.timeVariance||10;
-    const factor=1+(Math.random()*2-1)*(tv/100);
-    stockfishGetMove(vg.fen(),sk,Math.round(mt*factor),v==='chess960',uci=>{
-      if(!uci){variantSmartMove(vg,botRef,cb);return}
-      cb(uci,true) // true = is UCI move
-    });return
+// Variant-smarter Fallback (ohne Stockfish, für andere Varianten)
+function getVariantBotMove(vg, botRef, remainingMs, incMs, cb) {
+  const v = vg.variant;
+  if (v === 'standard' || v === 'chess960') {
+    const sk = botRef.sfLevel ?? 10;
+    const tv = botRef.timeVariance || 15;
+    // Zeitvarianz: ±tv%
+    const factor = 1 + (Math.random() * 2 - 1) * (tv / 100);
+    stockfishGetMove(vg.fen(), sk, Math.round(remainingMs * factor * 0.8 + remainingMs * 0.2), incMs, botRef.timePressure, v === 'chess960', uci => {
+      if (!uci) { variantSmartMove(vg, botRef, cb); return; }
+      cb(uci, true);
+    });
+    return;
   }
-  variantSmartMove(vg,botRef,cb)
+  variantSmartMove(vg, botRef, cb);
 }
-function variantSmartMove(vg,botRef,cb){
-  const moves=vg.moves({verbose:true});
-  if(!moves.length){cb(null);return}
-  const lv=botRef.sfLevel??10;
-  let scored=moves.map(m=>({m,s:0}));
-  const v=vg.variant;
-  scored.forEach(x=>{
-    if(x.m.san&&x.m.san.includes('+'))x.s+=v==='threecheck'?30:5;
-    if(x.m.captured){
-      x.s+=5;
-      if(v==='atomic')x.s+=10;
-      if(v==='antichess'){const vals={q:9,r:5,b:3,n:3,p:1};x.s+=(vals[x.m.captured]||1)*2}
+
+function variantSmartMove(vg, botRef, cb) {
+  const moves = vg.moves({verbose:true});
+  if (!moves.length) { cb(null); return; }
+  const lv = botRef.sfLevel ?? 10;
+  let scored = moves.map(m => ({m, s:0}));
+  const v = vg.variant;
+  scored.forEach(x => {
+    if (x.m.san && x.m.san.includes('+')) x.s += v==='threecheck' ? 30 : 5;
+    if (x.m.captured) {
+      x.s += 5;
+      if (v==='atomic') x.s += 10;
+      if (v==='antichess') { const vals={q:9,r:5,b:3,n:3,p:1}; x.s += (vals[x.m.captured]||1)*2; }
     }
-    if(v==='kingofthehill'&&x.m.piece==='k'){
-      const CENTER=['d4','d5','e4','e5'];const NEAR=['c3','c4','c5','c6','d3','d6','e3','e6','f3','f4','f5','f6'];
-      if(CENTER.includes(x.m.to))x.s+=50;else if(NEAR.includes(x.m.to))x.s+=20
+    if (v==='kingofthehill' && x.m.piece==='k') {
+      const CENTER=['d4','d5','e4','e5'], NEAR=['c3','c4','c5','c6','d3','d6','e3','e6','f3','f4','f5','f6'];
+      if (CENTER.includes(x.m.to)) x.s += 50;
+      else if (NEAR.includes(x.m.to)) x.s += 20;
     }
   });
-  const noise=Math.max(0,20-lv)*1.5;
-  scored.forEach(x=>x.s+=Math.random()*noise);
-  scored.sort((a,b)=>b.s-a.s);
-  const topN=Math.max(1,Math.ceil((21-lv)/4));
-  const pick=scored[Math.floor(Math.random()*Math.min(topN,scored.length))];
-  setTimeout(()=>cb(pick.m.san,false),50)
+  const noise = Math.max(0, 20 - lv) * 2.5;
+  scored.forEach(x => x.s += Math.random() * noise);
+  scored.sort((a,b) => b.s - a.s);
+  const topN = Math.max(1, Math.ceil((21 - lv) / 4));
+  const pick = scored[Math.floor(Math.random() * Math.min(topN, scored.length))];
+  setTimeout(() => cb(pick.m.san, false), 50);
 }
 
 // Opening book first move
-function getOpeningMove(botRef,game){
-  const hist=game.history();
-  if(hist.length>0&&game.turn()==='b'&&hist.length===1&&botRef.openingBook&&botRef.openingBook!=='random'&&botRef.openingBook!=='none'){
-    // simple response: prefer e5 against e4, d5/Nf6 against d4
-    if(botRef.preferSicilian&&hist[0]==='e4')return'c5';
-    if(botRef.preferIndian&&hist[0]==='d4')return'Nf6';
-    return null
+function getOpeningMove(botRef, game) {
+  const hist = game.history();
+  const turn = game.turn();
+  const book = botRef.openingBook || 'random';
+  if (book === 'none' || book === 'random') return null;
+
+  // Als Weiß: erster Zug
+  if (turn === 'w' && hist.length === 0) {
+    const whiteBooks = {
+      'e4':'e4','d4':'d4','Nf3':'Nf3','c4':'c4','g3':'g3','b3':'b3','f4':'f4','b4':'b4',
+      'a3':'a3','e3':'e3','d3':'d3','c3':'c3',
+      'e4_sicilian':'e4','e4_french':'e4','e4_caro':'e4','e4_pirc':'e4','e4_scandinavian':'e4',
+      'd4_queens':'d4','d4_kings':'d4','d4_nimzo':'d4','d4_dutch':'d4','d4_benko':'d4',
+      'e4_gc':'e4','e4_danish':'e4','e4_evan':'e4','e4_fried':'e4','e4_scotch':'e4',
+      'e4_ruy':'e4','e4_italian':'e4','e4_ponziani':'e4','e4_vienna':'e4'
+    };
+    return whiteBooks[book] || null;
   }
-  if(game.turn()==='w'&&hist.length===0&&botRef.openingBook&&botRef.openingBook!=='random'&&botRef.openingBook!=='none'){
-    return botRef.openingBook
+
+  // Als Schwarz: auf ersten Zug reagieren
+  if (turn === 'b' && hist.length === 1) {
+    const first = hist[0];
+    if (book === 'e4_sicilian' && first === 'e4') return 'c5';
+    if (book === 'e4_french' && first === 'e4') return 'e6';
+    if (book === 'e4_caro' && first === 'e4') return 'c6';
+    if (book === 'e4_pirc' && first === 'e4') return 'd6';
+    if (book === 'e4_scandinavian' && first === 'e4') return 'd5';
+    if (book === 'd4_kings' && first === 'd4') return 'Nf6';
+    if (book === 'd4_nimzo' && first === 'd4') return 'Nf6';
+    if (book === 'd4_dutch' && first === 'd4') return 'f5';
+    if (book === 'd4_benko' && first === 'd4') return 'Nf6';
+    if (book === 'd4_queens' && first === 'd4') return 'd5';
+    // Zweiter Zug Weiß-Spezifika (Gambit-Bücher)
+    if (book === 'e4_gc' && first === 'e4') return 'e5';
+    if (book === 'e4_danish' && first === 'e4') return 'e5';
+    if (book === 'e4_evan' && first === 'e4') return 'e5';
+    if (book === 'e4_fried' && first === 'e4') return 'e5';
+    if (book === 'e4_scotch' && first === 'e4') return 'e5';
+    if (book === 'e4_ruy' && first === 'e4') return 'e5';
+    if (book === 'e4_italian' && first === 'e4') return 'e5';
+    if (book === 'e4_ponziani' && first === 'e4') return 'e5';
+    if (book === 'e4_vienna' && first === 'e4') return 'e5';
   }
-  return null
+  return null;
 }
 
-// ══════ STATE ══════
-let memFS={};let storageOk=true;
-(function(){try{localStorage.setItem('__t','1');localStorage.removeItem('__t')}catch(e){storageOk=false}})();
-function saveState(){try{const s=JSON.stringify(state);storageOk?localStorage.setItem('chessArena_v3',s):memFS['ca']=s}catch(e){}}
-function loadState(){try{const s=storageOk?localStorage.getItem('chessArena_v3'):memFS['ca'];return s?JSON.parse(s):null}catch(e){return null}}
-window.addEventListener('beforeunload',saveState);
+// ══════════════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════════════
+let memFS = {}; let storageOk = true;
+(function(){ try{localStorage.setItem('__t','1');localStorage.removeItem('__t');}catch(e){storageOk=false;} })();
+function saveState(){ try{ const s=JSON.stringify(state); storageOk?localStorage.setItem('chessArena_v4',s):memFS['ca']=s; }catch(e){} }
+function loadState(){ try{ const s=storageOk?localStorage.getItem('chessArena_v4'):memFS['ca']; return s?JSON.parse(s):null; }catch(e){return null;} }
+window.addEventListener('beforeunload', saveState);
 
-function defaultBotStats(){
-  return{variantStats:{standard:{games:0,wins:0,draws:0,losses:0,elo:1500,ratingHistory:[1500]},chess960:{games:0,wins:0,draws:0,losses:0,elo:1500,ratingHistory:[1500]},kingofthehill:{games:0,wins:0,draws:0,losses:0,elo:1500,ratingHistory:[1500]},threecheck:{games:0,wins:0,draws:0,losses:0,elo:1500,ratingHistory:[1500]},atomic:{games:0,wins:0,draws:0,losses:0,elo:1500,ratingHistory:[1500]},antichess:{games:0,wins:0,draws:0,losses:0,elo:1500,ratingHistory:[1500]}},tcStats:{bullet:{games:0,wins:0,draws:0,losses:0},blitz:{games:0,wins:0,draws:0,losses:0},rapid:{games:0,wins:0,draws:0,losses:0},classical:{games:0,wins:0,draws:0,losses:0}},recentGames:[],streak:{current:0,best:0,type:'win'},bestWinElo:0}
+function defaultBotStats() {
+  return {
+    variantStats: {
+      standard:      {games:0,wins:0,draws:0,losses:0,elo:1500,ratingHistory:[1500]},
+      chess960:      {games:0,wins:0,draws:0,losses:0,elo:1500,ratingHistory:[1500]},
+      kingofthehill: {games:0,wins:0,draws:0,losses:0,elo:1500,ratingHistory:[1500]},
+      threecheck:    {games:0,wins:0,draws:0,losses:0,elo:1500,ratingHistory:[1500]},
+      atomic:        {games:0,wins:0,draws:0,losses:0,elo:1500,ratingHistory:[1500]},
+      antichess:     {games:0,wins:0,draws:0,losses:0,elo:1500,ratingHistory:[1500]}
+    },
+    tcStats: {bullet:{games:0,wins:0,draws:0,losses:0},blitz:{games:0,wins:0,draws:0,losses:0},rapid:{games:0,wins:0,draws:0,losses:0},classical:{games:0,wins:0,draws:0,losses:0}},
+    recentGames: [],
+    streak: {current:0, best:0, type:'win'},
+    bestWinElo: 0
+  };
 }
-function getTC(bm){return bm<2?'bullet':bm<8?'blitz':bm<20?'rapid':'classical'}
-function ensureBotStats(bot){if(!bot.variantStats)Object.assign(bot,defaultBotStats())}
 
-let state=loadState()||{player:{name:'Spieler',elo:1500,avatar:'👤',games:0,wins:0,draws:0,losses:0,ratingHistory:[1500],gameHistory:[]},bots:[],tournaments:[],stats:{totalGames:0,totalTournaments:0,totalWins:0}};
-if(!state.player.ratingHistory)state.player.ratingHistory=[state.player.elo];
-if(!state.player.gameHistory)state.player.gameHistory=[];
-if(!state.stats)state.stats={totalGames:0,totalTournaments:0,totalWins:0};
+function getTC(bm) { return bm<2?'bullet':bm<8?'blitz':bm<20?'rapid':'classical'; }
+function ensureBotStats(bot) { if (!bot.variantStats) Object.assign(bot, defaultBotStats()); }
+
+let state = loadState() || {
+  player: {name:'Spieler',elo:1500,avatar:'👤',games:0,wins:0,draws:0,losses:0,ratingHistory:[1500],gameHistory:[]},
+  bots: [], tournaments: [], stats: {totalGames:0,totalTournaments:0,totalWins:0}
+};
+if (!state.player.ratingHistory) state.player.ratingHistory = [state.player.elo];
+if (!state.player.gameHistory)   state.player.gameHistory = [];
+if (!state.stats) state.stats = {totalGames:0,totalTournaments:0,totalWins:0};
 state.bots.forEach(ensureBotStats);
 
-let arena=null,selectedBotColor='#7fa650',selectedEmoji='🤖',editingBotId=null,sfLevelSelected=10,viewingBotId=null;
+let arena=null, selectedBotColor='#7fa650', selectedEmoji='🤖', editingBotId=null, sfLevelSelected=10, viewingBotId=null;
 const BOT_EMOJIS=['🤖','🦾','🧠','👾','🤯','🎯','🦁','🐉','👑','⚡','🌟','🔥','💀','🎩','🤺','🦊','🐺','🦅','🐍','🐻','🦄','🐯','🦖','👻','🎭'];
 const VARIANT_SL_NAMES=['standard','chess960','kingofthehill','threecheck','atomic','antichess'];
 
-// scroll block
-document.addEventListener('mousedown',e=>{if(e.target.closest('.board-wrap,#myGameBoard')){document.body.style.overflow='hidden';document.body.style.touchAction='none'}});
-document.addEventListener('mouseup',()=>{document.body.style.overflow='';document.body.style.touchAction=''});
-document.addEventListener('touchstart',e=>{if(e.target.closest('.board-wrap,#myGameBoard')){document.body.style.overflow='hidden';document.body.style.touchAction='none'}},{passive:false});
-document.addEventListener('touchend',()=>{document.body.style.overflow='';document.body.style.touchAction=''});
-document.addEventListener('touchmove',e=>{if(e.target.closest('.board-wrap,#myGameBoard'))e.preventDefault()},{passive:false});
+// Scroll lock for boards
+document.addEventListener('mousedown', e=>{if(e.target.closest('.board-wrap,#myGameBoard')){document.body.style.overflow='hidden';document.body.style.touchAction='none';}});
+document.addEventListener('mouseup',   ()=>{document.body.style.overflow='';document.body.style.touchAction='';});
+document.addEventListener('touchstart',e=>{if(e.target.closest('.board-wrap,#myGameBoard')){document.body.style.overflow='hidden';document.body.style.touchAction='none';}},{passive:false});
+document.addEventListener('touchend',  ()=>{document.body.style.overflow='';document.body.style.touchAction='';});
+document.addEventListener('touchmove', e=>{if(e.target.closest('.board-wrap,#myGameBoard'))e.preventDefault();},{passive:false});
 
-// ══════ TAP TO MOVE ══════
-let tapState={sel:null,gs:null};
-function getSquare(el){const a=el.closest('[data-square]');if(a)return a.getAttribute('data-square');const p=el.parentElement?.closest('[data-square]');if(p)return p.getAttribute('data-square');return null}
-function clearTapHL(){document.querySelectorAll('.tap-sel,.tap-hint').forEach(e=>{e.classList.remove('tap-sel','tap-hint')})}
-function hlSq(sq,type){const b=document.getElementById('myGameBoard');if(!b)return;const e=b.querySelector(`[data-square="${sq}"]`);if(e)e.classList.add(type==='sel'?'tap-sel':'tap-hint')}
-function showHints(gs,from){gs.vgame.moves({square:from,verbose:true}).forEach(m=>hlSq(m.to,'hint'))}
-function setupTap(gs){
-  const el=document.getElementById('myGameBoard');if(!el)return;
-  el.removeEventListener('click',el._th);
-  el._th=function(e){
-    if(gs.done||gs.vgame.turn()!==gs.playerColor)return;
-    const sq=getSquare(e.target);if(!sq)return;
-    if(!tapState.sel){
-      const p=gs.vgame.get(sq);if(!p||p.color!==gs.playerColor)return;
-      tapState.sel=sq;clearTapHL();hlSq(sq,'sel');showHints(gs,sq)
-    }else{
-      const from=tapState.sel,to=sq;tapState.sel=null;clearTapHL();
-      const p=gs.vgame.get(sq);if(p&&p.color===gs.playerColor&&from!==sq){tapState.sel=sq;hlSq(sq,'sel');showHints(gs,sq);return}
-      if(from===sq)return;
-      const mv=gs.vgame.move({from,to,promotion:'q'});if(!mv)return;
+// ══════════════════════════════════════════════════════════════
+//  TAP TO MOVE
+// ══════════════════════════════════════════════════════════════
+let tapState = {sel:null, gs:null};
+function getSquare(el) { const a=el.closest('[data-square]'); if(a) return a.getAttribute('data-square'); const p=el.parentElement?.closest('[data-square]'); return p?p.getAttribute('data-square'):null; }
+function clearTapHL() { document.querySelectorAll('.tap-sel,.tap-hint').forEach(e=>{e.classList.remove('tap-sel','tap-hint');}); }
+function hlSq(sq,type) { const b=document.getElementById('myGameBoard'); if(!b) return; const e=b.querySelector(`[data-square="${sq}"]`); if(e) e.classList.add(type==='sel'?'tap-sel':'tap-hint'); }
+function showHints(gs,from) { gs.vgame.moves({square:from,verbose:true}).forEach(m=>hlSq(m.to,'hint')); }
+function setupTap(gs) {
+  const el = document.getElementById('myGameBoard'); if(!el) return;
+  el.removeEventListener('click', el._th);
+  el._th = function(e) {
+    if (gs.done || gs.vgame.turn() !== gs.playerColor) return;
+    const sq = getSquare(e.target); if(!sq) return;
+    if (!tapState.sel) {
+      const p = gs.vgame.get(sq); if(!p||p.color!==gs.playerColor) return;
+      tapState.sel=sq; clearTapHL(); hlSq(sq,'sel'); showHints(gs,sq);
+    } else {
+      const from=tapState.sel, to=sq; tapState.sel=null; clearTapHL();
+      const p=gs.vgame.get(sq);
+      if (p && p.color===gs.playerColor && from!==sq) { tapState.sel=sq; hlSq(sq,'sel'); showHints(gs,sq); return; }
+      if (from===sq) return;
+      const mv=gs.vgame.move({from,to,promotion:'q'}); if(!mv) return;
       gs.board.position(gs.vgame.fen());
-      if(gs.incMs>0){if(gs.playerColor==='w')gs.whiteClock+=gs.incMs;else gs.blackClock+=gs.incMs}
-      const st=document.getElementById('myGameStatus');if(st)st.textContent='⌛ Gegner denkt…';
-      checkGameOver(gs);if(!gs.done)scheduleNextMove(gs)
+      if (gs.incMs>0) { if(gs.playerColor==='w') gs.whiteClock+=gs.incMs; else gs.blackClock+=gs.incMs; }
+      const st=document.getElementById('myGameStatus'); if(st) st.textContent='⌛ Gegner denkt…';
+      checkGameOver(gs); if(!gs.done) scheduleNextMove(gs);
     }
   };
-  el.addEventListener('click',el._th)
+  el.addEventListener('click', el._th);
 }
 
-// ══════ NAVIGATION ══════
-function showPage(id){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById('page-'+id).classList.add('active');if(id==='home')refreshHome();if(id==='bots')renderBotGrid();if(id==='tournaments')renderTournamentList();if(id==='profile')renderProfile()}
-function setActive(el){document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active')}
+// ══════════════════════════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════════════════════════
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  if(id==='home') refreshHome();
+  if(id==='bots') renderBotGrid();
+  if(id==='tournaments') renderTournamentList();
+  if(id==='profile') renderProfile();
+}
+function setActive(el) { document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active')); el.classList.add('active'); }
+function escapeHtml(s) { if(s==null)return''; return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-function escapeHtml(s){if(s==null)return'';return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-
-// ══════ HOME ══════
-function refreshHome(){
-  document.getElementById('statBots').textContent=state.bots.length;
-  document.getElementById('statTournaments').textContent=state.stats.totalTournaments;
-  document.getElementById('statGames').textContent=state.stats.totalGames;
-  document.getElementById('statWins').textContent=state.stats.totalWins;
-  document.getElementById('playerNameDisplay').textContent=state.player.name;
-  document.getElementById('playerRatingDisplay').textContent=state.player.elo;
-  const el=document.getElementById('recentTournaments');
-  const rec=[...state.tournaments].reverse().slice(0,5);
-  if(!rec.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">🏆</div><p>Noch keine Turniere</p></div>';return}
-  el.innerHTML=rec.map(t=>`<div class="lb-row"><span style="font-size:18px">🏆</span><div style="flex:1"><div style="font-weight:600">${escapeHtml(t.name)}</div><div style="font-size:11px;color:var(--mu)">${escapeHtml(t.variant||'standard')} · ${t.baseTime}+${t.increment} · ${t.participantCount} Teiln.</div></div><div style="text-align:right;font-size:12px;color:var(--mu)">${t.finishedAt||''}</div></div>`).join('')
+// ══════════════════════════════════════════════════════════════
+//  HOME
+// ══════════════════════════════════════════════════════════════
+function refreshHome() {
+  document.getElementById('statBots').textContent = state.bots.length;
+  document.getElementById('statTournaments').textContent = state.stats.totalTournaments;
+  document.getElementById('statGames').textContent = state.stats.totalGames;
+  document.getElementById('statWins').textContent = state.stats.totalWins;
+  document.getElementById('playerNameDisplay').textContent = state.player.name;
+  document.getElementById('playerRatingDisplay').textContent = state.player.elo;
+  const el = document.getElementById('recentTournaments');
+  const rec = [...state.tournaments].reverse().slice(0,5);
+  if (!rec.length) { el.innerHTML='<div class="empty-state"><div class="empty-icon">🏆</div><p>Noch keine Turniere</p></div>'; return; }
+  el.innerHTML = rec.map(t=>`<div class="lb-row"><span style="font-size:18px">🏆</span><div style="flex:1"><div style="font-weight:600">${escapeHtml(t.name)}</div><div style="font-size:11px;color:var(--mu)">${escapeHtml(t.variant||'standard')} · ${t.baseTime}+${t.increment} · ${t.participantCount} Teiln.</div></div><div style="text-align:right;font-size:12px;color:var(--mu)">${t.finishedAt||''}</div></div>`).join('');
 }
 
-// ══════ SF LEVEL GRID ══════
-const sfDescs=['Level 0 ~800 Elo','Level 1 ~900','Level 2 ~1000','Level 3 ~1100','Level 4 ~1200','Level 5 ~1350','Level 6 ~1500','Level 7 ~1600','Level 8 ~1700','Level 9 ~1800','Level 10 ~1900','Level 11 ~2000','Level 12 ~2100','Level 13 ~2200','Level 14 ~2300','Level 15 ~2400','Level 16 ~2450','Level 17 ~2500','Level 18 ~2550','Level 19 ~2600','Level 20 ~2700+'];
-function buildSFGrid(){const g=document.getElementById('sfLevelGrid');g.innerHTML=Array.from({length:21},(_,i)=>`<div class="sf-level-btn ${i===sfLevelSelected?'selected':''}" onclick="selectSFLevel(${i})">${i}</div>`).join('');document.getElementById('sfLevelDesc').textContent=sfDescs[sfLevelSelected]}
-function selectSFLevel(lv){sfLevelSelected=lv;document.querySelectorAll('.sf-level-btn').forEach((b,i)=>b.classList.toggle('selected',i===lv));document.getElementById('sfLevelDesc').textContent=sfDescs[lv]}
+// ══════════════════════════════════════════════════════════════
+//  SF LEVEL GRID — zeigt Elo-Wert direkt im Button
+// ══════════════════════════════════════════════════════════════
+const sfDescs = [
+  '🔴 Level 0 — ~400 Elo — hängerisch, massive Blunders, verliert Figuren ständig',
+  '🔴 Level 1 — ~500 Elo — sehr viele Fehler, verliert Figuren oft',
+  '🔴 Level 2 — ~620 Elo — grobe Fehler, keine Taktik',
+  '🔴 Level 3 — ~750 Elo — schwach, aber erkennt einfache Drohungen',
+  '🟠 Level 4 — ~900 Elo — Anfänger-Niveau, manchmal taktisch',
+  '🟠 Level 5 — ~1050 Elo — gelegentliche Blunders, einfache Taktik',
+  '🟠 Level 6 — ~1200 Elo — Vereinsspielerniveau unteres Mittelfeld',
+  '🟡 Level 7 — ~1350 Elo — solide, wenige grobe Fehler',
+  '🟡 Level 8 — ~1500 Elo — Durchschnittsspieler online',
+  '🟡 Level 9 — ~1650 Elo — guter Vereinsspieler',
+  '🟢 Level 10 — ~1800 Elo — stark, findet die meisten Taktiken',
+  '🟢 Level 11 — ~1950 Elo — sehr stark, Vereins-Spitze',
+  '🟢 Level 12 — ~2050 Elo — Experte',
+  '🔵 Level 13 — ~2150 Elo — kandidatenmeister',
+  '🔵 Level 14 — ~2250 Elo — FM-Stärke',
+  '🔵 Level 15 — ~2350 Elo — IM-Stärke',
+  '🟣 Level 16 — ~2430 Elo — starker IM',
+  '🟣 Level 17 — ~2500 Elo — GM-Grenze',
+  '🟣 Level 18 — ~2580 Elo — starker GM',
+  '⭐ Level 19 — ~2650 Elo — Elite-GM',
+  '⭐ Level 20 — ~2750 Elo — Super-GM, Weltklasse'
+];
 
-function buildVariantSliders(bot){
-  const c=document.getElementById('variantLevelSliders');
-  c.innerHTML=VARIANT_SL_NAMES.map(v=>{
-    const vl=(bot&&bot.variantLevels&&bot.variantLevels[v]!=null)?bot.variantLevels[v]:(sfLevelSelected);
-    const vi=VARIANTS[v];
-    return`<div class="form-group"><label class="form-label">${vi.icon} ${vi.name}</label><div class="range-row"><input type="range" id="vsl_${v}" min="0" max="20" value="${vl}" oninput="document.getElementById('vsl_l_${v}').textContent=this.value"><span class="range-val" id="vsl_l_${v}">${vl}</span></div></div>`
-  }).join('')
+const sfColors = [
+  '#e85050','#e85050','#e85050','#e85050',
+  '#ff8c42','#ff8c42','#ff8c42',
+  '#e8c84f','#e8c84f','#e8c84f',
+  '#7fa650','#7fa650','#7fa650',
+  '#4f9de8','#4f9de8','#4f9de8',
+  '#b06bff','#b06bff','#b06bff',
+  '#f0d060','#f0d060'
+];
+
+function buildSFGrid() {
+  const g = document.getElementById('sfLevelGrid');
+  g.innerHTML = Array.from({length:21},(_,i) => `
+    <div class="sf-level-btn ${i===sfLevelSelected?'selected':''}" 
+         onclick="selectSFLevel(${i})"
+         style="${i===sfLevelSelected?'border-color:'+sfColors[i]+';background:'+sfColors[i]+'22;color:'+sfColors[i]:''}">
+      <div class="lv-num">${i}</div>
+      <div class="lv-elo" style="color:${i===sfLevelSelected?sfColors[i]:'var(--mu)'}">${Math.round(LEVEL_ELO[i]/100)*100===LEVEL_ELO[i]?LEVEL_ELO[i]:LEVEL_ELO[i]}</div>
+    </div>`).join('');
+  updateSFDesc();
 }
 
-function buildEmojiPicker(){
-  document.getElementById('emojiPicker').innerHTML=BOT_EMOJIS.map(e=>`<div onclick="selectEmoji('${e}')" style="width:38px;height:38px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;border:2px solid ${e===selectedEmoji?'var(--ac)':'var(--bd)'};background:var(--s2)" data-emoji="${e}">${e}</div>`).join('')
+function selectSFLevel(lv) {
+  sfLevelSelected = lv;
+  document.querySelectorAll('.sf-level-btn').forEach((b,i) => {
+    if (i === lv) {
+      b.className = 'sf-level-btn selected';
+      b.style.cssText = `border-color:${sfColors[i]};background:${sfColors[i]}22;color:${sfColors[i]}`;
+      b.querySelector('.lv-elo').style.color = sfColors[i];
+    } else {
+      b.className = 'sf-level-btn';
+      b.style.cssText = '';
+      b.querySelector('.lv-elo').style.color = 'var(--mu)';
+    }
+  });
+  updateSFDesc();
 }
-function selectEmoji(e){selectedEmoji=e;document.querySelectorAll('#emojiPicker>div').forEach(el=>el.style.borderColor=el.dataset.emoji===e?'var(--ac)':'var(--bd)')}
-function selectColor(el){selectedBotColor=el.dataset.color;document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('selected'));el.classList.add('selected')}
-function switchBotTab(tab,btn){['profil','engine','opening','char','variants','look'].forEach(t=>document.getElementById('botTab-'+t).style.display=t===tab?'':'none');document.querySelectorAll('#botModal .tab-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active')}
 
-document.addEventListener('change',e=>{
-  if(e.target.id==='tBaseTime'||e.target.id==='tIncrement')updateTimePreview();
-  if(e.target.id==='botEngine'){document.getElementById('sfSection').style.display=e.target.value==='stockfish'?'':'none'}
-  if(e.target.id==='tVariant')updateVariantDesc()
+function updateSFDesc() {
+  const el = document.getElementById('sfLevelDesc');
+  if (el) el.textContent = sfDescs[sfLevelSelected];
+}
+
+function buildVariantSliders(bot) {
+  const c = document.getElementById('variantLevelSliders');
+  c.innerHTML = VARIANT_SL_NAMES.map(v => {
+    const vl = (bot && bot.variantLevels && bot.variantLevels[v] != null) ? bot.variantLevels[v] : sfLevelSelected;
+    const vi = VARIANTS[v];
+    return `<div class="form-group"><label class="form-label">${vi.icon} ${vi.name}</label><div class="range-row"><input type="range" id="vsl_${v}" min="0" max="20" value="${vl}" oninput="document.getElementById('vsl_l_${v}').textContent=this.value"><span class="range-val" id="vsl_l_${v}">${vl}</span></div></div>`;
+  }).join('');
+}
+
+function buildEmojiPicker() {
+  document.getElementById('emojiPicker').innerHTML = BOT_EMOJIS.map(e =>
+    `<div onclick="selectEmoji('${e}')" style="width:38px;height:38px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;border:2px solid ${e===selectedEmoji?'var(--ac)':'var(--bd)'};background:var(--s2)" data-emoji="${e}">${e}</div>`
+  ).join('');
+}
+function selectEmoji(e) { selectedEmoji=e; document.querySelectorAll('#emojiPicker>div').forEach(el=>el.style.borderColor=el.dataset.emoji===e?'var(--ac)':'var(--bd)'); }
+function selectColor(el) { selectedBotColor=el.dataset.color; document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('selected')); el.classList.add('selected'); }
+function switchBotTab(tab,btn) { ['profil','engine','opening','char','variants','look'].forEach(t=>document.getElementById('botTab-'+t).style.display=t===tab?'':'none'); document.querySelectorAll('#botModal .tab-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); }
+
+document.addEventListener('change', e => {
+  if (e.target.id==='tBaseTime'||e.target.id==='tIncrement') updateTimePreview();
+  if (e.target.id==='tVariant') updateVariantDesc();
 });
-function updateTimePreview(){const b=parseFloat(document.getElementById('tBaseTime').value),i=parseInt(document.getElementById('tIncrement').value);document.getElementById('timeControlPreview').textContent=`${b}+${i}`;const t=b*60+i*40;document.getElementById('timeControlType').textContent=t<30?'Ultrabullet':t<179?'Bullet':t<479?'Blitz':t<1499?'Rapid':'Classical'}
-function updateVariantDesc(){const v=document.getElementById('tVariant').value;const vd=VARIANTS[v];document.getElementById('variantDescription').innerHTML=`<div style="font-size:22px;margin-bottom:8px">${vd.icon} ${vd.name}</div><div style="font-size:13px;color:var(--mu)">${vd.desc}</div>`}
+function updateTimePreview() { const b=parseFloat(document.getElementById('tBaseTime').value),i=parseInt(document.getElementById('tIncrement').value); document.getElementById('timeControlPreview').textContent=`${b}+${i}`; const t=b*60+i*40; document.getElementById('timeControlType').textContent=t<30?'Ultrabullet':t<179?'Bullet':t<479?'Blitz':t<1499?'Rapid':'Classical'; }
+function updateVariantDesc() { const v=document.getElementById('tVariant').value; const vd=VARIANTS[v]; document.getElementById('variantDescription').innerHTML=`<div style="font-size:22px;margin-bottom:8px">${vd.icon} ${vd.name}</div><div style="font-size:13px;color:var(--mu)">${vd.desc}</div>`; }
 
-function openBotModal(id=null){
-  editingBotId=id;sfLevelSelected=10;selectedEmoji='🤖';selectedBotColor='#7fa650';
-  const bot=id?state.bots.find(b=>b.id===id):null;
-  if(bot){
-    document.getElementById('botName').value=bot.name;
-    document.getElementById('botStartElo').value=bot.elo;
-    document.getElementById('botTitle').value=bot.title||'';
-    document.getElementById('botCountry').value=bot.country||'🌍 International';
-    document.getElementById('botBio').value=bot.bio||'';
-    document.getElementById('botPrefColor').value=bot.prefColor||'random';
-    document.getElementById('botEngine').value=bot.engine||'stockfish';
-    sfLevelSelected=bot.sfLevel??10;
-    document.getElementById('botContempt').value=bot.contempt||0;document.getElementById('contemptLabel').textContent=bot.contempt||0;
-    document.getElementById('botTimeVariance').value=bot.timeVariance||10;document.getElementById('timeVarLabel').textContent=(bot.timeVariance||10)+'%';
-    document.getElementById('botRandomize').checked=bot.randomize||false;
-    document.getElementById('botRandomPct').value=bot.randomPct||10;document.getElementById('randomPctLabel').textContent=(bot.randomPct||10)+'%';
-    document.getElementById('botOpeningBook').value=bot.openingBook||'random';
-    document.getElementById('botOpeningVariety').value=bot.openingVariety||3;document.getElementById('openVarLabel').textContent=bot.openingVariety||3;
-    document.getElementById('botGambitStyle').value=bot.gambitStyle||'neutral';
-    document.getElementById('botPreferSicilian').checked=bot.preferSicilian||false;
-    document.getElementById('botPreferIndian').checked=bot.preferIndian||false;
-    document.getElementById('botPlayStyle').value=bot.playStyle||'balanced';
-    document.getElementById('botAggressiveness').value=bot.aggressiveness||50;document.getElementById('aggrLabel').textContent=bot.aggressiveness||50;
-    document.getElementById('botTimePressure').value=bot.timePressure||'normal';
-    document.getElementById('botResignThreshold').value=bot.resignThreshold!=null?bot.resignThreshold:'-500';
-    document.getElementById('botDrawBehavior').value=bot.drawBehavior||'balanced';
-    document.getElementById('botLoveSacrifice').checked=bot.loveSacrifice||false;
-    document.getElementById('botBishopPair').checked=bot.bishopPair||false;
-    document.getElementById('botPawnFocus').checked=bot.pawnFocus||false;
-    document.getElementById('botPrefVariant').value=bot.prefVariant||'standard';
-    document.getElementById('botEloClass').value=bot.eloClass||'intermediate';
-    selectedEmoji=bot.emoji||'🤖';selectedBotColor=bot.color||'#7fa650';
-    document.getElementById('sfSection').style.display=bot.engine==='stockfish'?'':'none';
-    buildVariantSliders(bot)
-  }else{
-    document.getElementById('botName').value='';document.getElementById('botStartElo').value=1500;document.getElementById('botBio').value='';
-    document.getElementById('botEngine').value='stockfish';document.getElementById('sfSection').style.display='';
-    document.getElementById('botContempt').value=0;document.getElementById('contemptLabel').textContent=0;
-    document.getElementById('botTimeVariance').value=10;document.getElementById('timeVarLabel').textContent='10%';
-    document.getElementById('botRandomize').checked=false;document.getElementById('botRandomPct').value=10;document.getElementById('randomPctLabel').textContent='10%';
-    document.getElementById('botOpeningBook').value='random';document.getElementById('botOpeningVariety').value=3;document.getElementById('openVarLabel').textContent=3;
-    document.getElementById('botGambitStyle').value='neutral';document.getElementById('botPreferSicilian').checked=false;document.getElementById('botPreferIndian').checked=false;
-    document.getElementById('botPlayStyle').value='balanced';document.getElementById('botAggressiveness').value=50;document.getElementById('aggrLabel').textContent=50;
-    document.getElementById('botTimePressure').value='normal';document.getElementById('botResignThreshold').value='-500';document.getElementById('botDrawBehavior').value='balanced';
-    document.getElementById('botLoveSacrifice').checked=false;document.getElementById('botBishopPair').checked=false;document.getElementById('botPawnFocus').checked=false;
-    document.getElementById('botPrefVariant').value='standard';document.getElementById('botTitle').value='';document.getElementById('botPrefColor').value='random';document.getElementById('botEloClass').value='intermediate';
-    buildVariantSliders(null)
+// ══════════════════════════════════════════════════════════════
+//  BOT MODAL
+// ══════════════════════════════════════════════════════════════
+function openBotModal(id=null) {
+  editingBotId=id; sfLevelSelected=10; selectedEmoji='🤖'; selectedBotColor='#7fa650';
+  const bot = id ? state.bots.find(b=>b.id===id) : null;
+  if (bot) {
+    document.getElementById('botName').value = bot.name;
+    document.getElementById('botStartElo').value = bot.elo;
+    document.getElementById('botTitle').value = bot.title||'';
+    document.getElementById('botCountry').value = bot.country||'🌍 International';
+    document.getElementById('botPrefColor').value = bot.prefColor||'random';
+    document.getElementById('botEngine').value = bot.engine||'stockfish';
+    sfLevelSelected = bot.sfLevel ?? 10;
+    document.getElementById('botTimeVariance').value = bot.timeVariance||15;
+    document.getElementById('timeVarLabel').textContent = (bot.timeVariance||15)+'%';
+    document.getElementById('botOpeningBook').value = bot.openingBook||'random';
+    document.getElementById('botOpeningVariety').value = bot.openingVariety||3;
+    document.getElementById('openVarLabel').textContent = bot.openingVariety||3;
+    document.getElementById('botPlayStyle').value = bot.playStyle||'balanced';
+    document.getElementById('botTimePressure').value = bot.timePressure||'normal';
+    document.getElementById('botResignThreshold').value = bot.resignThreshold!=null ? bot.resignThreshold : '-500';
+    document.getElementById('botPrefVariant').value = bot.prefVariant||'standard';
+    document.getElementById('sfSection').style.display = bot.engine==='stockfish' ? '' : 'none';
+    selectedEmoji = bot.emoji||'🤖'; selectedBotColor = bot.color||'#7fa650';
+    buildVariantSliders(bot);
+  } else {
+    document.getElementById('botName').value=''; document.getElementById('botStartElo').value=1500;
+    document.getElementById('botEngine').value='stockfish'; document.getElementById('sfSection').style.display='';
+    document.getElementById('botTimeVariance').value=15; document.getElementById('timeVarLabel').textContent='15%';
+    document.getElementById('botOpeningBook').value='random'; document.getElementById('botOpeningVariety').value=3; document.getElementById('openVarLabel').textContent=3;
+    document.getElementById('botPlayStyle').value='balanced'; document.getElementById('botTimePressure').value='normal';
+    document.getElementById('botResignThreshold').value='-500';
+    document.getElementById('botPrefVariant').value='standard'; document.getElementById('botTitle').value=''; document.getElementById('botPrefColor').value='random';
+    buildVariantSliders(null);
   }
-  buildSFGrid();buildEmojiPicker();
-  document.querySelectorAll('.color-swatch').forEach(s=>s.classList.toggle('selected',s.dataset.color===selectedBotColor));
-  switchBotTab('profil',document.querySelector('#botModal .tab-btn'));
-  openModal('botModal')
+  buildSFGrid(); buildEmojiPicker();
+  document.querySelectorAll('.color-swatch').forEach(s=>s.classList.toggle('selected', s.dataset.color===selectedBotColor));
+  switchBotTab('profil', document.querySelector('#botModal .tab-btn'));
+  openModal('botModal');
 }
-function closeBotModal(){closeModal('botModal')}
+function closeBotModal() { closeModal('botModal'); }
 
-function saveBot(){
-  const name=document.getElementById('botName').value.trim();if(!name){toast('Bitte Namen eingeben','error');return}
-  const elo=parseInt(document.getElementById('botStartElo').value)||1500;
-  const variantLevels={};VARIANT_SL_NAMES.forEach(v=>{const el=document.getElementById('vsl_'+v);variantLevels[v]=el?parseInt(el.value):sfLevelSelected});
-  const bot={
-    id:editingBotId||'bot_'+Date.now(),name,elo,
-    title:document.getElementById('botTitle').value,
-    country:document.getElementById('botCountry').value,
-    bio:document.getElementById('botBio').value,
-    prefColor:document.getElementById('botPrefColor').value,
-    engine:document.getElementById('botEngine').value,
-    sfLevel:sfLevelSelected,
-    contempt:parseInt(document.getElementById('botContempt').value)||0,
-    timeVariance:parseInt(document.getElementById('botTimeVariance').value)||10,
-    randomize:document.getElementById('botRandomize').checked,
-    randomPct:parseInt(document.getElementById('botRandomPct').value)||10,
-    openingBook:document.getElementById('botOpeningBook').value,
-    openingVariety:parseInt(document.getElementById('botOpeningVariety').value)||3,
-    gambitStyle:document.getElementById('botGambitStyle').value,
-    preferSicilian:document.getElementById('botPreferSicilian').checked,
-    preferIndian:document.getElementById('botPreferIndian').checked,
-    playStyle:document.getElementById('botPlayStyle').value,
-    aggressiveness:parseInt(document.getElementById('botAggressiveness').value)||50,
-    timePressure:document.getElementById('botTimePressure').value,
-    resignThreshold:parseInt(document.getElementById('botResignThreshold').value),
-    drawBehavior:document.getElementById('botDrawBehavior').value,
-    loveSacrifice:document.getElementById('botLoveSacrifice').checked,
-    bishopPair:document.getElementById('botBishopPair').checked,
-    pawnFocus:document.getElementById('botPawnFocus').checked,
-    prefVariant:document.getElementById('botPrefVariant').value,
-    eloClass:document.getElementById('botEloClass').value,
+function saveBot() {
+  const name = document.getElementById('botName').value.trim();
+  if (!name) { toast('Bitte Namen eingeben','error'); return; }
+  const elo = parseInt(document.getElementById('botStartElo').value)||1500;
+  const variantLevels = {};
+  VARIANT_SL_NAMES.forEach(v => { const el=document.getElementById('vsl_'+v); variantLevels[v]=el?parseInt(el.value):sfLevelSelected; });
+  const bot = {
+    id: editingBotId || 'bot_'+Date.now(), name, elo,
+    title:     document.getElementById('botTitle').value,
+    country:   document.getElementById('botCountry').value,
+    prefColor: document.getElementById('botPrefColor').value,
+    engine:    document.getElementById('botEngine').value,
+    sfLevel:   sfLevelSelected,
+    timeVariance: parseInt(document.getElementById('botTimeVariance').value)||15,
+    openingBook:  document.getElementById('botOpeningBook').value,
+    openingVariety: parseInt(document.getElementById('botOpeningVariety').value)||3,
+    playStyle:  document.getElementById('botPlayStyle').value,
+    timePressure: document.getElementById('botTimePressure').value,
+    resignThreshold: parseInt(document.getElementById('botResignThreshold').value),
+    prefVariant: document.getElementById('botPrefVariant').value,
     variantLevels,
-    emoji:selectedEmoji,color:selectedBotColor,
-    games:0,wins:0,draws:0,losses:0,ratingHistory:[elo],
+    emoji: selectedEmoji, color: selectedBotColor,
+    games:0, wins:0, draws:0, losses:0, ratingHistory:[elo],
     ...defaultBotStats()
   };
-  bot.variantStats.standard.elo=elo;bot.variantStats.standard.ratingHistory=[elo];
-  VARIANT_SL_NAMES.forEach(v=>{if(!bot.variantStats[v]){bot.variantStats[v]={games:0,wins:0,draws:0,losses:0,elo,ratingHistory:[elo]}}});
-  if(editingBotId){
-    const idx=state.bots.findIndex(b=>b.id===editingBotId);
-    if(idx>=0){const old=state.bots[idx];bot.games=old.games;bot.wins=old.wins;bot.draws=old.draws;bot.losses=old.losses;bot.ratingHistory=old.ratingHistory;bot.elo=old.elo;bot.variantStats=old.variantStats||bot.variantStats;bot.tcStats=old.tcStats||bot.tcStats;bot.recentGames=old.recentGames||[];bot.streak=old.streak||{current:0,best:0,type:'win'};bot.bestWinElo=old.bestWinElo||0;state.bots[idx]=bot}
-  }else{state.bots.push(bot)}
-  saveState();closeBotModal();renderBotGrid();toast(`Bot "${name}" ${editingBotId?'aktualisiert':'erstellt'}!`);refreshHome()
+  bot.variantStats.standard.elo = elo; bot.variantStats.standard.ratingHistory = [elo];
+  VARIANT_SL_NAMES.forEach(v=>{ if(!bot.variantStats[v]) bot.variantStats[v]={games:0,wins:0,draws:0,losses:0,elo,ratingHistory:[elo]}; });
+  if (editingBotId) {
+    const idx = state.bots.findIndex(b=>b.id===editingBotId);
+    if (idx>=0) {
+      const old = state.bots[idx];
+      bot.games=old.games; bot.wins=old.wins; bot.draws=old.draws; bot.losses=old.losses;
+      bot.ratingHistory=old.ratingHistory; bot.elo=old.elo;
+      bot.variantStats=old.variantStats||bot.variantStats; bot.tcStats=old.tcStats||bot.tcStats;
+      bot.recentGames=old.recentGames||[]; bot.streak=old.streak||{current:0,best:0,type:'win'};
+      bot.bestWinElo=old.bestWinElo||0; state.bots[idx]=bot;
+    }
+  } else { state.bots.push(bot); }
+  saveState(); closeBotModal(); renderBotGrid(); toast(`Bot "${name}" ${editingBotId?'aktualisiert':'erstellt'}!`); refreshHome();
 }
 
-function deleteBot(id){if(!confirm('Bot wirklich löschen?'))return;state.bots=state.bots.filter(b=>b.id!==id);saveState();renderBotGrid();toast('Bot gelöscht','info')}
+function deleteBot(id) { if(!confirm('Bot wirklich löschen?'))return; state.bots=state.bots.filter(b=>b.id!==id); saveState(); renderBotGrid(); toast('Bot gelöscht','info'); }
 
-function openBotProfile(id){
+function openBotProfile(id) {
   viewingBotId=id;
-  const bot=state.bots.find(b=>b.id===id);if(!bot)return;
+  const bot = state.bots.find(b=>b.id===id); if(!bot) return;
   ensureBotStats(bot);
-  const wr=bot.games?Math.round(bot.wins/bot.games*100):0;
-  const v=VARIANTS;
-  const varRows=VARIANT_SL_NAMES.map(vk=>{
-    const vs=bot.variantStats[vk]||{games:0,wins:0,draws:0,losses:0,elo:1500};
-    if(!vs.games)return'';
+  const wr = bot.games ? Math.round(bot.wins/bot.games*100) : 0;
+  const varRows = VARIANT_SL_NAMES.map(vk => {
+    const vs = bot.variantStats[vk]||{games:0,wins:0,draws:0,losses:0,elo:1500};
+    if (!vs.games) return '';
     const tw=vs.wins+vs.draws+vs.losses||1;
-    const wp=Math.round(vs.wins/tw*100),dp=Math.round(vs.draws/tw*100),lp=100-wp-dp;
-    return`<div class="bp-perf-row"><div class="bp-perf-name">${v[vk].icon} ${v[vk].name}</div><div class="bp-bar-wrap"><div class="bp-bar-win" style="width:${wp}%"></div><div class="bp-bar-draw" style="width:${dp}%"></div><div class="bp-bar-loss" style="width:${lp}%"></div></div><div class="bp-elo-sm">${vs.elo}</div><div style="font-size:11px;color:var(--mu);min-width:60px;text-align:right">${vs.games}P ${wp}%</div></div>`
+    const wp=Math.round(vs.wins/tw*100), dp=Math.round(vs.draws/tw*100), lp=100-wp-dp;
+    return `<div class="bp-perf-row"><div class="bp-perf-name">${VARIANTS[vk].icon} ${VARIANTS[vk].name}</div><div class="bp-bar-wrap"><div class="bp-bar-win" style="width:${wp}%"></div><div class="bp-bar-draw" style="width:${dp}%"></div><div class="bp-bar-loss" style="width:${lp}%"></div></div><div class="bp-elo-sm">${vs.elo}</div><div style="font-size:11px;color:var(--mu);min-width:60px;text-align:right">${vs.games}P ${wp}%</div></div>`;
   }).join('');
-  const tcRows=Object.entries(bot.tcStats||{}).map(([tc,ts])=>{
-    if(!ts.games)return'';const wp=Math.round(ts.wins/ts.games*100);
-    return`<div class="bp-perf-row"><div class="bp-perf-name" style="min-width:80px">${tc.charAt(0).toUpperCase()+tc.slice(1)}</div><div class="bp-bar-wrap"><div class="bp-bar-win" style="width:${wp}%"></div><div class="bp-bar-loss" style="width:${100-wp}%"></div></div><div style="font-size:11px;color:var(--mu);margin-left:8px">${ts.games} Partien</div></div>`
-  }).join('');
-  const hist=bot.variantStats.standard.ratingHistory||[bot.elo];
-  const max=Math.max(...hist),min=Math.min(...hist),range=max-min||1;
-  const chart=hist.slice(-30).map(r=>`<div class="mini-chart-bar" style="height:${Math.max(4,((r-min)/range)*55)}px" title="${r}"></div>`).join('');
-  const recent=(bot.recentGames||[]).slice(-10).reverse();
-  const recRows=recent.length?recent.map(g=>`<tr><td>${g.date||''}</td><td>${escapeHtml(g.opponent||'?')}</td><td><span class="badge badge-blue">${VARIANTS[g.variant||'standard']?.icon||'♟'}</span></td><td class="result-${g.result}">${g.result==='win'?'Sieg':g.result==='draw'?'Remis':'Niederlage'}</td><td style="color:${(g.eloDiff||0)>=0?'var(--ac)':'var(--dn)'}">${(g.eloDiff||0)>=0?'+':''}${g.eloDiff||0}</td></tr>`).join(''):`<tr><td colspan="5" style="text-align:center;color:var(--mu)">Noch keine Partien</td></tr>`;
-  const streak=bot.streak||{current:0,best:0,type:'win'};
-  document.getElementById('botProfileContent').innerHTML=`
+  const hist = bot.variantStats.standard.ratingHistory||[bot.elo];
+  const max=Math.max(...hist), min=Math.min(...hist), range=max-min||1;
+  const chart = hist.slice(-30).map(r=>`<div class="mini-chart-bar" style="height:${Math.max(4,((r-min)/range)*55)}px" title="${r}"></div>`).join('');
+  const recent = (bot.recentGames||[]).slice(-10).reverse();
+  const recRows = recent.length ? recent.map(g=>`<tr><td>${g.date||''}</td><td>${escapeHtml(g.opponent||'?')}</td><td>${VARIANTS[g.variant||'standard']?.icon||'♟'}</td><td class="result-${g.result}">${g.result==='win'?'Sieg':g.result==='draw'?'Remis':'Niederlage'}</td><td style="color:${(g.eloDiff||0)>=0?'var(--ac)':'var(--dn)'}">${(g.eloDiff||0)>=0?'+':''}${g.eloDiff||0}</td></tr>`).join('') : `<tr><td colspan="5" style="text-align:center;color:var(--mu)">Noch keine Partien</td></tr>`;
+  const streak = bot.streak||{current:0,best:0,type:'win'};
+  const levelColor = sfColors[bot.sfLevel??10];
+  document.getElementById('botProfileContent').innerHTML = `
     <div class="bp-header">
       <div class="bp-avatar" style="background:${bot.color}22;border:2px solid ${bot.color}44">${bot.emoji}</div>
       <div style="flex:1">
@@ -1078,10 +1361,10 @@ function openBotProfile(id){
           ${bot.title?`<span class="badge badge-gold">${escapeHtml(bot.title)}</span>`:''}
           <div class="bp-name">${escapeHtml(bot.name)}</div>
           <div class="variant-pill">${VARIANTS[bot.prefVariant||'standard'].icon} ${bot.prefVariant||'standard'}</div>
+          <div style="background:${levelColor}22;border:1px solid ${levelColor}44;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;color:${levelColor}">Level ${bot.sfLevel??10}</div>
         </div>
         <div class="bp-elo">${bot.elo}</div>
-        <div class="bp-meta">${bot.country||'🌍'} · SF Level ${bot.sfLevel||0} · ${escapeHtml(bot.playStyle||'balanced')}</div>
-        ${bot.bio?`<div style="font-size:12px;color:var(--mu);margin-top:6px">${escapeHtml(bot.bio)}</div>`:''}
+        <div class="bp-meta">${bot.country||'🌍'} · ~${LEVEL_ELO[bot.sfLevel??10]} Elo-Stärke · ${escapeHtml(bot.playStyle||'balanced')}</div>
       </div>
       ${streak.current>=2?`<div class="streak-badge">🔥 ${streak.current} Serie</div>`:''}
     </div>
@@ -1091,29 +1374,29 @@ function openBotProfile(id){
       <div class="bp-stat"><div class="bp-stat-val" style="color:var(--mu)">${bot.draws||0}</div><div class="bp-stat-label">Remis</div></div>
       <div class="bp-stat"><div class="bp-stat-val" style="color:var(--dn)">${bot.losses||0}</div><div class="bp-stat-label">Niederlagen</div></div>
       <div class="bp-stat"><div class="bp-stat-val" style="color:var(--gold)">${wr}%</div><div class="bp-stat-label">Gewinnrate</div></div>
-      <div class="bp-stat"><div class="bp-stat-val" style="color:var(--gold)">${bot.bestWinElo||0}</div><div class="bp-stat-label">Stärkster Gegner besiegt</div></div>
+      <div class="bp-stat"><div class="bp-stat-val" style="color:var(--gold)">${bot.bestWinElo||0}</div><div class="bp-stat-label">Stärkster Sieg</div></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
       <div class="card" style="margin:0"><div class="card-title">📈 Rating (Standard)</div><div class="mini-chart">${chart}</div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--mu);margin-top:4px"><span>Min: ${min}</span><span>Jetzt: ${bot.elo}</span><span>Max: ${max}</span></div></div>
       <div class="card" style="margin:0"><div class="card-title">⏱ Beste Serie</div><div style="font-size:24px;font-weight:900;color:var(--gold);text-align:center;padding:12px">${streak.best}🔥</div><div style="text-align:center;font-size:12px;color:var(--mu)">Aktuell: ${streak.current}</div></div>
     </div>
     ${varRows?`<div class="card"><div class="card-title">♟ Performance nach Variante</div>${varRows}</div>`:''}
-    ${tcRows?`<div class="card"><div class="card-title">⏱ Performance nach Bedenkzeit</div>${tcRows}</div>`:''}
     <div class="card"><div class="card-title">📋 Letzte Partien</div><div class="scrollable"><table class="history-table"><thead><tr><th>Datum</th><th>Gegner</th><th>Var.</th><th>Ergebnis</th><th>Elo±</th></tr></thead><tbody>${recRows}</tbody></table></div></div>
   `;
-  openModal('botProfileModal')
+  openModal('botProfileModal');
 }
-let _editBotFromProfile_id=null;
-function editBotFromProfile(){closeModal('botProfileModal');openBotModal(viewingBotId)}
 
-function renderBotGrid(){
-  const g=document.getElementById('botGrid');
-  if(!state.bots.length){g.innerHTML='<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🤖</div><p>Noch keine Bots!</p></div>';return}
-  g.innerHTML=state.bots.map(bot=>`
-    <div class="bot-card">
+function editBotFromProfile() { closeModal('botProfileModal'); openBotModal(viewingBotId); }
+
+function renderBotGrid() {
+  const g = document.getElementById('botGrid');
+  if (!state.bots.length) { g.innerHTML='<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🤖</div><p>Noch keine Bots!</p></div>'; return; }
+  g.innerHTML = state.bots.map(bot => {
+    const lc = sfColors[bot.sfLevel??10];
+    return `<div class="bot-card">
       <div class="bot-avatar" style="background:${bot.color}22;border:1px solid ${bot.color}44">${bot.emoji}</div>
       <div class="bot-name-row">${bot.title?`<span class="badge badge-gold">${escapeHtml(bot.title)}</span>`:''}<span class="bot-name">${escapeHtml(bot.name)}</span><span class="bot-elo">${bot.elo}</span></div>
-      <div class="bot-level-badge">${bot.engine==='stockfish'?`♟ SF ${bot.sfLevel}`:'🎲 Random'} · ${VARIANTS[bot.prefVariant||'standard']?.icon||'♟'} · ${bot.country||'🌍'}</div>
+      <div class="bot-level-badge" style="color:${lc};background:${lc}18">${bot.engine==='stockfish'?`♟ Level ${bot.sfLevel??10} (~${LEVEL_ELO[bot.sfLevel??10]})`:'🎲 Random'} · ${VARIANTS[bot.prefVariant||'standard']?.icon||'♟'}</div>
       <div class="bot-stats">
         <div><div class="bot-stat-val">${bot.wins||0}</div>Siege</div>
         <div><div class="bot-stat-val">${bot.draws||0}</div>Remis</div>
@@ -1124,287 +1407,434 @@ function renderBotGrid(){
         <button class="btn btn-secondary btn-sm" onclick="openBotModal('${bot.id}')">✏️</button>
         <button class="btn btn-danger btn-sm" onclick="deleteBot('${bot.id}')">🗑️</button>
       </div>
-    </div>`).join('')
+    </div>`;
+  }).join('');
 }
 
-// ══════ TOURNAMENT MODAL ══════
-function switchTTab(tab,btn){['tbasic','ttime','tvariant','tbots','trules'].forEach(t=>document.getElementById('tTab-'+t).style.display=t===tab?'':'none');document.querySelectorAll('#tournamentModal .tab-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');if(tab==='tbots')renderTBotGrid();if(tab==='tvariant')updateVariantDesc()}
-let selectedTBots=new Set();
-function renderTBotGrid(){const g=document.getElementById('tBotGrid'),em=document.getElementById('tBotEmpty');if(!state.bots.length){g.style.display='none';em.style.display='';return}g.style.display='';em.style.display='none';g.innerHTML=state.bots.map(b=>`<div class="bot-card ${selectedTBots.has(b.id)?'selected':''}" onclick="toggleTBot('${b.id}')" style="cursor:pointer"><div class="bot-check">✓</div><div style="display:flex;align-items:center;gap:8px"><div style="font-size:22px">${b.emoji}</div><div><div style="font-weight:700;font-size:13px">${escapeHtml(b.name)}</div><div style="font-size:11px;color:var(--mu)">SF ${b.sfLevel||10} · ${b.elo} Elo</div></div></div></div>`).join('');document.getElementById('selectedBotCount').textContent=selectedTBots.size}
-function toggleTBot(id){if(selectedTBots.has(id))selectedTBots.delete(id);else selectedTBots.add(id);renderTBotGrid()}
-function selectAllBots(){state.bots.forEach(b=>selectedTBots.add(b.id));renderTBotGrid()}
-function deselectAllBots(){selectedTBots.clear();renderTBotGrid()}
-function openCreateTournament(){selectedTBots=new Set(state.bots.map(b=>b.id));switchTTab('tbasic',document.querySelector('#tournamentModal .tab-btn'));updateTimePreview();openModal('tournamentModal')}
-function closeTournamentModal(){closeModal('tournamentModal')}
-function startTournament(){
-  const name=(document.getElementById('tName').value.trim())||'Arena '+new Date().toLocaleDateString('de');
-  const botIds=[...selectedTBots];
-  if(!botIds.length){toast('Mindestens 1 Bot nötig','error');return}
-  const cfg={id:'T_'+Date.now(),name,type:document.getElementById('tType').value,duration:parseInt(document.getElementById('tDuration').value),baseTime:parseFloat(document.getElementById('tBaseTime').value),increment:parseInt(document.getElementById('tIncrement').value),playerJoins:document.getElementById('tPlayerJoins').checked,showElo:document.getElementById('tShowElo').checked,flagging:document.getElementById('tFlagging').checked,pointsWin:parseInt(document.getElementById('tPointsWin').value)||2,pointsDraw:parseInt(document.getElementById('tPointsDraw').value)||1,streakBonus:parseInt(document.getElementById('tStreakBonus').value)||1,avoidRematches:document.getElementById('tAvoidRematches').checked,eloMatch:document.getElementById('tEloMatch').checked,updateElo:document.getElementById('tUpdateElo').checked,animSpeed:parseInt(document.getElementById('tAnimSpeed').value)||500,botIds,variant:document.getElementById('tVariant').value||'standard',participantCount:botIds.length+(document.getElementById('tPlayerJoins').checked?1:0)};
-  closeTournamentModal();launchArena(cfg)
+// ══════════════════════════════════════════════════════════════
+//  TOURNAMENT MODAL
+// ══════════════════════════════════════════════════════════════
+function switchTTab(tab,btn) { ['tbasic','ttime','tvariant','tbots','trules'].forEach(t=>document.getElementById('tTab-'+t).style.display=t===tab?'':'none'); document.querySelectorAll('#tournamentModal .tab-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); if(tab==='tbots') renderTBotGrid(); if(tab==='tvariant') updateVariantDesc(); }
+let selectedTBots = new Set();
+function renderTBotGrid() {
+  const g=document.getElementById('tBotGrid'), em=document.getElementById('tBotEmpty');
+  if (!state.bots.length) { g.style.display='none'; em.style.display=''; return; }
+  g.style.display=''; em.style.display='none';
+  g.innerHTML = state.bots.map(b => {
+    const lc = sfColors[b.sfLevel??10];
+    return `<div class="bot-card ${selectedTBots.has(b.id)?'selected':''}" onclick="toggleTBot('${b.id}')" style="cursor:pointer"><div class="bot-check">✓</div><div style="display:flex;align-items:center;gap:8px"><div style="font-size:22px">${b.emoji}</div><div><div style="font-weight:700;font-size:13px">${escapeHtml(b.name)}</div><div style="font-size:11px;color:${lc}">Level ${b.sfLevel??10} · ${b.elo} Elo</div></div></div></div>`;
+  }).join('');
+  document.getElementById('selectedBotCount').textContent = selectedTBots.size;
 }
-function renderTournamentList(){const el=document.getElementById('tournamentList');if(!state.tournaments.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">🏆</div><p>Noch keine Turniere</p></div>';return}el.innerHTML=[...state.tournaments].reverse().map(t=>`<div class="tournament-item"><div class="t-status finished"></div><div class="t-info"><div class="t-name">${escapeHtml(t.name)}</div><div class="t-meta">${VARIANTS[t.variant||'standard']?.icon||'♟'} ${escapeHtml(t.variant||'standard')} · ${t.baseTime}+${t.increment} · ${t.participantCount} Teiln.</div></div><div><div class="t-time">${t.duration}min</div><div style="font-size:12px;color:var(--mu)">${t.finishedAt||''}</div></div></div>`).join('')}
+function toggleTBot(id) { if(selectedTBots.has(id)) selectedTBots.delete(id); else selectedTBots.add(id); renderTBotGrid(); }
+function selectAllBots()    { state.bots.forEach(b=>selectedTBots.add(b.id)); renderTBotGrid(); }
+function deselectAllBots()  { selectedTBots.clear(); renderTBotGrid(); }
+function openCreateTournament() { selectedTBots=new Set(state.bots.map(b=>b.id)); switchTTab('tbasic',document.querySelector('#tournamentModal .tab-btn')); updateTimePreview(); openModal('tournamentModal'); }
+function closeTournamentModal() { closeModal('tournamentModal'); }
 
-// ══════ ARENA ══════
-function launchArena(cfg){
-  showPage('arena');document.querySelectorAll('.nav-tab').forEach((t,i)=>t.classList.toggle('active',i===3));
-  arena={cfg,participants:[],activeGames:[],endTime:Date.now()+cfg.duration*60000,running:true};
-  cfg.botIds.forEach(id=>{const b=state.bots.find(b=>b.id===id);if(b){ensureBotStats(b);arena.participants.push({ref:b,isPlayer:false,score:0,streak:0,games:0,busy:false,name:b.name,elo:b.elo,uid:b.id,lastOpponentUid:null})}});
-  if(cfg.playerJoins)arena.participants.push({ref:state.player,isPlayer:true,score:0,streak:0,games:0,busy:false,name:state.player.name,elo:state.player.elo,uid:'PLAYER',lastOpponentUid:null});
-  const vi=VARIANTS[cfg.variant||'standard'];
-  document.getElementById('arenaTitle').textContent=cfg.name;
-  document.getElementById('arenaSubtitle').textContent=`${vi.icon} ${vi.name} · ${cfg.baseTime}+${cfg.increment} · ${cfg.duration} Min.`;
-  document.getElementById('arenaBoards').innerHTML='';document.getElementById('leaderboard').innerHTML='';document.getElementById('resultsFeed').innerHTML='';
-  document.getElementById('myGamePanel').style.display='none';document.getElementById('btnAbortArena').style.display='';
-  updateLeaderboard();startArenaTimer();fillArena();
-  toast(`${vi.icon} "${cfg.name}" gestartet!`,'info')
-}
-function startArenaTimer(){if(!arena)return;const u=()=>{if(!arena||!arena.running)return;const r=arena.endTime-Date.now();if(r<=0){endArena();return}const m=Math.floor(r/60000),s=Math.floor((r%60000)/1000);const el=document.getElementById('arenaTimer');el.textContent=`${m}:${s.toString().padStart(2,'0')}`;el.className='arena-timer'+(r<60000?' ending':'');setTimeout(u,500)};u()}
-function abortArena(){if(!arena||!confirm('Turnier abbrechen?'))return;endArena(true)}
-function endArena(aborted=false){
-  if(!arena)return;arena.running=false;
-  arena.activeGames.forEach(g=>{if(g.clockInterval){clearInterval(g.clockInterval);g.clockInterval=null}});
-  const sorted=[...arena.participants].sort((a,b)=>b.score-a.score);
-  state.tournaments.push({...arena.cfg,finishedAt:new Date().toLocaleString('de'),results:sorted.map((p,i)=>({rank:i+1,name:p.name,score:p.score}))});
-  state.stats.totalTournaments++;saveState();
-  document.getElementById('arenaTimer').textContent='🏁';document.getElementById('arenaTimer').className='arena-timer';
-  document.getElementById('btnAbortArena').style.display='none';document.getElementById('myGamePanel').style.display='none';
-  if(!aborted&&sorted.length)toast(`🏆 ${sorted[0].name} gewinnt mit ${sorted[0].score} Punkten!`,'info');
-  updateLeaderboard();refreshHome();arena=null
-}
-
-// ══════ PAIRING ══════
-function fillArena(){if(!arena||!arena.running)return;let ch=true;while(ch){ch=false;const av=arena.participants.filter(p=>!p.busy);if(av.length<2)break;const pair=pickPair(av);if(pair){startGame(pair[0],pair[1]);ch=true}else break}}
-function pickPair(av){
-  const cfg=arena.cfg;
-  const sorted=[...av].sort((a,b)=>b.score-a.score||Math.random()-.5);
-  for(let i=0;i<sorted.length;i++){for(let j=i+1;j<sorted.length;j++){
-    const a=sorted[i],b=sorted[j];
-    if(a.lastOpponentUid===b.uid&&b.lastOpponentUid===a.uid&&av.length>2)continue;
-    if(cfg.eloMatch&&Math.abs(a.elo-b.elo)>500&&av.length>3)continue;
-    a.busy=true;b.busy=true;return[a,b]
-  }}
-  if(sorted.length>=2){sorted[0].busy=true;sorted[1].busy=true;return[sorted[0],sorted[1]]}
-  return null
+function startTournament() {
+  const name = (document.getElementById('tName').value.trim()) || 'Arena '+new Date().toLocaleDateString('de');
+  const botIds = [...selectedTBots];
+  if (!botIds.length) { toast('Mindestens 1 Bot nötig','error'); return; }
+  const cfg = {
+    id:'T_'+Date.now(), name,
+    type:       document.getElementById('tType').value,
+    duration:   parseInt(document.getElementById('tDuration').value),
+    baseTime:   parseFloat(document.getElementById('tBaseTime').value),
+    increment:  parseInt(document.getElementById('tIncrement').value),
+    playerJoins:document.getElementById('tPlayerJoins').checked,
+    flagging:   document.getElementById('tFlagging').checked,
+    pointsWin:  parseInt(document.getElementById('tPointsWin').value)||2,
+    pointsDraw: parseInt(document.getElementById('tPointsDraw').value)||1,
+    streakBonus:parseInt(document.getElementById('tStreakBonus').value)||1,
+    avoidRematches:document.getElementById('tAvoidRematches').checked,
+    eloMatch:   document.getElementById('tEloMatch').checked,
+    updateElo:  document.getElementById('tUpdateElo').checked,
+    animSpeed:  parseInt(document.getElementById('tAnimSpeed').value)||500,
+    botIds, variant: document.getElementById('tVariant').value||'standard',
+    participantCount: botIds.length + (document.getElementById('tPlayerJoins').checked?1:0)
+  };
+  closeTournamentModal(); launchArena(cfg);
 }
 
-// ══════ GAME ENGINE ══════
-let gameBoards={};
-function startGame(pA,pB){
-  const vgame=new VariantGame(arena.cfg.variant||'standard');
-  const gid='g_'+Date.now()+'_'+Math.random().toString(36).slice(2,5);
-  const isMyGame=pA.isPlayer||pB.isPlayer;
-  const white=pA,black=pB;
-  const baseMs=arena.cfg.baseTime*60*1000,incMs=arena.cfg.increment*1000;
-  const gs={id:gid,vgame,white,black,whiteClock:baseMs,blackClock:baseMs,incMs,clockInterval:null,thinking:false,done:false,isMyGame,playerColor:isMyGame?(pA.isPlayer?'w':'b'):null};
-  if(isMyGame)setupMyGameUI(gs);else createBotBoardUI(gs);
-  arena.activeGames.push(gs);
-  requestAnimationFrame(()=>{if(!arena||!arena.running||gs.done)return;startClock(gs);updateClockUI(gs);scheduleNextMove(gs)})
+function renderTournamentList() {
+  const el = document.getElementById('tournamentList');
+  if (!state.tournaments.length) { el.innerHTML='<div class="empty-state"><div class="empty-icon">🏆</div><p>Noch keine Turniere</p></div>'; return; }
+  el.innerHTML = [...state.tournaments].reverse().map(t=>`<div class="tournament-item"><div class="t-status finished"></div><div class="t-info"><div class="t-name">${escapeHtml(t.name)}</div><div class="t-meta">${VARIANTS[t.variant||'standard']?.icon||'♟'} ${escapeHtml(t.variant||'standard')} · ${t.baseTime}+${t.increment} · ${t.participantCount} Teiln.</div></div><div><div>${t.duration}min</div><div style="font-size:12px;color:var(--mu)">${t.finishedAt||''}</div></div></div>`).join('');
 }
-function startClock(gs){if(gs.clockInterval)clearInterval(gs.clockInterval);gs.clockInterval=setInterval(()=>{if(gs.done||!arena||!arena.running){clearInterval(gs.clockInterval);gs.clockInterval=null;return}const t=gs.vgame.turn();if(t==='w')gs.whiteClock-=100;else gs.blackClock-=100;if(arena.cfg.flagging){if(gs.whiteClock<=0){finishGame(gs,'b','Zeit');return}if(gs.blackClock<=0){finishGame(gs,'w','Zeit');return}}else{gs.whiteClock=Math.max(0,gs.whiteClock);gs.blackClock=Math.max(0,gs.blackClock)}updateClockUI(gs)},100)}
-function fmt(ms){const t=Math.max(0,ms),m=Math.floor(t/60000),s=Math.floor((t%60000)/1000);return`${m}:${s.toString().padStart(2,'0')}`}
-// GEÄNDERT: die Uhren-Zeilen ("oben"/"unten") werden jetzt passend zur Brett-Orientierung
-// vertauscht. Spielt der Mensch Schwarz (Brett gedreht), steht die eigene Uhr jetzt auf
-// der Seite, auf der auch die eigenen Figuren stehen (oben), statt immer fix unten.
-function updateClockUI(gs){
-  if(gs.isMyGame){
-    const pi=gs.playerColor==='w';
-    const pMs=pi?gs.whiteClock:gs.blackClock, oMs=pi?gs.blackClock:gs.whiteClock;
-    const pEl=document.getElementById('myPlayerClock'),oEl=document.getElementById('myOpponentClock');
-    if(pEl){pEl.textContent=fmt(pMs);pEl.className='player-clock'+(gs.vgame.turn()===gs.playerColor?' active':'')+(pMs<30000?' low':'')}
-    if(oEl){oEl.textContent=fmt(oMs);oEl.className='player-clock'+(gs.vgame.turn()!==gs.playerColor?' active':'')+(oMs<30000?' low':'')}
-  }else{
-    const w=document.getElementById('bclk_w_'+gs.id),b=document.getElementById('bclk_b_'+gs.id);
-    if(w){w.textContent=fmt(gs.whiteClock);w.className='player-clock'+(gs.vgame.turn()==='w'?' active':'')+(gs.whiteClock<30000?' low':'')}
-    if(b){b.textContent=fmt(gs.blackClock);b.className='player-clock'+(gs.vgame.turn()==='b'?' active':'')+(gs.blackClock<30000?' low':'')}
+
+// ══════════════════════════════════════════════════════════════
+//  ARENA
+// ══════════════════════════════════════════════════════════════
+function launchArena(cfg) {
+  showPage('arena'); document.querySelectorAll('.nav-tab').forEach((t,i)=>t.classList.toggle('active',i===3));
+  arena = {cfg, participants:[], activeGames:[], endTime:Date.now()+cfg.duration*60000, running:true};
+  cfg.botIds.forEach(id => { const b=state.bots.find(b=>b.id===id); if(b){ensureBotStats(b);arena.participants.push({ref:b,isPlayer:false,score:0,streak:0,games:0,busy:false,name:b.name,elo:b.elo,uid:b.id,lastOpponentUid:null});} });
+  if (cfg.playerJoins) arena.participants.push({ref:state.player,isPlayer:true,score:0,streak:0,games:0,busy:false,name:state.player.name,elo:state.player.elo,uid:'PLAYER',lastOpponentUid:null});
+  const vi = VARIANTS[cfg.variant||'standard'];
+  document.getElementById('arenaTitle').textContent = cfg.name;
+  document.getElementById('arenaSubtitle').textContent = `${vi.icon} ${vi.name} · ${cfg.baseTime}+${cfg.increment} · ${cfg.duration} Min.`;
+  document.getElementById('arenaBoards').innerHTML=''; document.getElementById('leaderboard').innerHTML=''; document.getElementById('resultsFeed').innerHTML='';
+  document.getElementById('myGamePanel').style.display='none'; document.getElementById('btnAbortArena').style.display='';
+  updateLeaderboard(); startArenaTimer(); fillArena();
+  toast(`${vi.icon} "${cfg.name}" gestartet!`,'info');
+}
+
+function startArenaTimer() {
+  if (!arena) return;
+  const u = () => {
+    if (!arena||!arena.running) return;
+    const r = arena.endTime - Date.now();
+    if (r<=0) { endArena(); return; }
+    const m=Math.floor(r/60000), s=Math.floor((r%60000)/1000);
+    const el=document.getElementById('arenaTimer');
+    el.textContent=`${m}:${s.toString().padStart(2,'0')}`;
+    el.className='arena-timer'+(r<60000?' ending':'');
+    setTimeout(u,500);
+  };
+  u();
+}
+
+function abortArena() { if(!arena||!confirm('Turnier abbrechen?'))return; endArena(true); }
+
+function endArena(aborted=false) {
+  if (!arena) return; arena.running=false;
+  arena.activeGames.forEach(g=>{if(g.clockInterval){clearInterval(g.clockInterval);g.clockInterval=null;}});
+  const sorted = [...arena.participants].sort((a,b)=>b.score-a.score);
+  state.tournaments.push({...arena.cfg, finishedAt:new Date().toLocaleString('de'), results:sorted.map((p,i)=>({rank:i+1,name:p.name,score:p.score}))});
+  state.stats.totalTournaments++; saveState();
+  document.getElementById('arenaTimer').textContent='🏁'; document.getElementById('arenaTimer').className='arena-timer';
+  document.getElementById('btnAbortArena').style.display='none'; document.getElementById('myGamePanel').style.display='none';
+  if (!aborted && sorted.length) toast(`🏆 ${sorted[0].name} gewinnt mit ${sorted[0].score} Punkten!`,'info');
+  updateLeaderboard(); refreshHome(); arena=null;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  PAIRING
+// ══════════════════════════════════════════════════════════════
+function fillArena() {
+  if (!arena||!arena.running) return;
+  let ch=true;
+  while(ch) {
+    ch=false;
+    const av = arena.participants.filter(p=>!p.busy);
+    if (av.length<2) break;
+    const pair = pickPair(av);
+    if (pair) { startGame(pair[0],pair[1]); ch=true; } else break;
   }
 }
 
-function createBotBoardUI(gs){
-  const d=document.createElement('div');d.className='board-card';d.id='bc_'+gs.id;
+function pickPair(av) {
+  const cfg = arena.cfg;
+  const sorted = [...av].sort((a,b)=>b.score-a.score||Math.random()-.5);
+  for(let i=0;i<sorted.length;i++) for(let j=i+1;j<sorted.length;j++) {
+    const a=sorted[i], b=sorted[j];
+    if(a.lastOpponentUid===b.uid&&b.lastOpponentUid===a.uid&&av.length>2) continue;
+    if(cfg.eloMatch&&Math.abs(a.elo-b.elo)>500&&av.length>3) continue;
+    a.busy=true; b.busy=true; return [a,b];
+  }
+  if (sorted.length>=2) { sorted[0].busy=true; sorted[1].busy=true; return [sorted[0],sorted[1]]; }
+  return null;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  GAME ENGINE
+// ══════════════════════════════════════════════════════════════
+let gameBoards = {};
+
+function startGame(pA, pB) {
+  const vgame = new VariantGame(arena.cfg.variant||'standard');
+  const gid = 'g_'+Date.now()+'_'+Math.random().toString(36).slice(2,5);
+  const isMyGame = pA.isPlayer || pB.isPlayer;
+  const white=pA, black=pB;
+  const baseMs = arena.cfg.baseTime*60*1000, incMs = arena.cfg.increment*1000;
+  const gs = {id:gid,vgame,white,black,whiteClock:baseMs,blackClock:baseMs,incMs,clockInterval:null,thinking:false,done:false,isMyGame,playerColor:isMyGame?(pA.isPlayer?'w':'b'):null};
+  if (isMyGame) setupMyGameUI(gs); else createBotBoardUI(gs);
+  arena.activeGames.push(gs);
+  requestAnimationFrame(()=>{ if(!arena||!arena.running||gs.done) return; startClock(gs); updateClockUI(gs); scheduleNextMove(gs); });
+}
+
+function startClock(gs) {
+  if (gs.clockInterval) clearInterval(gs.clockInterval);
+  gs.clockInterval = setInterval(()=>{
+    if (gs.done||!arena||!arena.running) { clearInterval(gs.clockInterval); gs.clockInterval=null; return; }
+    const t = gs.vgame.turn();
+    if (t==='w') gs.whiteClock-=100; else gs.blackClock-=100;
+    if (arena.cfg.flagging) {
+      if (gs.whiteClock<=0) { finishGame(gs,'b','Zeit'); return; }
+      if (gs.blackClock<=0) { finishGame(gs,'w','Zeit'); return; }
+    } else {
+      gs.whiteClock=Math.max(0,gs.whiteClock); gs.blackClock=Math.max(0,gs.blackClock);
+    }
+    updateClockUI(gs);
+  }, 100);
+}
+
+function fmt(ms) { const t=Math.max(0,ms),m=Math.floor(t/60000),s=Math.floor((t%60000)/1000); return `${m}:${s.toString().padStart(2,'0')}`; }
+
+function updateClockUI(gs) {
+  if (gs.isMyGame) {
+    const pi = gs.playerColor==='w';
+    const pMs=pi?gs.whiteClock:gs.blackClock, oMs=pi?gs.blackClock:gs.whiteClock;
+    const pEl=document.getElementById('myPlayerClock'), oEl=document.getElementById('myOpponentClock');
+    if(pEl){pEl.textContent=fmt(pMs);pEl.className='player-clock'+(gs.vgame.turn()===gs.playerColor?' active':'')+(pMs<30000?' low':'');}
+    if(oEl){oEl.textContent=fmt(oMs);oEl.className='player-clock'+(gs.vgame.turn()!==gs.playerColor?' active':'')+(oMs<30000?' low':'');}
+  } else {
+    const w=document.getElementById('bclk_w_'+gs.id), b=document.getElementById('bclk_b_'+gs.id);
+    if(w){w.textContent=fmt(gs.whiteClock);w.className='player-clock'+(gs.vgame.turn()==='w'?' active':'')+(gs.whiteClock<30000?' low':'');}
+    if(b){b.textContent=fmt(gs.blackClock);b.className='player-clock'+(gs.vgame.turn()==='b'?' active':'')+(gs.blackClock<30000?' low':'');}
+  }
+}
+
+function createBotBoardUI(gs) {
+  const d = document.createElement('div'); d.className='board-card'; d.id='bc_'+gs.id;
   d.innerHTML=`<div class="player-row"><div><span class="player-name">${escapeHtml(gs.white.name)}</span> <span class="player-elo">(${gs.white.elo})</span></div><span class="player-clock active" id="bclk_w_${gs.id}">${fmt(gs.whiteClock)}</span></div><div class="board-wrap" id="bw_${gs.id}"></div><div class="player-row"><div><span class="player-name">${escapeHtml(gs.black.name)}</span> <span class="player-elo">(${gs.black.elo})</span></div><span class="player-clock" id="bclk_b_${gs.id}">${fmt(gs.blackClock)}</span></div><div class="game-status" id="bst_${gs.id}">Läuft…</div>`;
   document.getElementById('arenaBoards').prepend(d);
-  const board=Chessboard(document.getElementById('bw_'+gs.id),{position:gs.vgame.fen(),pieceTheme:'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',draggable:false,showNotation:false});
-  gameBoards[gs.id]=board
+  const board = Chessboard(document.getElementById('bw_'+gs.id),{position:gs.vgame.fen(),pieceTheme:'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',draggable:false,showNotation:false});
+  gameBoards[gs.id] = board;
 }
-function setupMyGameUI(gs){
+
+function setupMyGameUI(gs) {
   document.getElementById('myGamePanel').style.display='';
-  const opp=gs.playerColor==='w'?gs.black:gs.white;
-  document.getElementById('myOpponentName').textContent=opp.name;document.getElementById('myOpponentElo').textContent=` (${opp.elo})`;
-  document.getElementById('myPlayerName').textContent=state.player.name;document.getElementById('myPlayerElo').textContent=` (${state.player.elo})`;
-  document.getElementById('myGameStatus').textContent=gs.playerColor==='w'?'♟ Dein Zug':'⌛ Gegner denkt…';
-  document.getElementById('myGameStatus').className='game-status';
-  // GEÄNDERT: Bei Schwarz wird das Brett unten orientiert ("orientation: black"),
-  // daher tauschen wir auch die Reihenfolge der Uhren-Zeilen, damit die eigene Uhr
-  // weiterhin auf der Seite der eigenen Figuren steht (statt immer fix "unten").
-  const topRow=document.getElementById('myTopRow'),bottomRow=document.getElementById('myBottomRow');
+  const opp = gs.playerColor==='w' ? gs.black : gs.white;
+  document.getElementById('myOpponentName').textContent = opp.name;
+  document.getElementById('myOpponentElo').textContent = ` (${opp.elo})`;
+  document.getElementById('myPlayerName').textContent = state.player.name;
+  document.getElementById('myPlayerElo').textContent = ` (${state.player.elo})`;
+  document.getElementById('myGameStatus').textContent = gs.playerColor==='w' ? '♟ Dein Zug' : '⌛ Gegner denkt…';
+  document.getElementById('myGameStatus').className = 'game-status';
+  const topRow=document.getElementById('myTopRow'), bottomRow=document.getElementById('myBottomRow');
   const boardEl=document.getElementById('myGameBoard');
-  if(gs.playerColor==='b'){
-    // Eigene Zeile nach oben, Gegner-Zeile nach unten (vor das Brett bzw. danach einsortieren)
-    boardEl.parentNode.insertBefore(bottomRow,boardEl);
-    boardEl.parentNode.insertBefore(topRow,boardEl.nextSibling);
-  }else{
-    // Standard: Gegner oben, eigene Zeile unten
-    boardEl.parentNode.insertBefore(topRow,boardEl);
-    boardEl.parentNode.insertBefore(bottomRow,boardEl.nextSibling);
+  if (gs.playerColor==='b') {
+    boardEl.parentNode.insertBefore(bottomRow, boardEl);
+    boardEl.parentNode.insertBefore(topRow, boardEl.nextSibling);
+  } else {
+    boardEl.parentNode.insertBefore(topRow, boardEl);
+    boardEl.parentNode.insertBefore(bottomRow, boardEl.nextSibling);
   }
-  const el=boardEl;el.innerHTML='';
-  const board=Chessboard(el,{position:gs.vgame.fen(),pieceTheme:'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',draggable:true,orientation:gs.playerColor==='b'?'black':'white',onDrop:(from,to)=>handlePlayerDrop(gs,from,to),onDragStart:(src,piece)=>{if(gs.done||gs.vgame.turn()!==gs.playerColor)return false;if(gs.playerColor==='w'&&!piece.startsWith('w'))return false;if(gs.playerColor==='b'&&!piece.startsWith('b'))return false}});
-  gs.board=board;setupTap(gs)
+  boardEl.innerHTML='';
+  const board = Chessboard(boardEl, {
+    position: gs.vgame.fen(),
+    pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
+    draggable: true,
+    orientation: gs.playerColor==='b' ? 'black' : 'white',
+    onDrop: (from,to) => handlePlayerDrop(gs,from,to),
+    onDragStart: (src,piece) => {
+      if (gs.done||gs.vgame.turn()!==gs.playerColor) return false;
+      if (gs.playerColor==='w'&&!piece.startsWith('w')) return false;
+      if (gs.playerColor==='b'&&!piece.startsWith('b')) return false;
+    }
+  });
+  gs.board = board; setupTap(gs);
 }
-function handlePlayerDrop(gs,from,to){
-  if(gs.done||gs.vgame.turn()!==gs.playerColor)return'snapback';
-  clearTapHL();tapState.sel=null;
-  const mv=gs.vgame.move({from,to,promotion:'q'});if(!mv)return'snapback';
+
+function handlePlayerDrop(gs, from, to) {
+  if (gs.done||gs.vgame.turn()!==gs.playerColor) return 'snapback';
+  clearTapHL(); tapState.sel=null;
+  const mv = gs.vgame.move({from,to,promotion:'q'}); if(!mv) return 'snapback';
   gs.board.position(gs.vgame.fen());
-  if(gs.incMs>0){if(gs.playerColor==='w')gs.whiteClock+=gs.incMs;else gs.blackClock+=gs.incMs}
-  const st=document.getElementById('myGameStatus');if(st)st.textContent='⌛ Gegner denkt…';
-  checkGameOver(gs);if(!gs.done)scheduleNextMove(gs)
+  if (gs.incMs>0) { if(gs.playerColor==='w') gs.whiteClock+=gs.incMs; else gs.blackClock+=gs.incMs; }
+  const st=document.getElementById('myGameStatus'); if(st) st.textContent='⌛ Gegner denkt…';
+  checkGameOver(gs); if(!gs.done) scheduleNextMove(gs);
 }
 
-function scheduleNextMove(gs){
-  if(gs.done||!arena||!arena.running)return;
-  const turn=gs.vgame.turn();
-  if(gs.isMyGame&&gs.playerColor===turn)return;
-  if(gs.thinking)return;
+function scheduleNextMove(gs) {
+  if (gs.done||!arena||!arena.running) return;
+  const turn = gs.vgame.turn();
+  if (gs.isMyGame && gs.playerColor===turn) return;
+  if (gs.thinking) return;
   gs.thinking=true;
-  const actP=turn==='w'?gs.white:gs.black;
-  const delay=gs.isMyGame?350:(arena.cfg.animSpeed||500);
+  const actP = turn==='w' ? gs.white : gs.black;
+  const delay = gs.isMyGame ? 350 : (arena.cfg.animSpeed||500);
   setTimeout(()=>{
-    if(gs.done||!arena||!arena.running){gs.thinking=false;return}
-    const botRef=actP.ref;if(!botRef){gs.thinking=false;return}
+    if (gs.done||!arena||!arena.running) { gs.thinking=false; return; }
+    const botRef = actP.ref; if(!botRef){ gs.thinking=false; return; }
+
     // Opening book
-    const bookMove=getOpeningMove(botRef,gs.vgame._c);
-    if(bookMove){gs.thinking=false;const mv=gs.vgame.move(bookMove);if(mv){if(gs.incMs>0){if(turn==='w')gs.whiteClock+=gs.incMs;else gs.blackClock+=gs.incMs}applyMoveToUI(gs,turn);checkGameOver(gs);if(!gs.done)scheduleNextMove(gs)}else{scheduleNextMove(gs)}return}
-    // Blunder
-    if(botRef.engine==='random'||(botRef.randomize&&Math.random()*100<(botRef.randomPct||10))){const mvs=gs.vgame.moves();gs.thinking=false;if(mvs.length){const m=gs.vgame.move(mvs[Math.floor(Math.random()*mvs.length)]);if(m){if(gs.incMs>0){if(turn==='w')gs.whiteClock+=gs.incMs;else gs.blackClock+=gs.incMs}applyMoveToUI(gs,turn);checkGameOver(gs);if(!gs.done)scheduleNextMove(gs)}}return}
+    const bookMove = getOpeningMove(botRef, gs.vgame._c);
+    if (bookMove) {
+      gs.thinking=false;
+      const mv = gs.vgame.move(bookMove);
+      if (mv) {
+        if(gs.incMs>0){if(turn==='w')gs.whiteClock+=gs.incMs;else gs.blackClock+=gs.incMs;}
+        applyMoveToUI(gs,turn); checkGameOver(gs); if(!gs.done) scheduleNextMove(gs);
+      } else { scheduleNextMove(gs); }
+      return;
+    }
+
+    // Engine = random: always random move
+    if (botRef.engine === 'random') {
+      gs.thinking=false;
+      const mvs=gs.vgame.moves();
+      if(mvs.length){ const m=gs.vgame.move(mvs[Math.floor(Math.random()*mvs.length)]); if(m){if(gs.incMs>0){if(turn==='w')gs.whiteClock+=gs.incMs;else gs.blackClock+=gs.incMs;}applyMoveToUI(gs,turn);checkGameOver(gs);if(!gs.done)scheduleNextMove(gs);} }
+      return;
+    }
+
     // Variant-specific skill level
-    const varSk=botRef.variantLevels&&botRef.variantLevels[gs.vgame.variant]!=null?botRef.variantLevels[gs.vgame.variant]:botRef.sfLevel??10;
-    const fakeRef={...botRef,sfLevel:varSk};
-    // GEÄNDERT: statt der statischen Turnier-Grundzeit (arena.cfg.baseTime) wird jetzt
-    // die tatsächliche Restzeit des ziehenden Bots (seine eigene Uhr) übergeben, damit
-    // er bei wenig Zeit schneller und bei viel Zeit (relativ) langsamer zieht.
-    const myRemainingMs=turn==='w'?gs.whiteClock:gs.blackClock;
-    getVariantBotMove(gs.vgame,fakeRef,myRemainingMs,gs.incMs,(mv,isUci)=>{
-      gs.thinking=false;if(gs.done||!arena||!arena.running)return;
-      if(!mv){const mvs=gs.vgame.moves();if(mvs.length)gs.vgame.move(mvs[Math.floor(Math.random()*mvs.length)]);else return}
-      else if(isUci){
-        const from=mv.slice(0,2),to=mv.slice(2,4),promo=mv.length===5?mv[4]:'q';
-        const res=gs.vgame.move({from,to,promotion:promo});
-        if(!res){const mvs=gs.vgame.moves();if(mvs.length)gs.vgame.move(mvs[Math.floor(Math.random()*mvs.length)]);else return}
-      }else{const res=gs.vgame.move(mv);if(!res){const mvs=gs.vgame.moves();if(mvs.length)gs.vgame.move(mvs[Math.floor(Math.random()*mvs.length)]);else return}}
-      if(gs.incMs>0){if(turn==='w')gs.whiteClock+=gs.incMs;else gs.blackClock+=gs.incMs}
-      applyMoveToUI(gs,turn);checkGameOver(gs);if(!gs.done)scheduleNextMove(gs)
-    })
-  },delay)
-}
-function applyMoveToUI(gs,turn){
-  const fen=gs.vgame.fen();
-  if(gs.isMyGame&&gs.board){gs.board.position(fen);const st=document.getElementById('myGameStatus');if(st&&!gs.done)st.textContent=gs.vgame.turn()===gs.playerColor?'♟ Dein Zug':'⌛ Gegner denkt…'}
-  else{const b=gameBoards[gs.id];if(b)b.position(fen)}
-  // show three-check count
-  if(gs.vgame.variant==='threecheck'){const w=gs.vgame.checksGiven.w,b=gs.vgame.checksGiven.b;if(gs.isMyGame){const st=document.getElementById('myGameStatus');if(st&&!gs.done)st.textContent=`Schachs: ${gs.white.name} ${w}✓ – ${gs.black.name} ${b}✓`}else{const st=document.getElementById('bst_'+gs.id);if(st)st.textContent=`${gs.white.name}:${w}✓ ${gs.black.name}:${b}✓`}}
+    const varSk = botRef.variantLevels && botRef.variantLevels[gs.vgame.variant]!=null ? botRef.variantLevels[gs.vgame.variant] : botRef.sfLevel ?? 10;
+    const fakeRef = {...botRef, sfLevel: varSk};
+    const myRemainingMs = turn==='w' ? gs.whiteClock : gs.blackClock;
+
+    getVariantBotMove(gs.vgame, fakeRef, myRemainingMs, gs.incMs, (mv, isUci)=>{
+      gs.thinking=false;
+      if (gs.done||!arena||!arena.running) return;
+      let res = null;
+      if (!mv) {
+        const mvs=gs.vgame.moves(); if(mvs.length) gs.vgame.move(mvs[Math.floor(Math.random()*mvs.length)]); else return;
+      } else if (isUci) {
+        const from=mv.slice(0,2), to=mv.slice(2,4), promo=mv.length===5?mv[4]:'q';
+        res = gs.vgame.move({from,to,promotion:promo});
+        if (!res) { const mvs=gs.vgame.moves(); if(mvs.length) gs.vgame.move(mvs[Math.floor(Math.random()*mvs.length)]); else return; }
+      } else {
+        res = gs.vgame.move(mv);
+        if (!res) { const mvs=gs.vgame.moves(); if(mvs.length) gs.vgame.move(mvs[Math.floor(Math.random()*mvs.length)]); else return; }
+      }
+      if(gs.incMs>0){if(turn==='w')gs.whiteClock+=gs.incMs;else gs.blackClock+=gs.incMs;}
+      applyMoveToUI(gs,turn); checkGameOver(gs); if(!gs.done) scheduleNextMove(gs);
+    });
+  }, delay);
 }
 
-function checkGameOver(gs){
-  if(gs.done)return;
-  const result=gs.vgame.getResult();
-  if(!result&&!gs.vgame.game_over())return;
-  gs.done=true;if(gs.clockInterval){clearInterval(gs.clockInterval);gs.clockInterval=null}
-  const r=result||{winner:null,reason:'Beendet'};
-  resolveGame(gs,r.winner,r.reason)
+function applyMoveToUI(gs, turn) {
+  const fen = gs.vgame.fen();
+  if (gs.isMyGame && gs.board) {
+    gs.board.position(fen);
+    const st=document.getElementById('myGameStatus');
+    if(st&&!gs.done) st.textContent=gs.vgame.turn()===gs.playerColor?'♟ Dein Zug':'⌛ Gegner denkt…';
+  } else {
+    const b=gameBoards[gs.id]; if(b) b.position(fen);
+  }
+  if (gs.vgame.variant==='threecheck') {
+    const w=gs.vgame.checksGiven.w, b=gs.vgame.checksGiven.b;
+    if(gs.isMyGame){const st=document.getElementById('myGameStatus');if(st&&!gs.done)st.textContent=`Schachs: ${gs.white.name} ${w}✓ – ${gs.black.name} ${b}✓`;}
+    else{const st=document.getElementById('bst_'+gs.id);if(st)st.textContent=`${gs.white.name}:${w}✓ ${gs.black.name}:${b}✓`;}
+  }
 }
-function finishGame(gs,wc,reason){if(gs.done)return;gs.done=true;if(gs.clockInterval){clearInterval(gs.clockInterval);gs.clockInterval=null}resolveGame(gs,wc,reason)}
 
-function resolveGame(gs,winnerColor,reason){
-  const cfg=arena.cfg;const white=gs.white,black=gs.black;let text=reason;
-  white.lastOpponentUid=black.uid;black.lastOpponentUid=white.uid;
-  const variant=gs.vgame.variant||'standard';const tc=getTC(cfg.baseTime);
-  if(winnerColor==='w'){white.score+=cfg.pointsWin;white.streak=(white.streak||0)+1;if(white.streak>=2)white.score+=cfg.streakBonus;black.streak=0;text=`${white.name} gewinnt (${reason})`;addResultFeed(`${VARIANTS[variant].icon} 🟢 ${white.name} ⚔️ ${black.name} — ${reason}`)}
-  else if(winnerColor==='b'){black.score+=cfg.pointsWin;black.streak=(black.streak||0)+1;if(black.streak>=2)black.score+=cfg.streakBonus;white.streak=0;text=`${black.name} gewinnt (${reason})`;addResultFeed(`${VARIANTS[variant].icon} 🟢 ${black.name} ⚔️ ${white.name} — ${reason}`)}
-  else{white.score+=cfg.pointsDraw;black.score+=cfg.pointsDraw;white.streak=0;black.streak=0;text=`Remis (${reason})`;addResultFeed(`${VARIANTS[variant].icon} ⚪ ${white.name} = ${black.name} — ${reason}`)}
-  white.games++;black.games++;white.busy=false;black.busy=false;
-  // Elo
-  if(cfg.updateElo){
-    const K=32,expW=1/(1+Math.pow(10,(black.elo-white.elo)/400)),scW=winnerColor==='w'?1:winnerColor==='b'?0:.5;
+function checkGameOver(gs) {
+  if (gs.done) return;
+  const result = gs.vgame.getResult();
+  if (!result && !gs.vgame.game_over()) return;
+  gs.done=true; if(gs.clockInterval){clearInterval(gs.clockInterval);gs.clockInterval=null;}
+  const r = result||{winner:null,reason:'Beendet'};
+  resolveGame(gs, r.winner, r.reason);
+}
+
+function finishGame(gs, wc, reason) {
+  if (gs.done) return; gs.done=true;
+  if(gs.clockInterval){clearInterval(gs.clockInterval);gs.clockInterval=null;}
+  resolveGame(gs, wc, reason);
+}
+
+function resolveGame(gs, winnerColor, reason) {
+  const cfg=arena.cfg; const white=gs.white, black=gs.black; let text=reason;
+  white.lastOpponentUid=black.uid; black.lastOpponentUid=white.uid;
+  const variant=gs.vgame.variant||'standard'; const tc=getTC(cfg.baseTime);
+
+  if (winnerColor==='w') { white.score+=cfg.pointsWin; white.streak=(white.streak||0)+1; if(white.streak>=2)white.score+=cfg.streakBonus; black.streak=0; text=`${white.name} gewinnt (${reason})`; addResultFeed(`${VARIANTS[variant].icon} 🟢 ${white.name} ⚔️ ${black.name} — ${reason}`); }
+  else if (winnerColor==='b') { black.score+=cfg.pointsWin; black.streak=(black.streak||0)+1; if(black.streak>=2)black.score+=cfg.streakBonus; white.streak=0; text=`${black.name} gewinnt (${reason})`; addResultFeed(`${VARIANTS[variant].icon} 🟢 ${black.name} ⚔️ ${white.name} — ${reason}`); }
+  else { white.score+=cfg.pointsDraw; black.score+=cfg.pointsDraw; white.streak=0; black.streak=0; text=`Remis (${reason})`; addResultFeed(`${VARIANTS[variant].icon} ⚪ ${white.name} = ${black.name} — ${reason}`); }
+  white.games++; black.games++; white.busy=false; black.busy=false;
+
+  if (cfg.updateElo) {
+    const K=32, expW=1/(1+Math.pow(10,(black.elo-white.elo)/400)), scW=winnerColor==='w'?1:winnerColor==='b'?0:.5;
     const nW=Math.max(100,Math.min(3500,Math.round(white.elo+K*(scW-expW))));
     const nB=Math.max(100,Math.min(3500,Math.round(black.elo+K*((1-scW)-(1-expW)))));
-    white.elo=nW;black.elo=nB;
-    [white,black].forEach((p,pi)=>{
-      if(!p.isPlayer){
-        const bot=state.bots.find(b=>b.id===p.ref.id);if(!bot)return;
+    white.elo=nW; black.elo=nB;
+    [white,black].forEach((p,pi) => {
+      if (!p.isPlayer) {
+        const bot=state.bots.find(b=>b.id===p.ref.id); if(!bot) return;
         ensureBotStats(bot);
-        const newElo=pi===0?nW:nB;
-        const oldElo=bot.elo;
-        const eloDiff=newElo-oldElo;
-        bot.elo=newElo;if(!bot.ratingHistory)bot.ratingHistory=[];bot.ratingHistory.push(newElo);
+        const newElo=pi===0?nW:nB, oldElo=bot.elo, eloDiff=newElo-oldElo;
+        bot.elo=newElo; if(!bot.ratingHistory)bot.ratingHistory=[]; bot.ratingHistory.push(newElo);
         bot.games=(bot.games||0)+1;
-        const isWin=(pi===0&&winnerColor==='w')||(pi===1&&winnerColor==='b');
-        const isDraw=!winnerColor;
-        if(isWin){bot.wins=(bot.wins||0)+1;if(newElo>bot.bestWinElo)bot.bestWinElo=newElo}else if(isDraw)bot.draws=(bot.draws||0)+1;else bot.losses=(bot.losses||0)+1;
-        // streak
+        const isWin=(pi===0&&winnerColor==='w')||(pi===1&&winnerColor==='b'), isDraw=!winnerColor;
+        if(isWin){bot.wins=(bot.wins||0)+1;if(newElo>bot.bestWinElo)bot.bestWinElo=newElo;}
+        else if(isDraw) bot.draws=(bot.draws||0)+1;
+        else bot.losses=(bot.losses||0)+1;
         if(!bot.streak)bot.streak={current:0,best:0,type:'win'};
-        if(isWin){if(bot.streak.type==='win')bot.streak.current++;else{bot.streak.current=1;bot.streak.type='win'}bot.streak.best=Math.max(bot.streak.best,bot.streak.current)}else{bot.streak.current=0}
-        // variant stats
+        if(isWin){if(bot.streak.type==='win')bot.streak.current++;else{bot.streak.current=1;bot.streak.type='win';}bot.streak.best=Math.max(bot.streak.best,bot.streak.current);}else{bot.streak.current=0;}
         if(!bot.variantStats[variant])bot.variantStats[variant]={games:0,wins:0,draws:0,losses:0,elo:bot.elo,ratingHistory:[bot.elo]};
         const vs=bot.variantStats[variant];vs.games++;vs.elo=newElo;if(!vs.ratingHistory)vs.ratingHistory=[newElo];vs.ratingHistory.push(newElo);
         if(isWin)vs.wins++;else if(isDraw)vs.draws++;else vs.losses++;
-        // tc stats
         if(!bot.tcStats)bot.tcStats={bullet:{games:0,wins:0,draws:0,losses:0},blitz:{games:0,wins:0,draws:0,losses:0},rapid:{games:0,wins:0,draws:0,losses:0},classical:{games:0,wins:0,draws:0,losses:0}};
         if(!bot.tcStats[tc])bot.tcStats[tc]={games:0,wins:0,draws:0,losses:0};
         bot.tcStats[tc].games++;if(isWin)bot.tcStats[tc].wins++;else if(isDraw)bot.tcStats[tc].draws++;else bot.tcStats[tc].losses++;
-        // recent games
         if(!bot.recentGames)bot.recentGames=[];
         const opp=pi===0?black:white;
         bot.recentGames.push({date:new Date().toLocaleDateString('de'),opponent:opp.name,result:isWin?'win':isDraw?'draw':'loss',variant,timeControl:`${cfg.baseTime}+${cfg.increment}`,eloDiff});
-        if(bot.recentGames.length>50)bot.recentGames=bot.recentGames.slice(-50)
+        if(bot.recentGames.length>50)bot.recentGames=bot.recentGames.slice(-50);
       }
-    })
+    });
   }
-  // Player stats
-  if(gs.isMyGame){
+
+  if (gs.isMyGame) {
     state.stats.totalGames++;
-    const pC=gs.playerColor||'w';const won=winnerColor===pC,draw=!winnerColor;
-    if(won){state.player.wins=(state.player.wins||0)+1;state.stats.totalWins++}else if(draw)state.player.draws=(state.player.draws||0)+1;else state.player.losses=(state.player.losses||0)+1;
+    const pC=gs.playerColor||'w'; const won=winnerColor===pC, draw=!winnerColor;
+    if(won){state.player.wins=(state.player.wins||0)+1;state.stats.totalWins++;}
+    else if(draw) state.player.draws=(state.player.draws||0)+1;
+    else state.player.losses=(state.player.losses||0)+1;
     state.player.games=(state.player.games||0)+1;
-    if(cfg.updateElo){const pPart=pC==='w'?white:black;state.player.elo=pPart.elo;if(!state.player.ratingHistory)state.player.ratingHistory=[];state.player.ratingHistory.push(state.player.elo);document.getElementById('playerRatingDisplay').textContent=state.player.elo}
+    if(cfg.updateElo){const pPart=pC==='w'?white:black;state.player.elo=pPart.elo;if(!state.player.ratingHistory)state.player.ratingHistory=[];state.player.ratingHistory.push(state.player.elo);document.getElementById('playerRatingDisplay').textContent=state.player.elo;}
     const opp=pC==='w'?black:white;
     if(!state.player.gameHistory)state.player.gameHistory=[];
     state.player.gameHistory.push({date:new Date().toLocaleDateString('de'),opponent:opp.name,result:won?'win':draw?'draw':'loss',eloDiff:0,variant,timeControl:`${cfg.baseTime}+${cfg.increment}`});
-    clearTapHL();tapState.sel=null;
-    const st=document.getElementById('myGameStatus');if(st){st.textContent=text;st.className='game-status '+(draw?'':won?'win':'loss')}
-    setTimeout(()=>{const p=document.getElementById('myGamePanel');if(p)p.style.display='none'},3000)
-  }else{
+    clearTapHL(); tapState.sel=null;
+    const st=document.getElementById('myGameStatus');
+    if(st){st.textContent=text;st.className='game-status '+(draw?'':won?'win':'loss');}
+    setTimeout(()=>{const p=document.getElementById('myGamePanel');if(p)p.style.display='none';},3000);
+  } else {
     state.stats.totalGames++;
     const card=document.getElementById('bc_'+gs.id);
-    if(card){const st=document.getElementById('bst_'+gs.id);if(st)st.textContent=text;setTimeout(()=>{if(card.parentNode)card.remove();delete gameBoards[gs.id]},1800)}
+    if(card){const st=document.getElementById('bst_'+gs.id);if(st)st.textContent=text;setTimeout(()=>{if(card.parentNode)card.remove();delete gameBoards[gs.id];},1800);}
   }
-  arena.activeGames=arena.activeGames.filter(g=>g.id!==gs.id);
-  updateLeaderboard();saveState();
-  if(arena&&arena.running)setTimeout(fillArena,400)
+
+  arena.activeGames = arena.activeGames.filter(g=>g.id!==gs.id);
+  updateLeaderboard(); saveState();
+  if(arena&&arena.running) setTimeout(fillArena,400);
 }
-function addResultFeed(t){const f=document.getElementById('resultsFeed');const r=document.createElement('div');r.style.cssText='padding:5px 0;border-bottom:1px solid var(--bd);animation:slideIn .2s ease';r.textContent=t;f.prepend(r);while(f.children.length>30)f.removeChild(f.lastChild)}
-function updateLeaderboard(){if(!arena)return;const s=[...arena.participants].sort((a,b)=>b.score-a.score||b.streak-a.streak);document.getElementById('leaderboard').innerHTML=s.map((p,i)=>`<div class="lb-row ${p.isPlayer?'is-me':''}"><div class="lb-rank ${i<3?'top3':''}">${i+1}</div><div style="font-size:16px">${p.isPlayer?(state.player.avatar||'👤'):(p.ref.emoji||'🤖')}</div><div class="lb-name">${escapeHtml(p.name)}${p.isPlayer?' (Du)':''}</div><div class="lb-streak">${p.streak>=2?`🔥${p.streak}`:''}</div><div class="lb-score">${p.score}</div></div>`).join('')}
 
-// ══════ PROFIL ══════
-function renderProfile(){const p=state.player;document.getElementById('profileAvatar').textContent=p.avatar||'👤';document.getElementById('profileName').textContent=p.name;document.getElementById('profileElo').textContent=p.elo;document.getElementById('profileGames').textContent=`${p.games||0} Partien`;document.getElementById('profileWins').textContent=`${p.wins||0} Siege`;document.getElementById('profileDraws').textContent=`${p.draws||0} Remis`;document.getElementById('profileLosses').textContent=`${p.losses||0} Niederlagen`;document.getElementById('playerNameDisplay').textContent=p.name;document.getElementById('playerRatingDisplay').textContent=p.elo;renderRatingChart();renderResultDonut();renderGameHistory()}
-function renderRatingChart(){const h=state.player.ratingHistory||[1500];const el=document.getElementById('ratingChart');if(h.length<2){el.innerHTML='<div style="color:var(--mu);font-size:13px;margin:auto">Noch keine Daten</div>';return}const max=Math.max(...h),min=Math.min(...h),range=max-min||1;el.innerHTML=h.slice(-30).map(v=>`<div style="flex:1;background:var(--ac);opacity:.7;height:${Math.max(4,((v-min)/range)*100)}px;border-radius:2px 2px 0 0;min-width:4px" title="${v}"></div>`).join('')}
-function renderResultDonut(){const p=state.player;document.getElementById('resultDonut').innerHTML=`<div style="text-align:center"><div style="font-size:22px;font-weight:900;color:var(--ac)">${p.wins||0}</div><div style="color:var(--mu)">Siege</div></div><div style="text-align:center"><div style="font-size:22px;font-weight:900;color:var(--mu)">${p.draws||0}</div><div style="color:var(--mu)">Remis</div></div><div style="text-align:center"><div style="font-size:22px;font-weight:900;color:var(--dn)">${p.losses||0}</div><div style="color:var(--mu)">Nied.</div></div>`}
-function renderGameHistory(){const tb=document.getElementById('gameHistoryTable');const h=state.player.gameHistory||[];if(!h.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--mu)">Noch keine Partien</td></tr>';return}tb.innerHTML=[...h].reverse().slice(0,50).map(g=>`<tr><td>${g.date||''}</td><td>${escapeHtml(g.opponent||'?')}</td><td>${VARIANTS[g.variant||'standard']?.icon||'♟'}</td><td class="result-${g.result}">${g.result==='win'?'Sieg':g.result==='draw'?'Remis':'Niederlage'}</td><td style="color:${(g.eloDiff||0)>=0?'var(--ac)':'var(--dn)'}">${(g.eloDiff||0)>=0?'+':''}${g.eloDiff||0}</td><td>${g.timeControl||''}</td></tr>`).join('')}
-function openProfileSettings(){document.getElementById('settingPlayerName').value=state.player.name;document.getElementById('settingPlayerElo').value=state.player.elo;document.getElementById('settingAvatar').value=state.player.avatar||'👤';openModal('profileModal')}
-function saveProfileSettings(){state.player.name=document.getElementById('settingPlayerName').value.trim()||'Spieler';state.player.elo=parseInt(document.getElementById('settingPlayerElo').value)||1500;state.player.avatar=document.getElementById('settingAvatar').value||'👤';saveState();closeModal('profileModal');renderProfile();toast('Profil gespeichert!')}
+function addResultFeed(t) { const f=document.getElementById('resultsFeed');const r=document.createElement('div');r.style.cssText='padding:5px 0;border-bottom:1px solid var(--bd);animation:slideIn .2s ease';r.textContent=t;f.prepend(r);while(f.children.length>30)f.removeChild(f.lastChild); }
+function updateLeaderboard() { if(!arena)return;const s=[...arena.participants].sort((a,b)=>b.score-a.score||b.streak-a.streak);document.getElementById('leaderboard').innerHTML=s.map((p,i)=>`<div class="lb-row ${p.isPlayer?'is-me':''}"><div class="lb-rank ${i<3?'top3':''}">${i+1}</div><div style="font-size:16px">${p.isPlayer?(state.player.avatar||'👤'):(p.ref.emoji||'🤖')}</div><div class="lb-name">${escapeHtml(p.name)}${p.isPlayer?' (Du)':''}</div><div class="lb-streak">${p.streak>=2?`🔥${p.streak}`:''}</div><div class="lb-score">${p.score}</div></div>`).join(''); }
 
-// ══════ MODALS & TOAST ══════
-function openModal(id){document.getElementById(id).classList.add('open')}
-function closeModal(id){document.getElementById(id).classList.remove('open')}
-document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open')}));
-function toast(msg,type=''){const t=document.createElement('div');t.className='toast '+type;t.textContent=msg;document.getElementById('toastContainer').appendChild(t);setTimeout(()=>t.style.opacity='0',3000);setTimeout(()=>t.remove(),3400)}
+// ══════════════════════════════════════════════════════════════
+//  PROFIL
+// ══════════════════════════════════════════════════════════════
+function renderProfile() {
+  const p=state.player;
+  document.getElementById('profileAvatar').textContent=p.avatar||'👤';
+  document.getElementById('profileName').textContent=p.name;
+  document.getElementById('profileElo').textContent=p.elo;
+  document.getElementById('profileGames').textContent=`${p.games||0} Partien`;
+  document.getElementById('profileWins').textContent=`${p.wins||0} Siege`;
+  document.getElementById('profileDraws').textContent=`${p.draws||0} Remis`;
+  document.getElementById('profileLosses').textContent=`${p.losses||0} Niederlagen`;
+  document.getElementById('playerNameDisplay').textContent=p.name;
+  document.getElementById('playerRatingDisplay').textContent=p.elo;
+  renderRatingChart(); renderResultDonut(); renderGameHistory();
+}
+function renderRatingChart() { const h=state.player.ratingHistory||[1500];const el=document.getElementById('ratingChart');if(h.length<2){el.innerHTML='<div style="color:var(--mu);font-size:13px;margin:auto">Noch keine Daten</div>';return;}const max=Math.max(...h),min=Math.min(...h),range=max-min||1;el.innerHTML=h.slice(-30).map(v=>`<div style="flex:1;background:var(--ac);opacity:.7;height:${Math.max(4,((v-min)/range)*100)}px;border-radius:2px 2px 0 0;min-width:4px" title="${v}"></div>`).join(''); }
+function renderResultDonut() { const p=state.player;document.getElementById('resultDonut').innerHTML=`<div style="text-align:center"><div style="font-size:22px;font-weight:900;color:var(--ac)">${p.wins||0}</div><div style="color:var(--mu)">Siege</div></div><div style="text-align:center"><div style="font-size:22px;font-weight:900;color:var(--mu)">${p.draws||0}</div><div style="color:var(--mu)">Remis</div></div><div style="text-align:center"><div style="font-size:22px;font-weight:900;color:var(--dn)">${p.losses||0}</div><div style="color:var(--mu)">Nied.</div></div>`; }
+function renderGameHistory() { const tb=document.getElementById('gameHistoryTable');const h=state.player.gameHistory||[];if(!h.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--mu)">Noch keine Partien</td></tr>';return;}tb.innerHTML=[...h].reverse().slice(0,50).map(g=>`<tr><td>${g.date||''}</td><td>${escapeHtml(g.opponent||'?')}</td><td>${VARIANTS[g.variant||'standard']?.icon||'♟'}</td><td class="result-${g.result}">${g.result==='win'?'Sieg':g.result==='draw'?'Remis':'Niederlage'}</td><td style="color:${(g.eloDiff||0)>=0?'var(--ac)':'var(--dn)'}">${(g.eloDiff||0)>=0?'+':''}${g.eloDiff||0}</td><td>${g.timeControl||''}</td></tr>`).join(''); }
+function openProfileSettings() { document.getElementById('settingPlayerName').value=state.player.name;document.getElementById('settingPlayerElo').value=state.player.elo;document.getElementById('settingAvatar').value=state.player.avatar||'👤';openModal('profileModal'); }
+function saveProfileSettings() { state.player.name=document.getElementById('settingPlayerName').value.trim()||'Spieler';state.player.elo=parseInt(document.getElementById('settingPlayerElo').value)||1500;state.player.avatar=document.getElementById('settingAvatar').value||'👤';saveState();closeModal('profileModal');renderProfile();toast('Profil gespeichert!'); }
 
-// ══════ INIT ══════
-updateTimePreview();refreshHome();
-document.getElementById('playerNameDisplay').textContent=state.player.name;
-document.getElementById('playerRatingDisplay').textContent=state.player.elo;
-if(!storageOk)toast('Kein lokaler Speicher – Daten nur für diese Sitzung','info');
+// ══════════════════════════════════════════════════════════════
+//  MODALS & TOAST
+// ══════════════════════════════════════════════════════════════
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
+function toast(msg,type='') { const t=document.createElement('div');t.className='toast '+type;t.textContent=msg;document.getElementById('toastContainer').appendChild(t);setTimeout(()=>t.style.opacity='0',3000);setTimeout(()=>t.remove(),3400); }
+
+// ══════════════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════════════
+updateTimePreview();
+refreshHome();
+document.getElementById('playerNameDisplay').textContent = state.player.name;
+document.getElementById('playerRatingDisplay').textContent = state.player.elo;
+if (!storageOk) toast('Kein lokaler Speicher – Daten nur für diese Sitzung','info');
 initStockfishPool();
 </script>
 </body>
