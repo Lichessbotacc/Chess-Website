@@ -5,12 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>ChessArena – Lichess-Style Turniere</title>
 
-<!-- Chess Libraries -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
-<!-- REAL STOCKFISH (UCI, pure JS – no WASM/Worker needed) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js"></script>
 
 <style>
@@ -37,12 +35,14 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
 }
-/* Prevent scroll during board drag */
-.no-scroll { overflow: hidden; touch-action: none; }
 .board-wrap, #myGameBoard, .board-wrap > div {
   touch-action: none !important;
   user-select: none;
 }
+/* TAP HIGHLIGHT */
+.tap-selected-sq { background: rgba(79,157,232,0.55) !important; }
+.tap-hint-sq     { background: rgba(127,166,80,0.45) !important; }
+
 .topbar {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
@@ -287,7 +287,6 @@ body {
 </head>
 <body>
 
-<!-- TOPBAR -->
 <div class="topbar">
   <div class="logo" onclick="showPage('home')">♛<span>ChessArena</span></div>
   <div class="nav-tabs">
@@ -424,8 +423,6 @@ body {
     </div>
   </div>
 </div>
-
-<!-- ===== MODALS ===== -->
 
 <!-- BOT CREATION MODAL -->
 <div class="modal-overlay" id="botModal">
@@ -719,8 +716,6 @@ body {
 </div>
 
 <div class="toast-container" id="toastContainer"></div>
-
-<!-- Engine status badge -->
 <div class="engine-status" id="engineStatus">
   <div class="dot" id="engineDot"></div>
   <span id="engineStatusText">Stockfish lädt…</span>
@@ -728,100 +723,58 @@ body {
 
 <script>
 // ══════════════════════════════════════════════════════════
-//  STOCKFISH POOL – echte Stockfish UCI-Engine
-//  Wir erstellen einen Pool von SF-Instanzen, damit mehrere
-//  Bots parallel Züge berechnen können, ohne zu blockieren.
+//  STOCKFISH POOL
 // ══════════════════════════════════════════════════════════
-
-const SF_POOL_SIZE = 6; // max parallele Stockfish-Instanzen
-const sfPool = [];       // { engine, busy, gameId, callback, resolve }
+const SF_POOL_SIZE = 6;
+const sfPool = [];
 let sfReady = false;
-let sfReadyCount = 0;
 
 function createStockfishInstance() {
   return new Promise((resolve) => {
     let sf;
-    try {
-      // stockfish.js 10.0.2 aus cdnjs kann direkt als Objekt benutzt werden
-      // OHNE Worker – das ist wichtig für iframe-Sandboxes
-      sf = typeof Stockfish === 'function' ? Stockfish() : null;
-    } catch(e) { sf = null; }
-
+    try { sf = typeof Stockfish === 'function' ? Stockfish() : null; } catch(e) { sf = null; }
     if (!sf) {
-      // Fallback: als Worker aus Blob
       try {
         const blob = new Blob([`importScripts('https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js')`], {type:'text/javascript'});
         sf = new Worker(URL.createObjectURL(blob));
       } catch(e2) { resolve(null); return; }
     }
-
-    const instance = { sf, busy: false, pending: null, buffer: '' };
-
+    const instance = { sf, busy: false, pending: null };
     const handler = (event) => {
       const line = typeof event === 'string' ? event : (event.data || '');
       if (!line) return;
-
-      // Warte auf "readyok" beim Init
       if (!instance.initialized) {
         if (line.includes('readyok') || line.includes('uciok') || line.includes('Stockfish')) {
-          instance.initialized = true;
-          resolve(instance);
+          instance.initialized = true; resolve(instance);
         }
         return;
       }
-
-      // Zug-Antwort verarbeiten
       if (instance.pending && line.startsWith('bestmove')) {
         const parts = line.split(' ');
-        const move = parts[1]; // z.B. "e2e4"
+        const move = parts[1];
         const cb = instance.pending;
         instance.pending = null;
         instance.busy = false;
         cb(move && move !== '(none)' ? move : null);
       }
     };
-
-    if (typeof sf.onmessage !== 'undefined' || sf.addMessageListener) {
-      // Worker-artiges Interface
-      sf.onmessage = handler;
-    } else if (sf.addMessageListener) {
-      sf.addMessageListener(handler);
-    } else {
-      // Direkt-Interface (stockfish.js ohne Worker)
-      sf.onmessage = handler;
-    }
-
-    const send = (cmd) => {
-      try {
-        if (typeof sf.postMessage === 'function') sf.postMessage(cmd);
-      } catch(e) {}
-    };
-
+    sf.onmessage = handler;
+    const send = (cmd) => { try { if (typeof sf.postMessage === 'function') sf.postMessage(cmd); } catch(e) {} };
     instance.send = send;
-    send('uci');
-    send('isready');
-
-    // Fallback: nach 3s als ready markieren falls kein Event kommt
-    setTimeout(() => {
-      if (!instance.initialized) {
-        instance.initialized = true;
-        resolve(instance);
-      }
-    }, 3000);
+    send('uci'); send('isready');
+    setTimeout(() => { if (!instance.initialized) { instance.initialized = true; resolve(instance); } }, 3000);
   });
 }
 
 async function initStockfishPool() {
   updateEngineStatus('Stockfish lädt…', false);
   const promises = [];
-  for (let i = 0; i < SF_POOL_SIZE; i++) {
-    promises.push(createStockfishInstance());
-  }
+  for (let i = 0; i < SF_POOL_SIZE; i++) promises.push(createStockfishInstance());
   const instances = await Promise.all(promises);
   instances.forEach(inst => { if (inst) sfPool.push(inst); });
   sfReady = sfPool.length > 0;
-  updateEngineStatus(sfReady ? `Stockfish bereit (${sfPool.length}x)` : 'Engine-Fehler (Fallback aktiv)', sfReady);
-  if (!sfReady) toast('Stockfish konnte nicht geladen werden – Fallback-Engine aktiv', 'error');
+  updateEngineStatus(sfReady ? `Stockfish bereit (${sfPool.length}x)` : 'Engine-Fehler', sfReady);
+  if (!sfReady) toast('Stockfish konnte nicht geladen werden – Fallback aktiv', 'error');
 }
 
 function updateEngineStatus(text, ready) {
@@ -829,120 +782,73 @@ function updateEngineStatus(text, ready) {
   document.getElementById('engineDot').className = 'dot' + (ready ? ' ready' : '');
 }
 
-// Holt einen freien SF aus dem Pool und berechnet den nächsten Zug
-// via echtes UCI-Protokoll (ucinewgame + position + go movetime/depth)
 function stockfishGetMove(fen, skillLevel, movetime, callback) {
-  if (!sfReady || sfPool.length === 0) {
-    fallbackMove(fen, callback);
-    return;
-  }
-
+  if (!sfReady || sfPool.length === 0) { fallbackMove(fen, callback); return; }
   const inst = sfPool.find(p => !p.busy);
-  if (!inst) {
-    // Alle busy → kurz warten und neu versuchen
-    setTimeout(() => stockfishGetMove(fen, skillLevel, movetime, callback), 80);
-    return;
-  }
-
+  if (!inst) { setTimeout(() => stockfishGetMove(fen, skillLevel, movetime, callback), 80); return; }
   inst.busy = true;
-  inst.pending = (move) => {
-    inst.busy = false;
-    callback(move);
-  };
-
-  // UCI-Sequenz: Skill Level setzen, Position laden, suchen
+  inst.pending = (move) => { inst.busy = false; callback(move); };
   const sk = Math.max(0, Math.min(20, skillLevel || 10));
-  const mt = Math.max(50, Math.min(5000, movetime || 500));
-
+  const mt = Math.max(50, Math.min(10000, movetime || 500));
   inst.send('ucinewgame');
   inst.send(`setoption name Skill Level value ${sk}`);
   inst.send(`position fen ${fen}`);
   inst.send(`go movetime ${mt}`);
-
-  // Safety-Timeout: Falls SF hängt, machen wir einen Zufallszug
-  const timeoutMs = mt + 2000;
+  const timeoutMs = mt + 3000;
   const safetyTimer = setTimeout(() => {
-    if (inst.pending) {
-      console.warn('Stockfish Timeout – Fallback');
-      inst.pending = null;
-      inst.busy = false;
-      fallbackMove(fen, callback);
-    }
+    if (inst.pending) { console.warn('SF Timeout'); inst.pending = null; inst.busy = false; fallbackMove(fen, callback); }
   }, timeoutMs);
-
-  // Patch: Nach Antwort Timer clearen
   const origPending = inst.pending;
-  inst.pending = (move) => {
-    clearTimeout(safetyTimer);
-    origPending(move);
-  };
-}
-
-// Konvertiert UCI-Zug ("e2e4") in chess.js-Zug-Objekt und führt ihn aus
-function uciMoveToSan(game, uciMove) {
-  if (!uciMove || uciMove === '(none)') return null;
-  const from = uciMove.slice(0,2);
-  const to   = uciMove.slice(2,4);
-  const promo = uciMove.length === 5 ? uciMove[4] : undefined;
-  const move = game.move({ from, to, promotion: promo || 'q' });
-  return move ? move.san : null;
+  inst.pending = (move) => { clearTimeout(safetyTimer); origPending(move); };
 }
 
 function fallbackMove(fen, callback) {
-  try {
-    const g = new Chess(fen);
-    const moves = g.moves();
-    callback(moves.length ? moves[Math.floor(Math.random()*moves.length)] : null);
-  } catch(e) { callback(null); }
+  try { const g = new Chess(fen); const moves = g.moves(); callback(moves.length ? moves[Math.floor(Math.random()*moves.length)] : null); }
+  catch(e) { callback(null); }
 }
 
-// Berechnet Movetime je nach Skill Level (ms)
-// Niedrige Level = kurze Denkzeit (schwächere Suche durch weniger Zeit)
-// Hohe Level = mehr Denkzeit
-function levelToMovetime(level) {
-  const times = [
+// ══════════════════════════════════════════════════════════
+//  MOVETIME BERECHNUNG – skaliert mit Grundzeit
+//  Skill Level bestimmt die Stärke (SF-Parameter).
+//  Movetime skaliert proportional zur Grundzeit der Partie,
+//  damit Bots in Blitz länger denken als in Bullet.
+// ══════════════════════════════════════════════════════════
+function levelToMovetime(level, baseTimeMinutes) {
+  // Basis-Zeiten für 1-Minuten-Partie (in ms)
+  const baseTimes = [
     50,   // 0
     80,   // 1
     120,  // 2
     160,  // 3
-    200,  // 4
-    280,  // 5
-    380,  // 6
-    480,  // 7
-    600,  // 8
-    750,  // 9
+    220,  // 4
+    300,  // 5
+    400,  // 6
+    500,  // 7
+    620,  // 8
+    760,  // 9
     900,  // 10
     1100, // 11
     1300, // 12
     1550, // 13
     1800, // 14
-    2000, // 15
-    2200, // 16
-    2400, // 17
-    2700, // 18
-    3000, // 19
-    4000, // 20 (max)
+    2100, // 15
+    2400, // 16
+    2700, // 17
+    3100, // 18
+    3500, // 19
+    4200, // 20
   ];
-  return times[Math.max(0, Math.min(20, level))] || 500;
+  const base = baseTimes[Math.max(0, Math.min(20, level || 10))];
+  // Skalierung: sqrt(baseTime / 1) – bei 1min = 1.0x, 4min = 2x, 9min = 3x
+  // Gedeckelt auf maximal 8 Sekunden pro Zug
+  const bm = Math.max(0.25, baseTimeMinutes || 1);
+  const scale = Math.sqrt(bm / 1.0);
+  return Math.min(8000, Math.round(base * scale));
 }
 
 // ══════════════════════════════════════════════════════════
-//  STATE
+//  STATE & PERSISTENZ
 // ══════════════════════════════════════════════════════════
-let state = loadState() || {
-  player: { name:'Spieler', elo:1500, avatar:'👤', games:0, wins:0, draws:0, losses:0, ratingHistory:[1500], gameHistory:[] },
-  bots: [],
-  tournaments: [],
-  stats: { totalGames:0, totalTournaments:0, totalWins:0 }
-};
-
-let arena = null;
-let selectedBotColor = '#7fa650';
-let selectedEmoji = '🤖';
-let editingBotId = null;
-let sfLevelSelected = 10;
-const BOT_EMOJIS = ['🤖','🦾','🧠','👾','🤯','🎯','🦁','🐉','👑','⚡','🌟','🔥','💀','🎩','🤺','🦊','🐺','🦅','🐍','🐻'];
-
 let memoryFallbackStore = {};
 let storageAvailable = true;
 (function testStorage() {
@@ -953,48 +859,144 @@ let storageAvailable = true;
 function saveState() {
   try {
     const s = JSON.stringify(state);
-    if (storageAvailable) localStorage.setItem('chessArenaState', s);
-    else memoryFallbackStore['chessArenaState'] = s;
+    if (storageAvailable) localStorage.setItem('chessArenaState_v2', s);
+    else memoryFallbackStore['chessArenaState_v2'] = s;
   } catch(e) {}
 }
 function loadState() {
   try {
-    const s = storageAvailable ? localStorage.getItem('chessArenaState') : memoryFallbackStore['chessArenaState'];
+    const s = storageAvailable ? localStorage.getItem('chessArenaState_v2') : memoryFallbackStore['chessArenaState_v2'];
     return s ? JSON.parse(s) : null;
   } catch(e) { return null; }
 }
 
-// ══════════════════════════════════════════════════════════
-//  SCROLL-BLOCKIERUNG BEIM ZIEHEN
-// ══════════════════════════════════════════════════════════
-let isDragging = false;
+// Beim Schließen des Tabs immer speichern
+window.addEventListener('beforeunload', saveState);
+
+let state = loadState() || {
+  player: { name:'Spieler', elo:1500, avatar:'👤', games:0, wins:0, draws:0, losses:0, ratingHistory:[1500], gameHistory:[] },
+  bots: [],
+  tournaments: [],
+  stats: { totalGames:0, totalTournaments:0, totalWins:0 }
+};
+// Fehlende Felder ergänzen (Migration alter Saves)
+if (!state.player.ratingHistory) state.player.ratingHistory = [state.player.elo];
+if (!state.player.gameHistory) state.player.gameHistory = [];
+if (!state.stats) state.stats = { totalGames:0, totalTournaments:0, totalWins:0 };
+
+let arena = null;
+let selectedBotColor = '#7fa650';
+let selectedEmoji = '🤖';
+let editingBotId = null;
+let sfLevelSelected = 10;
+const BOT_EMOJIS = ['🤖','🦾','🧠','👾','🤯','🎯','🦁','🐉','👑','⚡','🌟','🔥','💀','🎩','🤺','🦊','🐺','🦅','🐍','🐻'];
+
+// Touch/Drag Scroll-Blockierung
 document.addEventListener('mousedown', (e) => {
   if (e.target.closest('.board-wrap, #myGameBoard, .board-wrap > *, #myGameBoard > *')) {
-    isDragging = true;
-    document.body.style.overflow = 'hidden';
-    document.body.style.touchAction = 'none';
+    document.body.style.overflow = 'hidden'; document.body.style.touchAction = 'none';
   }
 });
-document.addEventListener('mouseup', () => {
-  isDragging = false;
-  document.body.style.overflow = '';
-  document.body.style.touchAction = '';
-});
+document.addEventListener('mouseup', () => { document.body.style.overflow = ''; document.body.style.touchAction = ''; });
 document.addEventListener('touchstart', (e) => {
   if (e.target.closest('.board-wrap, #myGameBoard, .board-wrap > *, #myGameBoard > *')) {
-    document.body.style.overflow = 'hidden';
-    document.body.style.touchAction = 'none';
+    document.body.style.overflow = 'hidden'; document.body.style.touchAction = 'none';
   }
 }, { passive: false });
-document.addEventListener('touchend', () => {
-  document.body.style.overflow = '';
-  document.body.style.touchAction = '';
-});
+document.addEventListener('touchend', () => { document.body.style.overflow = ''; document.body.style.touchAction = ''; });
 document.addEventListener('touchmove', (e) => {
-  if (e.target.closest('.board-wrap, #myGameBoard, .board-wrap > *, #myGameBoard > *')) {
-    e.preventDefault();
-  }
+  if (e.target.closest('.board-wrap, #myGameBoard, .board-wrap > *, #myGameBoard > *')) e.preventDefault();
 }, { passive: false });
+
+// ══════════════════════════════════════════════════════════
+//  TAP-TO-MOVE (Antippen zum Auswählen & Ziehen)
+// ══════════════════════════════════════════════════════════
+let tapState = { selected: null, gs: null };
+
+function getSquareFromEl(el) {
+  // Sucht das nächste Element mit data-square Attribut
+  const sq = el.closest('[data-square]');
+  if (sq) return sq.getAttribute('data-square');
+  // Alternativ via CSS-Klasse: square-e2
+  const cls = [...(el.classList||[])].find(c => /^square-[a-h][1-8]$/.test(c));
+  if (cls) return cls.replace('square-', '');
+  const parent = el.parentElement && el.parentElement.closest('[data-square]');
+  if (parent) return parent.getAttribute('data-square');
+  return null;
+}
+
+function clearTapHighlights() {
+  document.querySelectorAll('.tap-selected-sq, .tap-hint-sq').forEach(el => {
+    el.classList.remove('tap-selected-sq', 'tap-hint-sq');
+  });
+}
+
+function highlightTapSquare(sq, type) {
+  const boardEl = document.getElementById('myGameBoard');
+  if (!boardEl) return;
+  const el = boardEl.querySelector(`[data-square="${sq}"]`);
+  if (el) el.classList.add(type === 'selected' ? 'tap-selected-sq' : 'tap-hint-sq');
+}
+
+function showTapHints(gs, fromSq) {
+  // Zeige mögliche Züge als Hinweise
+  const moves = gs.game.moves({ square: fromSq, verbose: true });
+  moves.forEach(m => highlightTapSquare(m.to, 'hint'));
+}
+
+function setupTapToMove(gs) {
+  const boardEl = document.getElementById('myGameBoard');
+  if (!boardEl) return;
+  // Entferne alten Listener
+  boardEl.removeEventListener('click', boardEl._tapHandler);
+  boardEl._tapHandler = function(e) {
+    if (gs.done || gs.game.turn() !== gs.playerColor) return;
+    const sq = getSquareFromEl(e.target);
+    if (!sq) return;
+
+    if (!tapState.selected) {
+      // Kein Feld gewählt → Figur auswählen
+      const piece = gs.game.get(sq);
+      if (!piece || piece.color !== gs.playerColor) return;
+      tapState.selected = sq;
+      tapState.gs = gs;
+      clearTapHighlights();
+      highlightTapSquare(sq, 'selected');
+      showTapHints(gs, sq);
+    } else {
+      const from = tapState.selected;
+      const to = sq;
+      tapState.selected = null;
+      clearTapHighlights();
+
+      // Eigene Figur angeklickt → Auswahl wechseln
+      const piece = gs.game.get(sq);
+      if (piece && piece.color === gs.playerColor && from !== sq) {
+        tapState.selected = sq;
+        highlightTapSquare(sq, 'selected');
+        showTapHints(gs, sq);
+        return;
+      }
+
+      if (from === sq) return; // Gleiches Feld → Abwählen
+
+      // Zug versuchen
+      const move = gs.game.move({ from, to, promotion: 'q' });
+      if (!move) return;
+
+      gs.board.position(gs.game.fen());
+      if (gs.incMs > 0) {
+        if (gs.playerColor === 'w') gs.whiteClock += gs.incMs;
+        else gs.blackClock += gs.incMs;
+      }
+      const statusEl = document.getElementById('myGameStatus');
+      if (statusEl) statusEl.textContent = '⌛ Gegner denkt…';
+      checkGameOver(gs);
+      if (!gs.done) scheduleNextMove(gs);
+    }
+  };
+  boardEl.addEventListener('click', boardEl._tapHandler);
+}
 
 // ══════════════════════════════════════════════════════════
 //  NAVIGATION
@@ -1043,34 +1045,22 @@ function escapeHtml(str) {
 //  BOT MODAL
 // ══════════════════════════════════════════════════════════
 const sfDescs = [
-  'Level 0 – Zufällige Fehler, ca. ~800 Elo',
-  'Level 1 – Sehr schwach, ca. ~900 Elo',
-  'Level 2 – Schwach, ca. ~1000 Elo',
-  'Level 3 – Anfänger, ca. ~1100 Elo',
-  'Level 4 – Anfänger+, ca. ~1200 Elo',
-  'Level 5 – Mittelklasse, ca. ~1350 Elo',
-  'Level 6 – Mittel, ca. ~1500 Elo',
-  'Level 7 – Mittel+, ca. ~1600 Elo',
-  'Level 8 – Fortgeschritten, ca. ~1700 Elo',
-  'Level 9 – Fortgeschritten+, ca. ~1800 Elo',
-  'Level 10 – Stark, ca. ~1900 Elo',
-  'Level 11 – Stark+, ca. ~2000 Elo',
-  'Level 12 – Experte, ca. ~2100 Elo',
-  'Level 13 – Experte+, ca. ~2200 Elo',
-  'Level 14 – Meister, ca. ~2300 Elo',
-  'Level 15 – Meister+, ca. ~2400 Elo',
-  'Level 16 – Sehr stark, ca. ~2450 Elo',
-  'Level 17 – Sehr stark+, ca. ~2500 Elo',
-  'Level 18 – Meister-Niveau, ca. ~2550 Elo',
-  'Level 19 – Großmeister-Klasse, ca. ~2600 Elo',
+  'Level 0 – Zufällige Fehler, ca. ~800 Elo','Level 1 – Sehr schwach, ca. ~900 Elo',
+  'Level 2 – Schwach, ca. ~1000 Elo','Level 3 – Anfänger, ca. ~1100 Elo',
+  'Level 4 – Anfänger+, ca. ~1200 Elo','Level 5 – Mittelklasse, ca. ~1350 Elo',
+  'Level 6 – Mittel, ca. ~1500 Elo','Level 7 – Mittel+, ca. ~1600 Elo',
+  'Level 8 – Fortgeschritten, ca. ~1700 Elo','Level 9 – Fortgeschritten+, ca. ~1800 Elo',
+  'Level 10 – Stark, ca. ~1900 Elo','Level 11 – Stark+, ca. ~2000 Elo',
+  'Level 12 – Experte, ca. ~2100 Elo','Level 13 – Experte+, ca. ~2200 Elo',
+  'Level 14 – Meister, ca. ~2300 Elo','Level 15 – Meister+, ca. ~2400 Elo',
+  'Level 16 – Sehr stark, ca. ~2450 Elo','Level 17 – Sehr stark+, ca. ~2500 Elo',
+  'Level 18 – Meister-Niveau, ca. ~2550 Elo','Level 19 – Großmeister-Klasse, ca. ~2600 Elo',
   'Level 20 – Volle Stärke, ca. ~2700+ Elo',
 ];
 
 function buildSFLevelGrid() {
   const grid = document.getElementById('sfLevelGrid');
-  grid.innerHTML = Array.from({length:21},(_,i)=>`
-    <div class="sf-level-btn ${i===sfLevelSelected?'selected':''}" onclick="selectSFLevel(${i})">${i}</div>
-  `).join('');
+  grid.innerHTML = Array.from({length:21},(_,i)=>`<div class="sf-level-btn ${i===sfLevelSelected?'selected':''}" onclick="selectSFLevel(${i})">${i}</div>`).join('');
   updateSFDesc();
 }
 function selectSFLevel(lv) {
@@ -1078,9 +1068,8 @@ function selectSFLevel(lv) {
   document.querySelectorAll('.sf-level-btn').forEach((b,i)=>b.classList.toggle('selected',i===lv));
   updateSFDesc();
 }
-function updateSFDesc() {
-  document.getElementById('sfLevelDesc').textContent = sfDescs[sfLevelSelected] || '';
-}
+function updateSFDesc() { document.getElementById('sfLevelDesc').textContent = sfDescs[sfLevelSelected] || ''; }
+
 function buildEmojiPicker() {
   document.getElementById('emojiPicker').innerHTML = BOT_EMOJIS.map(e=>`
     <div onclick="selectEmoji('${e}')" style="width:38px;height:38px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;border:2px solid ${e===selectedEmoji?'var(--accent)':'var(--border)'};background:var(--surface2);" data-emoji="${e}">${e}</div>
@@ -1106,7 +1095,6 @@ document.addEventListener('change', e => {
     document.getElementById('sfLevelSection').style.display = e.target.value==='stockfish'?'':'none';
   }
 });
-
 function updateTimePreview() {
   const base = parseFloat(document.getElementById('tBaseTime').value);
   const inc = parseInt(document.getElementById('tIncrement').value);
@@ -1117,10 +1105,7 @@ function updateTimePreview() {
 }
 
 function openBotModal(id=null) {
-  editingBotId = id;
-  sfLevelSelected = 10;
-  selectedEmoji = '🤖';
-  selectedBotColor = '#7fa650';
+  editingBotId = id; sfLevelSelected = 10; selectedEmoji = '🤖'; selectedBotColor = '#7fa650';
   if (id) {
     const bot = state.bots.find(b=>b.id===id);
     if (bot) {
@@ -1137,8 +1122,7 @@ function openBotModal(id=null) {
       document.getElementById('botPlayStyle').value = bot.playStyle||'balanced';
       document.getElementById('botAcceptDraw').checked = bot.acceptDraw!==false;
       document.getElementById('botEloClass').value = bot.eloClass||'intermediate';
-      selectedEmoji = bot.emoji||'🤖';
-      selectedBotColor = bot.color||'#7fa650';
+      selectedEmoji = bot.emoji||'🤖'; selectedBotColor = bot.color||'#7fa650';
       document.getElementById('sfLevelSection').style.display = bot.engine==='stockfish'?'':'none';
     }
   } else {
@@ -1154,8 +1138,7 @@ function openBotModal(id=null) {
     document.getElementById('botEloClass').value = 'intermediate';
     document.getElementById('sfLevelSection').style.display = '';
   }
-  buildSFLevelGrid();
-  buildEmojiPicker();
+  buildSFLevelGrid(); buildEmojiPicker();
   document.getElementById('colorPicker').querySelectorAll('.color-swatch').forEach(s=>s.classList.toggle('selected',s.dataset.color===selectedBotColor));
   switchBotTab('basic', document.querySelector('#botModal .tab-btn'));
   openModal('botModal');
@@ -1165,10 +1148,10 @@ function closeBotModal() { closeModal('botModal'); }
 function saveBot() {
   const name = document.getElementById('botName').value.trim();
   if (!name) { toast('Bitte einen Bot-Namen eingeben','error'); return; }
+  const elo = parseInt(document.getElementById('botStartElo').value)||1500;
   const bot = {
     id: editingBotId || 'bot_'+Date.now(),
-    name,
-    elo: parseInt(document.getElementById('botStartElo').value)||1500,
+    name, elo,
     country: document.getElementById('botCountry').value,
     title: document.getElementById('botTitle').value,
     bio: document.getElementById('botBio').value,
@@ -1179,10 +1162,8 @@ function saveBot() {
     playStyle: document.getElementById('botPlayStyle').value,
     acceptDraw: document.getElementById('botAcceptDraw').checked,
     eloClass: document.getElementById('botEloClass').value,
-    emoji: selectedEmoji,
-    color: selectedBotColor,
-    games:0, wins:0, draws:0, losses:0,
-    ratingHistory: [parseInt(document.getElementById('botStartElo').value)||1500]
+    emoji: selectedEmoji, color: selectedBotColor,
+    games:0, wins:0, draws:0, losses:0, ratingHistory:[elo]
   };
   if (editingBotId) {
     const idx = state.bots.findIndex(b=>b.id===editingBotId);
@@ -1192,12 +1173,8 @@ function saveBot() {
       bot.ratingHistory=old.ratingHistory; bot.elo=old.elo;
       state.bots[idx] = bot;
     }
-  } else {
-    state.bots.push(bot);
-  }
-  saveState();
-  closeBotModal();
-  renderBotGrid();
+  } else { state.bots.push(bot); }
+  saveState(); closeBotModal(); renderBotGrid();
   toast(`Bot "${name}" ${editingBotId?'aktualisiert':'erstellt'}!`);
   refreshHome();
 }
@@ -1205,16 +1182,13 @@ function saveBot() {
 function deleteBot(id) {
   if (!confirm('Bot wirklich löschen?')) return;
   state.bots = state.bots.filter(b=>b.id!==id);
-  saveState();
-  renderBotGrid();
-  toast('Bot gelöscht','info');
+  saveState(); renderBotGrid(); toast('Bot gelöscht','info');
 }
 
 function renderBotGrid() {
   const grid = document.getElementById('botGrid');
   if (!state.bots.length) {
-    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🤖</div><p>Noch keine Bots. Erstelle deinen ersten Bot!</p></div>';
-    return;
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🤖</div><p>Noch keine Bots. Erstelle deinen ersten Bot!</p></div>'; return;
   }
   grid.innerHTML = state.bots.map(bot=>`
     <div class="bot-card" id="bc_${bot.id}">
@@ -1225,10 +1199,7 @@ function renderBotGrid() {
         <span class="bot-name">${escapeHtml(bot.name)}</span>
         <span class="bot-elo">${bot.elo}</span>
       </div>
-      <div class="bot-level-badge">
-        ${bot.engine==='stockfish'?`♟ SF Level ${bot.sfLevel}`:'🎲 Random'}
-        · ${bot.country||'🌍'}
-      </div>
+      <div class="bot-level-badge">${bot.engine==='stockfish'?`♟ SF Level ${bot.sfLevel}`:'🎲 Random'} · ${bot.country||'🌍'}</div>
       <div class="bot-stats">
         <div><div class="bot-stat-val">${bot.wins||0}</div>Siege</div>
         <div><div class="bot-stat-val">${bot.draws||0}</div>Remis</div>
@@ -1277,8 +1248,7 @@ function deselectAllBots() { selectedTBots.clear(); renderTBotGrid(); }
 function openCreateTournament() {
   selectedTBots = new Set(state.bots.map(b=>b.id));
   switchTTab('tbasic', document.querySelector('#tournamentModal .tab-btn'));
-  updateTimePreview();
-  openModal('tournamentModal');
+  updateTimePreview(); openModal('tournamentModal');
 }
 function closeTournamentModal() { closeModal('tournamentModal'); }
 function startTournament() {
@@ -1287,8 +1257,8 @@ function startTournament() {
   if (botIds.length < 1) { toast('Mindestens 1 Bot nötig','error'); return; }
   if (!document.getElementById('tPlayerJoins').checked && botIds.length < 2) { toast('Mindestens 2 Bots oder aktiviere "Spieler nimmt teil"','error'); return; }
   const config = {
-    id: 'T_'+Date.now(),
-    name, type: document.getElementById('tType').value,
+    id: 'T_'+Date.now(), name,
+    type: document.getElementById('tType').value,
     duration: parseInt(document.getElementById('tDuration').value),
     baseTime: parseFloat(document.getElementById('tBaseTime').value),
     increment: parseInt(document.getElementById('tIncrement').value),
@@ -1305,8 +1275,7 @@ function startTournament() {
     botIds,
     participantCount: botIds.length + (document.getElementById('tPlayerJoins').checked?1:0)
   };
-  closeTournamentModal();
-  launchArena(config);
+  closeTournamentModal(); launchArena(config);
 }
 function renderTournamentList() {
   const el = document.getElementById('tournamentList');
@@ -1332,14 +1301,23 @@ function launchArena(config) {
     activeGames: [],
     endTime: Date.now() + config.duration * 60000,
     running: true,
-    lastPairings: [],
   };
   config.botIds.forEach(id => {
     const bot = state.bots.find(b=>b.id===id);
-    if (bot) arena.participants.push({ ref:bot, isPlayer:false, score:0, streak:0, games:0, busy:false, name:bot.name, elo:bot.elo });
+    if (bot) arena.participants.push({
+      ref: bot, isPlayer: false, score: 0, streak: 0, games: 0, busy: false,
+      name: bot.name, elo: bot.elo,
+      uid: bot.id,          // stabiler unique key
+      lastOpponentUid: null // FIX: Letzte Paarung – nie direkt wiederholen
+    });
   });
   if (config.playerJoins) {
-    arena.participants.push({ ref:state.player, isPlayer:true, score:0, streak:0, games:0, busy:false, name:state.player.name, elo:state.player.elo });
+    arena.participants.push({
+      ref: state.player, isPlayer: true, score: 0, streak: 0, games: 0, busy: false,
+      name: state.player.name, elo: state.player.elo,
+      uid: 'PLAYER',
+      lastOpponentUid: null
+    });
   }
   document.getElementById('arenaTitle').textContent = config.name;
   document.getElementById('arenaSubtitle').textContent = `${config.baseTime}+${config.increment} · ${config.type} · ${config.duration} Min.`;
@@ -1348,9 +1326,7 @@ function launchArena(config) {
   document.getElementById('resultsFeed').innerHTML = '';
   document.getElementById('myGamePanel').style.display = 'none';
   document.getElementById('btnAbortArena').style.display = '';
-  updateLeaderboard();
-  startArenaTimer();
-  fillArena();
+  updateLeaderboard(); startArenaTimer(); fillArena();
   toast(`Turnier "${config.name}" gestartet!`, 'info');
 }
 
@@ -1385,50 +1361,61 @@ function endArena(aborted=false) {
   state.tournaments.push(rec);
   state.stats.totalTournaments++;
   saveState();
-  const timerEl = document.getElementById('arenaTimer');
-  timerEl.textContent = '🏁';
-  timerEl.className = 'arena-timer';
+  document.getElementById('arenaTimer').textContent = '🏁';
+  document.getElementById('arenaTimer').className = 'arena-timer';
   document.getElementById('btnAbortArena').style.display = 'none';
   document.getElementById('myGamePanel').style.display = 'none';
   if (!aborted && sorted.length) toast(`🏆 ${sorted[0].name} gewinnt "${arena.config.name}" mit ${sorted[0].score} Punkten!`,'info');
-  updateLeaderboard();
-  refreshHome();
+  updateLeaderboard(); refreshHome();
   arena = null;
 }
 
 // ══════════════════════════════════════════════════════════
-//  PAIRING
+//  PAIRING – robust, kein Consecutive-Repeat
 // ══════════════════════════════════════════════════════════
 function fillArena() {
   if (!arena || !arena.running) return;
-  while (true) {
-    const avail = arena.participants.filter(p=>!p.busy);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    const avail = arena.participants.filter(p => !p.busy);
     if (avail.length < 2) break;
     const pair = pickPair(avail);
-    if (!pair) break;
-    startGame(pair[0], pair[1]);
+    if (pair) { startGame(pair[0], pair[1]); changed = true; }
+    else break;
   }
 }
 
 function pickPair(avail) {
   const cfg = arena.config;
-  const shuffled = [...avail].sort(()=>Math.random()-0.5);
-  for (let i=0;i<shuffled.length;i++) {
-    for (let j=i+1;j<shuffled.length;j++) {
-      const a=shuffled[i], b=shuffled[j];
-      const key = `${a.name}-${b.name}`;
-      if (cfg.avoidRematches && arena.lastPairings.includes(key) && avail.length>3) continue;
-      if (cfg.eloMatch && Math.abs(a.elo-b.elo)>400 && avail.length>3) continue;
-      arena.lastPairings.push(key);
-      if (arena.lastPairings.length>30) arena.lastPairings.shift();
-      a.busy=true; b.busy=true;
-      return [a,b];
+  // Sortiere nach Score (höchste zuerst) für bessere Paarungsqualität
+  const sorted = [...avail].sort((a,b) => b.score - a.score || Math.random()-0.5);
+
+  // Suche bestes Paar (kein direkter Wiederhol-Gegner)
+  for (let i = 0; i < sorted.length; i++) {
+    for (let j = i+1; j < sorted.length; j++) {
+      const a = sorted[i], b = sorted[j];
+      const aUid = a.uid, bUid = b.uid;
+
+      // HAUPTREGEL: Niemals direkt hintereinander dasselbe Paar
+      // (erst wenn einer von beiden jemand anderen gespielt hat, ist es wieder OK)
+      const justPlayed = (a.lastOpponentUid === bUid && b.lastOpponentUid === aUid);
+      if (justPlayed && avail.length > 2) continue;
+
+      // Elo-Differenz optional beschränken (nur wenn genug Kandidaten)
+      if (cfg.eloMatch && Math.abs(a.elo - b.elo) > 500 && avail.length > 3) continue;
+
+      a.busy = true; b.busy = true;
+      return [a, b];
     }
   }
-  // Fallback
-  const a=shuffled[0], b=shuffled[1];
-  a.busy=true; b.busy=true;
-  return [a,b];
+
+  // Absoluter Fallback: Alle Restriktionen aufheben (nur 2 Teilnehmer übrig)
+  if (sorted.length >= 2) {
+    sorted[0].busy = true; sorted[1].busy = true;
+    return [sorted[0], sorted[1]];
+  }
+  return null;
 }
 
 // ══════════════════════════════════════════════════════════
@@ -1441,30 +1428,28 @@ function startGame(pA, pB) {
   const gameId = 'g_'+Date.now()+'_'+Math.random().toString(36).slice(2,5);
   const isMyGame = pA.isPlayer || pB.isPlayer;
   const white = pA, black = pB;
-  const baseMs = arena.config.baseTime*60*1000;
-  const incMs = arena.config.increment*1000;
+  const baseMs = arena.config.baseTime * 60 * 1000;
+  const incMs  = arena.config.increment * 1000;
   const gs = {
-    id:gameId, game, white, black,
-    whiteClock:baseMs, blackClock:baseMs,
-    incMs, clockInterval:null,
-    thinking:false, done:false, isMyGame,
-    playerColor: isMyGame?(pA.isPlayer?'w':'b'):null
+    id: gameId, game, white, black,
+    whiteClock: baseMs, blackClock: baseMs,
+    incMs, clockInterval: null,
+    thinking: false, done: false, isMyGame,
+    playerColor: isMyGame ? (pA.isPlayer ? 'w' : 'b') : null
   };
   if (isMyGame) setupMyGameUI(gs);
   else createBotBoardUI(gs);
   arena.activeGames.push(gs);
-  requestAnimationFrame(()=>{
-    if (!arena||!arena.running||gs.done) return;
-    startClock(gs);
-    updateClockUI(gs);
-    scheduleNextMove(gs);
+  requestAnimationFrame(() => {
+    if (!arena || !arena.running || gs.done) return;
+    startClock(gs); updateClockUI(gs); scheduleNextMove(gs);
   });
 }
 
 function startClock(gs) {
   if (gs.clockInterval) clearInterval(gs.clockInterval);
-  gs.clockInterval = setInterval(()=>{
-    if (gs.done||!arena||!arena.running) { clearInterval(gs.clockInterval); gs.clockInterval=null; return; }
+  gs.clockInterval = setInterval(() => {
+    if (gs.done || !arena || !arena.running) { clearInterval(gs.clockInterval); gs.clockInterval=null; return; }
     const turn = gs.game.turn();
     if (turn==='w') gs.whiteClock-=100; else gs.blackClock-=100;
     if (arena.config.flagging) {
@@ -1475,17 +1460,17 @@ function startClock(gs) {
       gs.blackClock=Math.max(0,gs.blackClock);
     }
     updateClockUI(gs);
-  },100);
+  }, 100);
 }
 
 function updateClockUI(gs) {
-  const fmt = ms=>{ const t=Math.max(0,ms); const m=Math.floor(t/60000); const s=Math.floor((t%60000)/1000); return `${m}:${s.toString().padStart(2,'0')}`; };
+  const fmt = ms => { const t=Math.max(0,ms); const m=Math.floor(t/60000); const s=Math.floor((t%60000)/1000); return `${m}:${s.toString().padStart(2,'0')}`; };
   if (gs.isMyGame) {
-    const playerIsWhite = gs.playerColor==='w';
-    const pMs = playerIsWhite?gs.whiteClock:gs.blackClock;
-    const oMs = playerIsWhite?gs.blackClock:gs.whiteClock;
-    const pEl=document.getElementById('myPlayerClock');
-    const oEl=document.getElementById('myOpponentClock');
+    const playerIsWhite = gs.playerColor === 'w';
+    const pMs = playerIsWhite ? gs.whiteClock : gs.blackClock;
+    const oMs = playerIsWhite ? gs.blackClock : gs.whiteClock;
+    const pEl = document.getElementById('myPlayerClock');
+    const oEl = document.getElementById('myOpponentClock');
     if (pEl) { pEl.textContent=fmt(pMs); pEl.className='player-clock'+(gs.game.turn()===gs.playerColor?' active':'')+(pMs<30000?' low':''); }
     if (oEl) { oEl.textContent=fmt(oMs); oEl.className='player-clock'+(gs.game.turn()!==gs.playerColor?' active':'')+(oMs<30000?' low':''); }
   } else {
@@ -1513,102 +1498,106 @@ function createBotBoardUI(gs) {
     <div class="game-status" id="bst_${gs.id}">Partie läuft…</div>
   `;
   document.getElementById('arenaBoards').prepend(div);
-  const boardEl=document.getElementById('bw_'+gs.id);
-  const board=Chessboard(boardEl,{position:'start',pieceTheme:'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',draggable:false,showNotation:false});
-  gameBoards[gs.id]=board;
+  const boardEl = document.getElementById('bw_'+gs.id);
+  const board = Chessboard(boardEl, {
+    position:'start',
+    pieceTheme:'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
+    draggable:false, showNotation:false
+  });
+  gameBoards[gs.id] = board;
 }
 
 function setupMyGameUI(gs) {
   document.getElementById('myGamePanel').style.display='';
-  const opp=gs.playerColor==='w'?gs.black:gs.white;
-  document.getElementById('myOpponentName').textContent=opp.name;
-  document.getElementById('myOpponentElo').textContent=` (${opp.elo})`;
-  document.getElementById('myPlayerName').textContent=state.player.name;
-  document.getElementById('myPlayerElo').textContent=` (${state.player.elo})`;
-  document.getElementById('myGameStatus').textContent=gs.playerColor==='w'?'♟ Dein Zug':'⌛ Gegner denkt…';
-  document.getElementById('myGameStatus').className='game-status';
-  const boardEl=document.getElementById('myGameBoard');
-  boardEl.innerHTML='';
-  const board=Chessboard(boardEl,{
+  const opp = gs.playerColor==='w' ? gs.black : gs.white;
+  document.getElementById('myOpponentName').textContent = opp.name;
+  document.getElementById('myOpponentElo').textContent = ` (${opp.elo})`;
+  document.getElementById('myPlayerName').textContent = state.player.name;
+  document.getElementById('myPlayerElo').textContent = ` (${state.player.elo})`;
+  document.getElementById('myGameStatus').textContent = gs.playerColor==='w' ? '♟ Dein Zug' : '⌛ Gegner denkt…';
+  document.getElementById('myGameStatus').className = 'game-status';
+  const boardEl = document.getElementById('myGameBoard');
+  boardEl.innerHTML = '';
+  const board = Chessboard(boardEl, {
     position:'start',
     pieceTheme:'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
-    draggable:true,
-    orientation:gs.playerColor==='b'?'black':'white',
-    onDrop:(from,to)=>handlePlayerDrop(gs,from,to),
-    onDragStart:(src,piece)=>{
-      if (gs.done||gs.game.turn()!==gs.playerColor) return false;
-      if (!piece.startsWith(gs.playerColor==='w'?'w':'b')) return false;
+    draggable: true,
+    orientation: gs.playerColor==='b' ? 'black' : 'white',
+    onDrop: (from,to) => handlePlayerDrop(gs, from, to),
+    onDragStart: (src, piece) => {
+      if (gs.done || gs.game.turn() !== gs.playerColor) return false;
+      if (gs.playerColor==='w' && !piece.startsWith('w')) return false;
+      if (gs.playerColor==='b' && !piece.startsWith('b')) return false;
     }
   });
-  gs.board=board;
+  gs.board = board;
+  // TAP-TO-MOVE aktivieren
+  setupTapToMove(gs);
 }
 
-function handlePlayerDrop(gs,from,to) {
-  if (gs.done||gs.game.turn()!==gs.playerColor) return 'snapback';
-  const move=gs.game.move({from,to,promotion:'q'});
+function handlePlayerDrop(gs, from, to) {
+  if (gs.done || gs.game.turn() !== gs.playerColor) return 'snapback';
+  clearTapHighlights(); tapState.selected = null;
+  const move = gs.game.move({ from, to, promotion:'q' });
   if (!move) return 'snapback';
   gs.board.position(gs.game.fen());
   if (gs.incMs>0) { if (gs.playerColor==='w') gs.whiteClock+=gs.incMs; else gs.blackClock+=gs.incMs; }
-  document.getElementById('myGameStatus').textContent='⌛ Gegner denkt…';
+  const statusEl = document.getElementById('myGameStatus');
+  if (statusEl) statusEl.textContent = '⌛ Gegner denkt…';
   checkGameOver(gs);
   if (!gs.done) scheduleNextMove(gs);
 }
 
 function scheduleNextMove(gs) {
-  if (gs.done||!arena||!arena.running) return;
-  const turn=gs.game.turn();
-  if (gs.isMyGame&&gs.playerColor===turn) return; // Spieler am Zug
+  if (gs.done || !arena || !arena.running) return;
+  const turn = gs.game.turn();
+  if (gs.isMyGame && gs.playerColor === turn) return;
   if (gs.thinking) return;
-  gs.thinking=true;
-  const actingP = turn==='w'?gs.white:gs.black;
-  const delay = gs.isMyGame?300:(arena.config.animSpeed||500);
+  gs.thinking = true;
+  const actingP = turn==='w' ? gs.white : gs.black;
+  const delay = gs.isMyGame ? 350 : (arena.config.animSpeed || 500);
 
-  setTimeout(()=>{
-    if (gs.done||!arena||!arena.running) { gs.thinking=false; return; }
+  setTimeout(() => {
+    if (gs.done || !arena || !arena.running) { gs.thinking=false; return; }
     const botRef = actingP.ref;
     if (!botRef) { gs.thinking=false; return; }
 
-    // Zufalls-Bot
-    if (botRef.engine==='random'||(botRef.randomize&&Math.random()*100<(botRef.randomPct||10))) {
-      const moves=gs.game.moves();
-      gs.thinking=false;
+    // Zufalls-Bot oder Blunder
+    if (botRef.engine==='random' || (botRef.randomize && Math.random()*100 < (botRef.randomPct||10))) {
+      const moves = gs.game.moves();
+      gs.thinking = false;
       if (moves.length) applyBotMove(gs, moves[Math.floor(Math.random()*moves.length)]);
       return;
     }
 
-    // Echter Stockfish UCI-Aufruf
-    const fen=gs.game.fen();
-    const skillLevel=botRef.sfLevel??10;
-    const movetime=levelToMovetime(skillLevel);
+    // Echter Stockfish – Movetime skaliert nach Bedenkzeit des Turniers
+    const fen = gs.game.fen();
+    const skillLevel = botRef.sfLevel ?? 10;
+    const movetime = levelToMovetime(skillLevel, arena.config.baseTime);  // ← FIX
 
-    stockfishGetMove(fen, skillLevel, movetime, (uciMove)=>{
-      gs.thinking=false;
-      if (gs.done||!arena||!arena.running) return;
-
+    stockfishGetMove(fen, skillLevel, movetime, (uciMove) => {
+      gs.thinking = false;
+      if (gs.done || !arena || !arena.running) return;
       if (!uciMove) {
-        // Fallback
-        const moves=gs.game.moves();
+        const moves = gs.game.moves();
         if (moves.length) applyBotMove(gs, moves[Math.floor(Math.random()*moves.length)]);
         return;
       }
-
-      // UCI-Zug anwenden
-      const from=uciMove.slice(0,2), to=uciMove.slice(2,4), promo=uciMove.length===5?uciMove[4]:'q';
-      const moved=gs.game.move({from,to,promotion:promo});
+      const from = uciMove.slice(0,2), to = uciMove.slice(2,4), promo = uciMove.length===5 ? uciMove[4] : 'q';
+      const moved = gs.game.move({ from, to, promotion: promo });
       if (!moved) {
-        // UCI-Zug ungültig (race condition?) → Fallback
-        const moves=gs.game.moves();
+        const moves = gs.game.moves();
         if (moves.length) { const m=gs.game.move(moves[Math.floor(Math.random()*moves.length)]); if (!m) return; }
       }
-
       if (gs.incMs>0) { if (turn==='w') gs.whiteClock+=gs.incMs; else gs.blackClock+=gs.incMs; }
-
-      // UI updaten
-      if (gs.isMyGame&&gs.board) {
+      if (gs.isMyGame && gs.board) {
         gs.board.position(gs.game.fen());
-        if (!gs.done) document.getElementById('myGameStatus').textContent=gs.game.turn()===gs.playerColor?'♟ Dein Zug':'⌛ Gegner denkt…';
+        if (!gs.done) {
+          const statusEl = document.getElementById('myGameStatus');
+          if (statusEl) statusEl.textContent = gs.game.turn()===gs.playerColor ? '♟ Dein Zug' : '⌛ Gegner denkt…';
+        }
       } else {
-        const b=gameBoards[gs.id];
+        const b = gameBoards[gs.id];
         if (b) b.position(gs.game.fen());
       }
       checkGameOver(gs);
@@ -1618,24 +1607,26 @@ function scheduleNextMove(gs) {
 }
 
 function applyBotMove(gs, san) {
-  const moved=gs.game.move(san);
+  const moved = gs.game.move(san);
   if (!moved) return;
-  const turn=gs.game.history().length%2===0?'b':'w'; // schon gewechselt
+  const turn = gs.game.history().length%2===0 ? 'b' : 'w';
   if (gs.incMs>0) { if (turn==='b') gs.whiteClock+=gs.incMs; else gs.blackClock+=gs.incMs; }
-  if (gs.isMyGame&&gs.board) {
+  if (gs.isMyGame && gs.board) {
     gs.board.position(gs.game.fen());
-    if (!gs.done) document.getElementById('myGameStatus').textContent=gs.game.turn()===gs.playerColor?'♟ Dein Zug':'⌛ Gegner denkt…';
+    if (!gs.done) {
+      const statusEl = document.getElementById('myGameStatus');
+      if (statusEl) statusEl.textContent = gs.game.turn()===gs.playerColor ? '♟ Dein Zug' : '⌛ Gegner denkt…';
+    }
   } else {
-    const b=gameBoards[gs.id];
-    if (b) b.position(gs.game.fen());
+    const b = gameBoards[gs.id]; if (b) b.position(gs.game.fen());
   }
   checkGameOver(gs);
   if (!gs.done) scheduleNextMove(gs);
 }
 
 function checkGameOver(gs) {
-  if (gs.done||!gs.game.game_over()) return;
-  gs.done=true;
+  if (gs.done || !gs.game.game_over()) return;
+  gs.done = true;
   if (gs.clockInterval) { clearInterval(gs.clockInterval); gs.clockInterval=null; }
   let winnerColor=null, reason='';
   if (gs.game.in_checkmate()) { winnerColor=gs.game.turn()==='w'?'b':'w'; reason='Matt'; }
@@ -1649,15 +1640,20 @@ function checkGameOver(gs) {
 
 function finishGame(gs, winnerColor, reason) {
   if (gs.done) return;
-  gs.done=true;
+  gs.done = true;
   if (gs.clockInterval) { clearInterval(gs.clockInterval); gs.clockInterval=null; }
   resolveGame(gs, winnerColor, reason);
 }
 
 function resolveGame(gs, winnerColor, reason) {
-  const cfg=arena.config;
-  const white=gs.white, black=gs.black;
-  let text=reason;
+  const cfg = arena.config;
+  const white = gs.white, black = gs.black;
+  let text = reason;
+
+  // FIX: Paarungs-Gedächtnis aktualisieren (NACH dem Spiel, VOR busy=false)
+  white.lastOpponentUid = black.uid;
+  black.lastOpponentUid = white.uid;
+
   if (winnerColor==='w') {
     white.score+=cfg.pointsWin; white.streak=(white.streak||0)+1;
     if (white.streak>=2) white.score+=cfg.streakBonus;
@@ -1678,19 +1674,28 @@ function resolveGame(gs, winnerColor, reason) {
     white.draws=(white.draws||0)+1; black.draws=(black.draws||0)+1;
   }
   white.games++; black.games++;
-  white.busy=false; black.busy=false;
+  white.busy = false; black.busy = false;
 
-  // Elo (K=32)
+  // Elo K=32
   if (cfg.updateElo) {
     const K=32;
-    const expW=1/(1+Math.pow(10,(black.elo-white.elo)/400));
-    const scoreW=winnerColor==='w'?1:winnerColor==='b'?0:0.5;
-    white.elo=Math.max(100,Math.min(3500,Math.round(white.elo+K*(scoreW-expW))));
-    black.elo=Math.max(100,Math.min(3500,Math.round(black.elo+K*((1-scoreW)-(1-expW)))));
-    [white,black].forEach(p=>{
+    const expW = 1/(1+Math.pow(10,(black.elo-white.elo)/400));
+    const scoreW = winnerColor==='w'?1:winnerColor==='b'?0:0.5;
+    const newWhiteElo = Math.max(100,Math.min(3500,Math.round(white.elo+K*(scoreW-expW))));
+    const newBlackElo = Math.max(100,Math.min(3500,Math.round(black.elo+K*((1-scoreW)-(1-expW)))));
+    white.elo = newWhiteElo; black.elo = newBlackElo;
+    [white,black].forEach(p => {
       if (!p.isPlayer) {
-        const bot=state.bots.find(b=>b.id===p.ref.id);
-        if (bot) { bot.elo=p.elo; if (!bot.ratingHistory) bot.ratingHistory=[]; bot.ratingHistory.push(bot.elo); bot.games=(bot.games||0)+1; }
+        const bot = state.bots.find(b=>b.id===p.ref.id);
+        if (bot) {
+          bot.elo = p.elo;
+          if (!bot.ratingHistory) bot.ratingHistory = [];
+          bot.ratingHistory.push(bot.elo);
+          bot.games = (bot.games||0)+1;
+          if (winnerColor==='w'&&p===white||winnerColor==='b'&&p===black) bot.wins=(bot.wins||0)+1;
+          else if (!winnerColor) bot.draws=(bot.draws||0)+1;
+          else bot.losses=(bot.losses||0)+1;
+        }
       }
     });
   }
@@ -1698,48 +1703,63 @@ function resolveGame(gs, winnerColor, reason) {
   // Spieler-Stats
   if (gs.isMyGame) {
     state.stats.totalGames++;
-    const pC=gs.playerColor||'w';
-    const won=winnerColor===pC, draw=!winnerColor;
+    const pC = gs.playerColor||'w';
+    const won = winnerColor===pC, draw = !winnerColor;
     if (won) { state.player.wins=(state.player.wins||0)+1; state.stats.totalWins++; }
     else if (draw) state.player.draws=(state.player.draws||0)+1;
     else state.player.losses=(state.player.losses||0)+1;
     state.player.games=(state.player.games||0)+1;
-    if (cfg.updateElo) document.getElementById('playerRatingDisplay').textContent=state.player.elo;
-    const opp=pC==='w'?black:white;
+    if (cfg.updateElo) {
+      // Elo des Spielers wurde bereits in white/black.elo berechnet
+      const pPart = pC==='w' ? white : black;
+      state.player.elo = pPart.elo;
+      if (!state.player.ratingHistory) state.player.ratingHistory = [];
+      state.player.ratingHistory.push(state.player.elo);
+      document.getElementById('playerRatingDisplay').textContent = state.player.elo;
+    }
+    const opp = pC==='w' ? black : white;
     if (!state.player.gameHistory) state.player.gameHistory=[];
-    state.player.gameHistory.push({ date:new Date().toLocaleDateString('de'), opponent:opp.name, result:won?'win':draw?'draw':'loss', eloDiff:0, timeControl:`${arena.config.baseTime}+${arena.config.increment}` });
-    const statusEl=document.getElementById('myGameStatus');
+    const eloDiff = cfg.updateElo ? ((pC==='w'?white.elo:black.elo) - arena.config.baseTime) : 0;
+    state.player.gameHistory.push({
+      date: new Date().toLocaleDateString('de'),
+      opponent: opp.name,
+      result: won?'win':draw?'draw':'loss',
+      eloDiff: 0,
+      timeControl: `${arena.config.baseTime}+${arena.config.increment}`
+    });
+    clearTapHighlights(); tapState.selected = null;
+    const statusEl = document.getElementById('myGameStatus');
     if (statusEl) { statusEl.textContent=text; statusEl.className='game-status '+(draw?'':won?'win':'loss'); }
-    setTimeout(()=>{ const p=document.getElementById('myGamePanel'); if(p) p.style.display='none'; },3000);
+    setTimeout(() => { const p=document.getElementById('myGamePanel'); if(p) p.style.display='none'; }, 3000);
   } else {
     state.stats.totalGames++;
-    const card=document.getElementById('bc_'+gs.id);
+    const card = document.getElementById('bc_'+gs.id);
     if (card) {
-      const st=document.getElementById('bst_'+gs.id);
-      if (st) st.textContent=text;
-      setTimeout(()=>{ if (card.parentNode) card.remove(); delete gameBoards[gs.id]; },1800);
+      const st = document.getElementById('bst_'+gs.id);
+      if (st) st.textContent = text;
+      setTimeout(() => { if(card.parentNode) card.remove(); delete gameBoards[gs.id]; }, 1800);
     }
   }
 
-  arena.activeGames=arena.activeGames.filter(g=>g.id!==gs.id);
+  arena.activeGames = arena.activeGames.filter(g => g.id !== gs.id);
   updateLeaderboard();
   saveState();
-  if (arena&&arena.running) setTimeout(fillArena,400);
+  if (arena && arena.running) setTimeout(fillArena, 400);
 }
 
 function addResultFeed(text) {
-  const feed=document.getElementById('resultsFeed');
-  const row=document.createElement('div');
-  row.style.cssText='padding:5px 0; border-bottom:1px solid var(--border); animation:slideIn 0.2s ease;';
-  row.textContent=text;
+  const feed = document.getElementById('resultsFeed');
+  const row = document.createElement('div');
+  row.style.cssText = 'padding:5px 0; border-bottom:1px solid var(--border); animation:slideIn 0.2s ease;';
+  row.textContent = text;
   feed.prepend(row);
-  while (feed.children.length>30) feed.removeChild(feed.lastChild);
+  while (feed.children.length > 30) feed.removeChild(feed.lastChild);
 }
 
 function updateLeaderboard() {
   if (!arena) return;
-  const sorted=[...arena.participants].sort((a,b)=>b.score-a.score||b.streak-a.streak);
-  document.getElementById('leaderboard').innerHTML=sorted.map((p,i)=>`
+  const sorted = [...arena.participants].sort((a,b)=>b.score-a.score||b.streak-a.streak);
+  document.getElementById('leaderboard').innerHTML = sorted.map((p,i)=>`
     <div class="lb-row ${p.isPlayer?'is-me':''}">
       <div class="lb-rank ${i<3?'top3':''}">${i+1}</div>
       <div style="font-size:16px;">${p.isPlayer?(state.player.avatar||'👤'):(p.ref.emoji||'🤖')}</div>
@@ -1754,27 +1774,27 @@ function updateLeaderboard() {
 //  PROFIL
 // ══════════════════════════════════════════════════════════
 function renderProfile() {
-  const p=state.player;
-  document.getElementById('profileAvatar').textContent=p.avatar||'👤';
-  document.getElementById('profileName').textContent=p.name;
-  document.getElementById('profileElo').textContent=p.elo;
-  document.getElementById('profileGames').textContent=`${p.games||0} Partien`;
-  document.getElementById('profileWins').textContent=`${p.wins||0} Siege`;
-  document.getElementById('profileDraws').textContent=`${p.draws||0} Remis`;
-  document.getElementById('profileLosses').textContent=`${p.losses||0} Niederlagen`;
-  document.getElementById('playerNameDisplay').textContent=p.name;
-  document.getElementById('playerRatingDisplay').textContent=p.elo;
+  const p = state.player;
+  document.getElementById('profileAvatar').textContent = p.avatar||'👤';
+  document.getElementById('profileName').textContent = p.name;
+  document.getElementById('profileElo').textContent = p.elo;
+  document.getElementById('profileGames').textContent = `${p.games||0} Partien`;
+  document.getElementById('profileWins').textContent = `${p.wins||0} Siege`;
+  document.getElementById('profileDraws').textContent = `${p.draws||0} Remis`;
+  document.getElementById('profileLosses').textContent = `${p.losses||0} Niederlagen`;
+  document.getElementById('playerNameDisplay').textContent = p.name;
+  document.getElementById('playerRatingDisplay').textContent = p.elo;
   renderRatingChart(); renderResultDonut(); renderGameHistory();
 }
 function renderRatingChart() {
-  const hist=state.player.ratingHistory||[1500];
-  const el=document.getElementById('ratingChart');
+  const hist = state.player.ratingHistory||[1500];
+  const el = document.getElementById('ratingChart');
   if (hist.length<2) { el.innerHTML='<div style="color:var(--muted);font-size:13px;margin:auto;">Noch keine Daten</div>'; return; }
   const max=Math.max(...hist),min=Math.min(...hist),range=max-min||1,h=100;
-  el.innerHTML=hist.slice(-30).map(v=>`<div style="flex:1;background:var(--accent);opacity:0.7;height:${Math.max(4,((v-min)/range)*h)}px;border-radius:2px 2px 0 0;min-width:4px;" title="${v}"></div>`).join('');
+  el.innerHTML = hist.slice(-30).map(v=>`<div style="flex:1;background:var(--accent);opacity:0.7;height:${Math.max(4,((v-min)/range)*h)}px;border-radius:2px 2px 0 0;min-width:4px;" title="${v}"></div>`).join('');
 }
 function renderResultDonut() {
-  const p=state.player;
+  const p = state.player;
   document.getElementById('resultDonut').innerHTML=`
     <div style="text-align:center"><div style="font-size:22px;font-weight:900;color:var(--accent)">${p.wins||0}</div><div style="color:var(--muted)">Siege</div></div>
     <div style="text-align:center"><div style="font-size:22px;font-weight:900;color:var(--muted)">${p.draws||0}</div><div style="color:var(--muted)">Remis</div></div>
@@ -1782,10 +1802,10 @@ function renderResultDonut() {
   `;
 }
 function renderGameHistory() {
-  const tbody=document.getElementById('gameHistoryTable');
-  const hist=state.player.gameHistory||[];
+  const tbody = document.getElementById('gameHistoryTable');
+  const hist = state.player.gameHistory||[];
   if (!hist.length) { tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--muted);">Noch keine Partien</td></tr>'; return; }
-  tbody.innerHTML=[...hist].reverse().slice(0,50).map(g=>`
+  tbody.innerHTML = [...hist].reverse().slice(0,50).map(g=>`
     <tr>
       <td>${g.date||''}</td>
       <td>${escapeHtml(g.opponent||'?')}</td>
@@ -1796,18 +1816,17 @@ function renderGameHistory() {
   `).join('');
 }
 function openProfileSettings() {
-  document.getElementById('settingPlayerName').value=state.player.name;
-  document.getElementById('settingPlayerElo').value=state.player.elo;
-  document.getElementById('settingAvatar').value=state.player.avatar||'👤';
+  document.getElementById('settingPlayerName').value = state.player.name;
+  document.getElementById('settingPlayerElo').value = state.player.elo;
+  document.getElementById('settingAvatar').value = state.player.avatar||'👤';
   openModal('profileModal');
 }
 function saveProfileSettings() {
-  state.player.name=document.getElementById('settingPlayerName').value.trim()||'Spieler';
-  state.player.elo=parseInt(document.getElementById('settingPlayerElo').value)||1500;
-  state.player.avatar=document.getElementById('settingAvatar').value||'👤';
-  if (!state.player.ratingHistory) state.player.ratingHistory=[state.player.elo];
-  saveState(); closeModal('profileModal'); renderProfile();
-  toast('Profil gespeichert!');
+  state.player.name = document.getElementById('settingPlayerName').value.trim()||'Spieler';
+  state.player.elo = parseInt(document.getElementById('settingPlayerElo').value)||1500;
+  state.player.avatar = document.getElementById('settingAvatar').value||'👤';
+  if (!state.player.ratingHistory) state.player.ratingHistory = [state.player.elo];
+  saveState(); closeModal('profileModal'); renderProfile(); toast('Profil gespeichert!');
 }
 
 // ══════════════════════════════════════════════════════════
@@ -1816,7 +1835,6 @@ function saveProfileSettings() {
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('open'); }));
-
 function toast(msg, type='') {
   const t=document.createElement('div');
   t.className='toast '+type; t.textContent=msg;
@@ -1830,11 +1848,9 @@ function toast(msg, type='') {
 // ══════════════════════════════════════════════════════════
 updateTimePreview();
 refreshHome();
-document.getElementById('playerNameDisplay').textContent=state.player.name;
-document.getElementById('playerRatingDisplay').textContent=state.player.elo;
+document.getElementById('playerNameDisplay').textContent = state.player.name;
+document.getElementById('playerRatingDisplay').textContent = state.player.elo;
 if (!storageAvailable) toast('Hinweis: Kein lokaler Speicher – Fortschritt nur für diese Sitzung','info');
-
-// Stockfish Pool initialisieren (asynchron)
 initStockfishPool();
 </script>
 </body>
